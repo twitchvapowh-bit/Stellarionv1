@@ -43,6 +43,17 @@ exception
   when duplicate_object then null;
 end $$;
 
+do $$
+begin
+  create policy "players mark received messages read"
+    on public.messages
+    for update
+    using (auth.uid() = recipient_id)
+    with check (auth.uid() = recipient_id);
+exception
+  when duplicate_object then null;
+end $$;
+
 -- 0,0 est une position "non attribuee", jamais une vraie planete joueur.
 update public.players
 set galaxy_x = null,
@@ -98,7 +109,7 @@ create table if not exists public.public_missions (
   target_name text,
   started_at timestamptz not null default now(),
   ends_at timestamptz not null,
-  returning boolean not null default false,
+  is_returning boolean not null default false,
   updated_at timestamptz not null default now()
 );
 
