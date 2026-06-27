@@ -1,4 +1,4 @@
--- Stellarion - positions joueurs uniques sur la carte galaxie
+﻿-- Stellarion - positions joueurs uniques sur la carte galaxie
 -- A lancer une fois dans l'editeur SQL Supabase.
 
 alter table public.players
@@ -11,6 +11,47 @@ alter table public.players
   add column if not exists home_planet_type text,
   add column if not exists home_planet_world jsonb;
 
+
+create table if not exists public.player_saves (
+  player_id uuid primary key,
+  payload jsonb not null,
+  save_version text,
+  saved_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.player_saves enable row level security;
+
+do $$
+begin
+  create policy "players read own save"
+    on public.player_saves
+    for select
+    using (auth.uid() = player_id);
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create policy "players insert own save"
+    on public.player_saves
+    for insert
+    with check (auth.uid() = player_id);
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create policy "players update own save"
+    on public.player_saves
+    for update
+    using (auth.uid() = player_id)
+    with check (auth.uid() = player_id);
+exception
+  when duplicate_object then null;
+end $$;
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
   sender_id uuid not null,
@@ -145,3 +186,4 @@ begin
 exception
   when duplicate_object then null;
 end $$;
+
