@@ -5,7 +5,11 @@ alter table public.players
   add column if not exists galaxy_x integer,
   add column if not exists galaxy_y integer,
   add column if not exists sector integer,
-  add column if not exists system integer;
+  add column if not exists system integer,
+  add column if not exists home_planet_id text,
+  add column if not exists home_planet_name text,
+  add column if not exists home_planet_type text,
+  add column if not exists home_planet_world jsonb;
 
 -- 0,0 est une position "non attribuee", jamais une vraie planete joueur.
 update public.players
