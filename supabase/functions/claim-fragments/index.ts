@@ -40,6 +40,38 @@ Deno.serve(async (req) => {
       (sum: number, r: { fragments: number }) => sum + (r.fragments || 0),
       0,
     );
+
+    // Server-authority 1.5.70 : les fragments payés doivent aussi être crédités
+    // dans la table canonique game_resources. Le client n'est plus autorisé à
+    // rendre une monnaie premium persistante par simple modification JS.
+    if (credited > 0) {
+      const current = await admin.from("game_resources")
+        .select("player_id,fragments")
+        .eq("player_id", user.id)
+        .maybeSingle();
+
+      if (!current.data) {
+        const ins = await admin.from("game_resources").insert({
+          player_id: user.id,
+          titanium: 2500,
+          xenite: 1200,
+          antimatter: 0,
+          fragments: credited,
+          last_tick: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        if (ins.error) throw ins.error;
+      } else {
+        const up = await admin.from("game_resources")
+          .update({
+            fragments: (Number(current.data.fragments) || 0) + credited,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("player_id", user.id);
+        if (up.error) throw up.error;
+      }
+    }
+
     return json({ credited }, 200);
   } catch (e) {
     return json({ credited: 0, error: String(e) }, 500);
