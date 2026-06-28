@@ -275,7 +275,7 @@ exception
 end $$;
 
 create table if not exists public.alliance_members (
-  alliance_id text not null references public.alliances(id) on delete cascade,
+  alliance_id text not null,
   player_id text not null,
   name text not null,
   rank text not null default 'Membre',
@@ -288,6 +288,9 @@ create table if not exists public.alliance_members (
 );
 
 alter table public.alliance_members enable row level security;
+
+drop policy if exists "alliance members visible" on public.alliance_members;
+drop policy if exists "alliance owners manage members" on public.alliance_members;
 
 do $$
 begin
@@ -307,14 +310,14 @@ begin
     using (
       exists (
         select 1 from public.alliances a
-        where a.id = alliance_members.alliance_id
+        where a.id::text = alliance_members.alliance_id
           and a.owner_id = auth.uid()
       )
     )
     with check (
       exists (
         select 1 from public.alliances a
-        where a.id = alliance_members.alliance_id
+        where a.id::text = alliance_members.alliance_id
           and a.owner_id = auth.uid()
       )
     );
@@ -324,7 +327,7 @@ end $$;
 
 create table if not exists public.alliance_announcements (
   id uuid primary key default gen_random_uuid(),
-  alliance_id text not null references public.alliances(id) on delete cascade,
+  alliance_id text not null,
   author_id uuid,
   title text not null default 'Annonce',
   body text not null,
@@ -332,6 +335,9 @@ create table if not exists public.alliance_announcements (
 );
 
 alter table public.alliance_announcements enable row level security;
+
+drop policy if exists "alliance announcements visible" on public.alliance_announcements;
+drop policy if exists "alliance owners publish announcements" on public.alliance_announcements;
 
 do $$
 begin
@@ -351,7 +357,7 @@ begin
     with check (
       exists (
         select 1 from public.alliances a
-        where a.id = alliance_announcements.alliance_id
+        where a.id::text = alliance_announcements.alliance_id
           and a.owner_id = auth.uid()
       )
     );
@@ -361,7 +367,7 @@ end $$;
 
 create table if not exists public.alliance_applications (
   id uuid primary key default gen_random_uuid(),
-  alliance_id text not null references public.alliances(id) on delete cascade,
+  alliance_id text not null,
   player_id uuid,
   player_name text not null,
   message text not null default '',
@@ -372,6 +378,10 @@ create table if not exists public.alliance_applications (
 
 alter table public.alliance_applications enable row level security;
 
+drop policy if exists "players read related alliance applications" on public.alliance_applications;
+drop policy if exists "players create alliance applications" on public.alliance_applications;
+drop policy if exists "alliance owners update applications" on public.alliance_applications;
+
 do $$
 begin
   create policy "players read related alliance applications"
@@ -381,7 +391,7 @@ begin
       auth.uid() = player_id
       or exists (
         select 1 from public.alliances a
-        where a.id = alliance_applications.alliance_id
+        where a.id::text = alliance_applications.alliance_id
           and a.owner_id = auth.uid()
       )
     );
@@ -407,14 +417,14 @@ begin
     using (
       exists (
         select 1 from public.alliances a
-        where a.id = alliance_applications.alliance_id
+        where a.id::text = alliance_applications.alliance_id
           and a.owner_id = auth.uid()
       )
     )
     with check (
       exists (
         select 1 from public.alliances a
-        where a.id = alliance_applications.alliance_id
+        where a.id::text = alliance_applications.alliance_id
           and a.owner_id = auth.uid()
       )
     );
