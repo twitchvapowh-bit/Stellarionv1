@@ -41,10 +41,12 @@
   }
   function boot() {
     var justPaid = /[?&]stellarion_paid=1/.test(window.location.search);
-    if (justPaid) claimWithRetry(8); else claimFragments();
+    if (justPaid) claimWithRetry(8); else claimWithRetry(2);
   }
+  var tries = 0;
   (function waitReady() {
-    if (window.__stellarionReady && typeof state !== "undefined" && typeof supa !== "undefined" && supa) { boot(); }
-    else { setTimeout(waitReady, 600); }
+    tries++;
+    if (typeof supa !== "undefined" && supa && typeof state !== "undefined") { boot(); }
+    else if (tries < 40) { setTimeout(waitReady, 600); }
   })();
 })();
