@@ -187,3 +187,200 @@ exception
   when duplicate_object then null;
 end $$;
 
+-- Alpha 1.5.60 - Alliances MMO: registre, membres, annonces, candidatures.
+create table if not exists public.alliances (
+  id text primary key,
+  owner_id uuid,
+  name text not null,
+  tag text not null,
+  description text not null default '',
+  status text not null default 'open',
+  country text not null default '',
+  member_count integer not null default 1,
+  power integer not null default 0,
+  announcement text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.alliances enable row level security;
+
+do $$
+begin
+  create policy "alliances visible to all players"
+    on public.alliances
+    for select
+    using (true);
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create policy "players create owned alliances"
+    on public.alliances
+    for insert
+    with check (auth.uid() = owner_id);
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create policy "owners update their alliances"
+    on public.alliances
+    for update
+    using (auth.uid() = owner_id)
+    with check (auth.uid() = owner_id);
+exception
+  when duplicate_object then null;
+end $$;
+
+create table if not exists public.alliance_members (
+  alliance_id text not null references public.alliances(id) on delete cascade,
+  player_id text not null,
+  name text not null,
+  rank text not null default 'Membre',
+  power integer not null default 0,
+  country text not null default '',
+  status text not null default 'Actif',
+  joined_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (alliance_id, player_id)
+);
+
+alter table public.alliance_members enable row level security;
+
+do $$
+begin
+  create policy "alliance members visible"
+    on public.alliance_members
+    for select
+    using (true);
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create policy "alliance owners manage members"
+    on public.alliance_members
+    for all
+    using (
+      exists (
+        select 1 from public.alliances a
+        where a.id = alliance_members.alliance_id
+          and a.owner_id = auth.uid()
+      )
+    )
+    with check (
+      exists (
+        select 1 from public.alliances a
+        where a.id = alliance_members.alliance_id
+          and a.owner_id = auth.uid()
+      )
+    );
+exception
+  when duplicate_object then null;
+end $$;
+
+create table if not exists public.alliance_announcements (
+  id uuid primary key default gen_random_uuid(),
+  alliance_id text not null references public.alliances(id) on delete cascade,
+  author_id uuid,
+  title text not null default 'Annonce',
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.alliance_announcements enable row level security;
+
+do $$
+begin
+  create policy "alliance announcements visible"
+    on public.alliance_announcements
+    for select
+    using (true);
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create policy "alliance owners publish announcements"
+    on public.alliance_announcements
+    for insert
+    with check (
+      exists (
+        select 1 from public.alliances a
+        where a.id = alliance_announcements.alliance_id
+          and a.owner_id = auth.uid()
+      )
+    );
+exception
+  when duplicate_object then null;
+end $$;
+
+create table if not exists public.alliance_applications (
+  id uuid primary key default gen_random_uuid(),
+  alliance_id text not null references public.alliances(id) on delete cascade,
+  player_id uuid,
+  player_name text not null,
+  message text not null default '',
+  status text not null default 'pending',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.alliance_applications enable row level security;
+
+do $$
+begin
+  create policy "players read related alliance applications"
+    on public.alliance_applications
+    for select
+    using (
+      auth.uid() = player_id
+      or exists (
+        select 1 from public.alliances a
+        where a.id = alliance_applications.alliance_id
+          and a.owner_id = auth.uid()
+      )
+    );
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create policy "players create alliance applications"
+    on public.alliance_applications
+    for insert
+    with check (auth.uid() = player_id);
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create policy "alliance owners update applications"
+    on public.alliance_applications
+    for update
+    using (
+      exists (
+        select 1 from public.alliances a
+        where a.id = alliance_applications.alliance_id
+          and a.owner_id = auth.uid()
+      )
+    )
+    with check (
+      exists (
+        select 1 from public.alliances a
+        where a.id = alliance_applications.alliance_id
+          and a.owner_id = auth.uid()
+      )
+    );
+exception
+  when duplicate_object then null;
+end $$;
+
