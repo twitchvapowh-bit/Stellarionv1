@@ -203,7 +203,45 @@ create table if not exists public.alliances (
   updated_at timestamptz not null default now()
 );
 
+alter table public.alliances
+  add column if not exists owner_id uuid,
+  add column if not exists name text not null default 'Alliance',
+  add column if not exists tag text not null default 'ALL',
+  add column if not exists description text not null default '',
+  add column if not exists status text not null default 'open',
+  add column if not exists country text not null default '',
+  add column if not exists member_count integer not null default 1,
+  add column if not exists power integer not null default 0,
+  add column if not exists announcement text not null default '',
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'alliances'
+      and column_name = 'founder_id'
+  ) then
+    execute 'update public.alliances set owner_id = coalesce(owner_id, founder_id) where owner_id is null';
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'alliances'
+      and column_name = 'user_id'
+  ) then
+    execute 'update public.alliances set owner_id = coalesce(owner_id, user_id) where owner_id is null';
+  end if;
+end $$;
+
 alter table public.alliances enable row level security;
+
+drop policy if exists "alliances visible to all players" on public.alliances;
+drop policy if exists "players create owned alliances" on public.alliances;
+drop policy if exists "owners update their alliances" on public.alliances;
 
 do $$
 begin
