@@ -57,91 +57,87 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 </div>
 <div id="app"></div>
 
-<!-- STELLARION 1.5.77 — Alliance focus root clean
-     À charger AVANT js/main.js pour empêcher les anciens patches Alliance 1566/1567 de s'installer. -->
-<script id="stellarion-alliance-focus-root-clean-pre-1577">
+<!-- STELLARION 1.5.78 — Alliance native field fix
+     Objectif : réparer le focus Alliance sans casser la messagerie, sans bloquer les onglets, sans ralentir les changements de page. -->
+<script id="stellarion-alliance-native-field-pre-1578">
 (function(){
   'use strict';
-  if (window.__stellarionAllianceFocusRootCleanPre1577) return;
-  window.__stellarionAllianceFocusRootCleanPre1577 = true;
+  if (window.__stellarionAllianceNativeFieldPre1578) return;
+  window.__stellarionAllianceNativeFieldPre1578 = true;
 
-  var VERSION = '1.5.77';
+  var VERSION = '1.5.78';
   var blockedListeners = 0;
   var blockedByType = Object.create(null);
+  var blockedSamples = [];
 
-  // Ces deux flags servent à faire sortir immédiatement les anciens IIFE si leur code les vérifie.
-  // On ne touche pas au correctif messagerie.
+  // Empêche les deux vieux locks les plus dangereux de s'installer.
   window.__stellarionAllianceQGFocusGuard1566 = true;
   window.__stellarionAllianceEditorFocusLock1567 = true;
 
-  var nativeAddEventListener = EventTarget.prototype.addEventListener;
-  window.__stellarionNativeAddEventListener1577 = nativeAddEventListener;
+  var nativeAdd = EventTarget.prototype.addEventListener;
+  window.__stellarionNativeAddEventListener1578 = nativeAdd;
 
-  function fnSource(fn){
-    try { return Function.prototype.toString.call(fn); } catch(e){ return ''; }
+  function srcOf(listener){
+    try {
+      if (!listener) return '';
+      if (typeof listener === 'function') return Function.prototype.toString.call(listener);
+      if (listener.handleEvent) return Function.prototype.toString.call(listener.handleEvent);
+    } catch(e) {}
+    return '';
   }
 
-  function isOldAllianceFocusListener(type, listener){
-    if (!listener) return false;
-    var src = fnSource(listener);
-    if (!src && typeof listener === 'object' && listener.handleEvent) src = fnSource(listener.handleEvent);
+  function shouldBlockOldAllianceListener(type, listener){
+    var src = srcOf(listener);
     if (!src) return false;
+    var s = src.slice(0, 16000);
 
-    var s = src.slice(0, 12000);
-    var explicit =
+    // 1566/1567 : anciens systèmes focus/render Alliance.
+    if (
       s.indexOf('__stellarionAllianceQGFocusGuard1566') !== -1 ||
       s.indexOf('__stellarionAllianceEditorFocusLock1567') !== -1 ||
       s.indexOf('stellarion-alliance-editing1567') !== -1 ||
       s.indexOf('Alliance QG Focus Guard') !== -1 ||
       s.indexOf('Alliance editor hard focus') !== -1 ||
-      s.indexOf('alliance editor hard focus') !== -1;
+      s.indexOf('alliance editor hard focus') !== -1
+    ) return true;
 
-    if (explicit) return true;
+    // 1548/1549 : anciens capteurs document qui stopPropagation / focusent les vieux filtres Alliance.
+    // Ils ne correspondent plus au centre Alliance 1560 actuel (.alliance-cx-*), donc on les neutralise.
+    var legacyAlliance =
+      s.indexOf('installAllianceControls1548') !== -1 ||
+      s.indexOf('__allianceControls1548') !== -1 ||
+      s.indexOf('stopOnly') !== -1 ||
+      s.indexOf('__stellarionAllianceInputRescue1549') !== -1 ||
+      s.indexOf('rescueAllianceInputs1549') !== -1 ||
+      s.indexOf('allianceRealFilters1547') !== -1 ||
+      s.indexOf('allianceV5Filters') !== -1 ||
+      s.indexOf('alliance-v4') !== -1 ||
+      s.indexOf('alliance-v5') !== -1;
 
-    var hasAlliance =
-      s.indexOf('allianceCx') !== -1 ||
-      s.indexOf('alliance-cx') !== -1 ||
-      s.indexOf('Alliance') !== -1 ||
-      s.indexOf('alliance') !== -1;
+    if (legacyAlliance) return true;
 
-    var hasFocus =
-      s.indexOf('.focus') !== -1 ||
-      s.indexOf('focus(') !== -1 ||
-      s.indexOf('setSelectionRange') !== -1 ||
-      s.indexOf('selectionStart') !== -1 ||
-      s.indexOf('selectionEnd') !== -1 ||
-      s.indexOf('restoreFocus') !== -1 ||
-      s.indexOf('activeElement') !== -1;
-
-    var looksLikeGuard =
-      s.indexOf('1566') !== -1 ||
-      s.indexOf('1567') !== -1 ||
-      s.indexOf('editing1567') !== -1 ||
-      s.indexOf('Focus Guard') !== -1 ||
-      s.indexOf('FocusLock') !== -1 ||
-      s.indexOf('focus lock') !== -1;
-
-    // On ne bloque que les listeners clairement orientés focus/sélection Alliance.
-    return !!(hasAlliance && hasFocus && looksLikeGuard);
+    return false;
   }
 
   EventTarget.prototype.addEventListener = function(type, listener, options){
     try {
-      var hostIsGlobal = this === window || this === document || this === document.body || this === document.documentElement;
-      if (hostIsGlobal && isOldAllianceFocusListener(type, listener)) {
+      var globalHost = this === window || this === document || this === document.body || this === document.documentElement;
+      if (globalHost && shouldBlockOldAllianceListener(type, listener)) {
         blockedListeners++;
         blockedByType[type] = (blockedByType[type] || 0) + 1;
+        if (blockedSamples.length < 8) blockedSamples.push(String(type));
         return;
       }
     } catch(e) {}
-    return nativeAddEventListener.call(this, type, listener, options);
+    return nativeAdd.call(this, type, listener, options);
   };
 
-  window.stellarionAllianceRootCleanPreAudit1577 = function(){
+  window.stellarionAllianceNativePreAudit1578 = function(){
     return {
-      patch: 'alliance-focus-root-clean-pre-' + VERSION,
+      patch: 'alliance-native-field-pre-' + VERSION,
       blockedListeners: blockedListeners,
       blockedByType: Object.assign({}, blockedByType),
+      blockedSamples: blockedSamples.slice(),
       flagsForced: {
         qg1566: window.__stellarionAllianceQGFocusGuard1566 === true,
         editor1567: window.__stellarionAllianceEditorFocusLock1567 === true
@@ -154,75 +150,119 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
 <script src="js/main.js"></script>
 <script src="js/fragment-shop-stripe-patch.js"></script>
-<!-- STELLARION 1.5.77 — Alliance focus root clean POST
-     À charger APRÈS js/main.js. Pas de blocage de render(), pas de blocage d'onglets. -->
-<script id="stellarion-alliance-focus-root-clean-post-1577">
+<script id="stellarion-alliance-native-field-post-1578">
 (function(){
   'use strict';
-  if (window.__stellarionAllianceFocusRootCleanPost1577) return;
-  window.__stellarionAllianceFocusRootCleanPost1577 = true;
+  if (window.__stellarionAllianceNativeFieldPost1578) return;
+  window.__stellarionAllianceNativeFieldPost1578 = true;
 
-  var VERSION = '1.5.77';
-  var lastPointerAt = 0;
-  var lastPointerTarget = null;
-  var lastKeyboardAt = 0;
-  var blockedFocus = 0;
-  var blockedSelection = 0;
+  var VERSION = '1.5.78';
+  var nativeFocus = HTMLElement.prototype.focus;
+  var nativeInputBlur = window.HTMLInputElement && HTMLInputElement.prototype.blur;
+  var nativeTextBlur = window.HTMLTextAreaElement && HTMLTextAreaElement.prototype.blur;
+  var nativeSelectBlur = window.HTMLSelectElement && HTMLSelectElement.prototype.blur;
+  var nativeTokenAdd = DOMTokenList.prototype.add;
+  var nativeTokenToggle = DOMTokenList.prototype.toggle;
+
+  var userTarget = null;
+  var userTargetKey = null;
+  var userTargetAt = 0;
+  var lastOutsidePointerAt = 0;
+  var lastOutsidePointerTarget = null;
+  var intendedUntil = 0;
+  var restoredFocus = 0;
+  var blockedBlur = 0;
   var cleanedClasses = 0;
+  var lostFocusEvents = 0;
 
   function now(){ return Date.now(); }
 
+  function lower(v){ return String(v || '').toLowerCase(); }
+
   function isAlliancePage(){
     try {
-      var view = window.state && String(window.state.view || '').toLowerCase();
+      var view = window.state && lower(window.state.view || '');
       if (view.indexOf('alliance') !== -1) return true;
-      return !!document.querySelector('.alliance-cx-dashboard,.alliance-cx-wrap,.alliance-cx-directory,#allianceCxModal,[id^="allianceCx"]');
-    } catch(e){ return false; }
+      return !!document.querySelector('.alliance-cx-dashboard,.alliance-cx-wrap,.alliance-cx-directory,#allianceCxModal,.alliance-page,.alliance-panel,.alliance-layout');
+    } catch(e) { return false; }
   }
 
   function isAllianceArea(el){
     try {
       return !!(el && el.closest && el.closest(
         '.alliance-cx-dashboard,.alliance-cx-wrap,.alliance-cx-directory,#allianceCxModal,' +
-        '[id^="allianceCx"],.alliance-cx-field,.alliance-cx-card,.alliance-cx-main,.alliance-cx-side-actions,' +
-        '[data-view="alliance"],[data-page="alliance"],.alliance-page,.alliance-panel,.alliance-layout'
+        '.alliance-cx-card,.alliance-cx-main,.alliance-cx-side-actions,.alliance-cx-field,' +
+        '.alliance-page,.alliance-panel,.alliance-layout,[data-view="alliance"],[data-page="alliance"]'
       ));
-    } catch(e){ return false; }
+    } catch(e) { return false; }
   }
 
   function isEditable(el){
     try {
       if (!el || !el.tagName) return false;
-      var tag = String(el.tagName).toLowerCase();
+      var tag = lower(el.tagName);
       if (tag === 'textarea' || tag === 'select') return true;
       if (tag === 'input') {
-        var type = String(el.type || 'text').toLowerCase();
+        var type = lower(el.type || 'text');
         return !/^(hidden|button|submit|reset|checkbox|radio|file|color|range)$/.test(type);
       }
       return el.isContentEditable === true;
-    } catch(e){ return false; }
+    } catch(e) { return false; }
   }
 
   function isAllianceEditable(el){
     return isEditable(el) && (isAllianceArea(el) || isAlliancePage());
   }
 
-  function isInteractiveNonText(el){
+  function isClickableNavigation(el){
     try {
-      if (!el || !el.closest) return false;
-      var hit = el.closest('button,a,[role="tab"],[role="button"],.tab,.alliance-cx-tab,.alliance-tab,[data-tab],[data-action]');
-      return !!(hit && !isEditable(hit));
-    } catch(e){ return false; }
+      return !!(el && el.closest && el.closest('button,a,[role="button"],[role="tab"],.tab,.alliance-cx-tab,.alliance-tab,[data-tab],[data-action],.btn'));
+    } catch(e) { return false; }
   }
 
-  function directUserFocusFor(el){
-    var t = now();
-    if (lastPointerTarget && (el === lastPointerTarget || (el.contains && el.contains(lastPointerTarget)))) return t - lastPointerAt < 1200;
-    if (document.activeElement === el && t - lastKeyboardAt < 1200) return true;
-    return false;
+  function fieldKey(el){
+    if (!el) return '';
+    var tag = lower(el.tagName);
+    var id = el.id ? ('#' + el.id) : '';
+    var name = el.getAttribute && el.getAttribute('name') ? ('[name="' + el.getAttribute('name') + '"]') : '';
+    var ph = el.getAttribute && el.getAttribute('placeholder') ? ('[placeholder="' + String(el.getAttribute('placeholder')).slice(0,80).replace(/"/g,'\\"') + '"]') : '';
+    var cls = '';
+    try {
+      if (el.classList && el.classList.length) cls = '.' + Array.prototype.slice.call(el.classList).slice(0,4).join('.');
+    } catch(e) {}
+    return tag + '|' + id + '|' + name + '|' + ph + '|' + cls;
   }
 
-  function cleanAllianceEditingClass(){
+  function findFieldByKey(key){
+    if (!key) return null;
+    try {
+      var parts = key.split('|');
+      var tag = parts[0] || '';
+      var idPart = parts[1] || '';
+      if (idPart && idPart.charAt(0) === '#') {
+        var byId = document.getElementById(idPart.slice(1));
+        if (isAllianceEditable(byId)) return byId;
+      }
+      var namePart = parts[2] || '';
+      if (namePart) {
+        var byName = document.querySelector(tag + namePart);
+        if (isAllianceEditable(byName)) return byName;
+      }
+      var phPart = parts[3] || '';
+      if (phPart) {
+        var byPh = document.querySelector(tag + phPart);
+        if (isAllianceEditable(byPh)) return byPh;
+      }
+      var clsPart = parts[4] || '';
+      if (clsPart) {
+        var byCls = document.querySelector(tag + clsPart);
+        if (isAllianceEditable(byCls)) return byCls;
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  function cleanOldEditingClass(){
     try {
       if (document.body && document.body.classList && document.body.classList.contains('stellarion-alliance-editing1567')) {
         document.body.classList.remove('stellarion-alliance-editing1567');
@@ -231,35 +271,121 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     } catch(e) {}
   }
 
+  function setIntent(el, ms){
+    if (!isAllianceEditable(el)) return;
+    userTarget = el;
+    userTargetKey = fieldKey(el);
+    userTargetAt = now();
+    intendedUntil = Math.max(intendedUntil, userTargetAt + (ms || 1200));
+    cleanOldEditingClass();
+  }
+
+  function shouldKeepFocus(el){
+    var t = now();
+    if (!isAllianceEditable(el)) return false;
+    if (t > intendedUntil) return false;
+    if (lastOutsidePointerAt > userTargetAt && t - lastOutsidePointerAt < 900) return false;
+    if (lastOutsidePointerTarget && isClickableNavigation(lastOutsidePointerTarget)) return false;
+    return true;
+  }
+
+  function focusNative(el){
+    if (!isAllianceEditable(el) || !nativeFocus) return false;
+    try {
+      nativeFocus.call(el, { preventScroll: true });
+    } catch(e) {
+      try { nativeFocus.call(el); } catch(_) { return false; }
+    }
+    restoredFocus++;
+    return document.activeElement === el;
+  }
+
+  function restoreIntendedSoon(reason){
+    var stamps = [0, 35, 90, 180];
+    stamps.forEach(function(delay){
+      setTimeout(function(){
+        try {
+          if (!userTargetKey || now() > intendedUntil) return;
+          var el = (userTarget && userTarget.isConnected) ? userTarget : findFieldByKey(userTargetKey);
+          if (!isAllianceEditable(el)) return;
+          if (!shouldKeepFocus(el)) return;
+          if (document.activeElement !== el) focusNative(el);
+        } catch(e) {}
+      }, delay);
+    });
+  }
+
   document.addEventListener('pointerdown', function(e){
-    lastPointerAt = now();
-    lastPointerTarget = e.target;
-    if (isAlliancePage() && isInteractiveNonText(e.target)) cleanAllianceEditingClass();
+    var editable = e.target && e.target.closest && e.target.closest('input,textarea,select,[contenteditable="true"]');
+    if (isAllianceEditable(editable)) {
+      setIntent(editable, 1600);
+      restoreIntendedSoon('pointerdown-field');
+    } else {
+      lastOutsidePointerAt = now();
+      lastOutsidePointerTarget = e.target;
+      if (isAlliancePage()) cleanOldEditingClass();
+    }
   }, true);
 
   document.addEventListener('mousedown', function(e){
-    lastPointerAt = now();
-    lastPointerTarget = e.target;
-    if (isAlliancePage() && isInteractiveNonText(e.target)) cleanAllianceEditingClass();
+    var editable = e.target && e.target.closest && e.target.closest('input,textarea,select,[contenteditable="true"]');
+    if (isAllianceEditable(editable)) setIntent(editable, 1600);
   }, true);
 
-  document.addEventListener('keydown', function(e){
-    lastKeyboardAt = now();
-    if (e.key === 'Escape') cleanAllianceEditingClass();
+  document.addEventListener('focusin', function(e){
+    if (isAllianceEditable(e.target)) setIntent(e.target, 2500);
   }, true);
 
   document.addEventListener('input', function(e){
-    if (isAllianceEditable(e.target)) lastKeyboardAt = now();
+    if (isAllianceEditable(e.target)) setIntent(e.target, 3500);
   }, true);
 
-  document.addEventListener('click', function(e){
-    if (isAlliancePage() && isInteractiveNonText(e.target)) cleanAllianceEditingClass();
+  document.addEventListener('keydown', function(e){
+    if (isAllianceEditable(e.target)) {
+      setIntent(e.target, 3500);
+      if (e.key === 'Escape') {
+        intendedUntil = 0;
+        cleanOldEditingClass();
+      }
+    }
   }, true);
 
-  // Empêche le vieux lock de remettre son état visuel qui perturbait les onglets.
+  document.addEventListener('blur', function(e){
+    if (isAllianceEditable(e.target) && shouldKeepFocus(e.target)) {
+      lostFocusEvents++;
+      restoreIntendedSoon('blur');
+    }
+  }, true);
+
+  document.addEventListener('focusout', function(e){
+    if (isAllianceEditable(e.target) && shouldKeepFocus(e.target)) {
+      lostFocusEvents++;
+      restoreIntendedSoon('focusout');
+    }
+  }, true);
+
+  function wrapBlur(proto, label){
+    try {
+      if (!proto || !proto.blur || proto.__stellarionAllianceNativeBlur1578) return;
+      var nativeBlur = proto.blur;
+      proto.blur = function(){
+        if (isAllianceEditable(this) && shouldKeepFocus(this)) {
+          blockedBlur++;
+          restoreIntendedSoon('blocked-blur-' + label);
+          return;
+        }
+        return nativeBlur.apply(this, arguments);
+      };
+      proto.__stellarionAllianceNativeBlur1578 = true;
+    } catch(e) {}
+  }
+  wrapBlur(window.HTMLInputElement && HTMLInputElement.prototype, 'input');
+  wrapBlur(window.HTMLTextAreaElement && HTMLTextAreaElement.prototype, 'textarea');
+  wrapBlur(window.HTMLSelectElement && HTMLSelectElement.prototype, 'select');
+
+  // Ne laisse plus l'ancien body.stellarion-alliance-editing1567 revenir perturber le focus.
   try {
-    var nativeTokenAdd = DOMTokenList.prototype.add;
-    if (nativeTokenAdd && !DOMTokenList.prototype.__stellarionAllianceClassGuard1577) {
+    if (nativeTokenAdd && !DOMTokenList.prototype.__stellarionAllianceNativeClass1578) {
       DOMTokenList.prototype.add = function(){
         try {
           var args = Array.prototype.slice.call(arguments);
@@ -267,94 +393,57 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
           if (filtered.length !== args.length) cleanedClasses++;
           if (!filtered.length) return;
           return nativeTokenAdd.apply(this, filtered);
-        } catch(e){ return nativeTokenAdd.apply(this, arguments); }
+        } catch(e) { return nativeTokenAdd.apply(this, arguments); }
       };
-      DOMTokenList.prototype.__stellarionAllianceClassGuard1577 = true;
+      if (nativeTokenToggle) {
+        DOMTokenList.prototype.toggle = function(token, force){
+          if (token === 'stellarion-alliance-editing1567') {
+            cleanedClasses++;
+            try { return this.remove(token), false; } catch(e) { return false; }
+          }
+          return nativeTokenToggle.apply(this, arguments);
+        };
+      }
+      DOMTokenList.prototype.__stellarionAllianceNativeClass1578 = true;
     }
   } catch(e) {}
 
-  // Ne bloque pas les boutons/onglets. Ne bloque que les focus programmatiques vers un champ Alliance
-  // alors que l'utilisateur vient de cliquer ailleurs dans Alliance.
   try {
-    var nativeFocus = HTMLElement.prototype.focus;
-    if (nativeFocus && !HTMLElement.prototype.__stellarionAllianceFocusRootClean1577) {
-      HTMLElement.prototype.focus = function(){
-        if (isAllianceEditable(this)) {
-          var t = now();
-          var userClickedElsewhere = lastPointerTarget && !this.contains(lastPointerTarget) && t - lastPointerAt < 1800;
-          var activeIsOther = document.activeElement && document.activeElement !== this && isEditable(document.activeElement);
-          var legitimate = directUserFocusFor(this);
-          if ((userClickedElsewhere || activeIsOther) && !legitimate) {
-            blockedFocus++;
-            return;
-          }
-        }
-        return nativeFocus.apply(this, arguments);
-      };
-      HTMLElement.prototype.__stellarionAllianceFocusRootClean1577 = true;
-    }
+    var mo = new MutationObserver(function(muts){
+      cleanOldEditingClass();
+      if (userTargetKey && now() < intendedUntil) restoreIntendedSoon('mutation');
+    });
+    if (document.body) mo.observe(document.body, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] });
   } catch(e) {}
 
-  function guardSetSelectionRange(proto){
-    try {
-      if (!proto || !proto.setSelectionRange || proto.__stellarionAllianceSelectionRootClean1577) return;
-      var nativeSet = proto.setSelectionRange;
-      proto.setSelectionRange = function(){
-        if (isAllianceEditable(this)) {
-          var t = now();
-          var userClickedElsewhere = lastPointerTarget && !this.contains(lastPointerTarget) && t - lastPointerAt < 1800;
-          if (userClickedElsewhere && !directUserFocusFor(this)) {
-            blockedSelection++;
-            return;
-          }
-        }
-        return nativeSet.apply(this, arguments);
-      };
-      proto.__stellarionAllianceSelectionRootClean1577 = true;
-    } catch(e) {}
-  }
-  guardSetSelectionRange(window.HTMLInputElement && HTMLInputElement.prototype);
-  guardSetSelectionRange(window.HTMLTextAreaElement && HTMLTextAreaElement.prototype);
+  setInterval(function(){ cleanOldEditingClass(); }, 800);
 
-  // Nettoyage régulier léger, sans toucher à render/innerHTML.
-  setInterval(cleanAllianceEditingClass, 500);
-  try {
-    var mo = new MutationObserver(cleanAllianceEditingClass);
-    if (document.body) mo.observe(document.body, { attributes:true, attributeFilter:['class'] });
-  } catch(e) {}
-
-  window.stellarionAllianceFocusAudit1577 = function(){
+  window.stellarionAllianceNativeFocusAudit1578 = function(){
     var ae = document.activeElement;
     return {
-      patch: 'alliance-focus-root-clean-' + VERSION,
-      pre: window.stellarionAllianceRootCleanPreAudit1577 ? window.stellarionAllianceRootCleanPreAudit1577() : null,
-      activeElement: ae ? { tag: ae.tagName, id: ae.id || '', className: String(ae.className || '').slice(0,160), allianceEditable: isAllianceEditable(ae) } : null,
-      lastPointerTarget: lastPointerTarget ? { tag: lastPointerTarget.tagName, id: lastPointerTarget.id || '', className: String(lastPointerTarget.className || '').slice(0,160) } : null,
+      patch: 'alliance-native-field-' + VERSION,
+      pre: window.stellarionAllianceNativePreAudit1578 ? window.stellarionAllianceNativePreAudit1578() : null,
       alliancePage: isAlliancePage(),
-      blockedFocus: blockedFocus,
-      blockedSelection: blockedSelection,
+      activeElement: ae ? { tag: ae.tagName, id: ae.id || '', className: String(ae.className || '').slice(0,160), allianceEditable: isAllianceEditable(ae) } : null,
+      userTarget: userTarget ? { connected: !!userTarget.isConnected, tag: userTarget.tagName, id: userTarget.id || '', className: String(userTarget.className || '').slice(0,160) } : null,
+      userTargetKey: userTargetKey,
+      intendedRemainingMs: Math.max(0, intendedUntil - now()),
+      blockedBlur: blockedBlur,
+      restoredFocus: restoredFocus,
+      lostFocusEvents: lostFocusEvents,
       cleanedClasses: cleanedClasses,
-      bodyHasOldEditingClass: !!(document.body && document.body.classList && document.body.classList.contains('stellarion-alliance-editing1567')),
       oldFlags: {
         qg1566: !!window.__stellarionAllianceQGFocusGuard1566,
         editor1567: !!window.__stellarionAllianceEditorFocusLock1567,
+        legacy1548: !!window.__stellarionAllianceControls1548,
+        legacy1549: !!window.__stellarionAllianceInputRescue1549,
         messageFocusPatch: !!window.__stellarionFocusRenderFixV1
       }
     };
   };
 
-  window.stellarionReleaseAllianceFocus1577 = function(){
-    cleanAllianceEditingClass();
-    try {
-      if (document.activeElement && isAllianceEditable(document.activeElement)) document.activeElement.blur();
-    } catch(e) {}
-    lastPointerTarget = document.body;
-    lastPointerAt = now();
-    return window.stellarionAllianceFocusAudit1577();
-  };
-
-  cleanAllianceEditingClass();
-  console.log('✅ STELLARION Alliance focus root clean 1.5.77 actif — audit: stellarionAllianceFocusAudit1577()');
+  cleanOldEditingClass();
+  console.log('✅ STELLARION Alliance native field fix 1.5.78 actif — audit: stellarionAllianceNativeFocusAudit1578()');
 })();
 </script>
 
