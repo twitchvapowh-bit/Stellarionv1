@@ -59,67 +59,109 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
 <script src="js/main.js"></script>
 <script src="js/fragment-shop-stripe-patch.js"></script>
-<script id="stellarion-focus-flicker-fix-1572">
+<script id="stellarion-focus-alliance-notifications-fix-1573">
 /* =========================================================
-   STELLARION — FIX FOCUS + ANTI-SCINTILLEMENT 1.5.72
-   À charger APRÈS js/main.js.
-   Corrige : perte de focus lors de la saisie message + render trop fréquent.
+   STELLARION — FIX FOCUS GLOBAL + ALLIANCE + NOTIFS 1.5.73
+   À charger APRÈS js/main.js et les patchs client.
+
+   Corrige :
+   - perte de focus dans les messages ET dans les annonces alliance ;
+   - scintillement causé par les render()/innerHTML pendant la saisie ;
+   - notifications de message déjà affichées qui reviennent en boucle.
    ========================================================= */
 (function(){
   'use strict';
-  if (window.__stellarionFocusFlickerFix1572) return;
-  window.__stellarionFocusFlickerFix1572 = true;
+  if (window.__stellarionFocusAllianceNotifFix1573) return;
+  window.__stellarionFocusAllianceNotifFix1573 = true;
 
-  var EDITABLE_SELECTOR = 'input, textarea, select, [contenteditable="true"]';
-  var MESSAGE_HINT_SELECTOR = [
-    '#app', '#messages', '#message', '#chat', '#mailbox',
-    '[data-view="messages"]', '[data-page="messages"]', '[data-panel="messages"]',
-    '[id*="message" i]', '[class*="message" i]', '[id*="chat" i]', '[class*="chat" i]',
-    '[id*="mail" i]', '[class*="mail" i]', '[id*="compose" i]', '[class*="compose" i]'
+  var VERSION = '1.5.73';
+  var EDITABLE_SELECTOR = [
+    'textarea',
+    'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])',
+    'select',
+    '[contenteditable="true"]'
   ].join(',');
+  var DYNAMIC_ROOT_SELECTOR = '#app, main, [data-view], [data-page], .app, .screen, .page, .panel, .card, .modal, .overlay';
+  var RENDER_NAMES = [
+    'render','renderApp','renderUI','renderView','renderPage','renderCurrentView','rerender','redraw','draw','drawApp',
+    'updateUI','refreshUI','refreshApp','refreshView','renderMessages','renderNotifications','renderNotifs',
+    'renderAlliance','renderAlliancePage','renderAllianceAnnouncements','renderAllianceView'
+  ];
+  var NOTIFY_NAMES = [
+    'notify','notification','showNotification','pushNotification','addNotification','createNotification',
+    'toast','showToast','pushToast','addToast','createToast','notifyUser','gameNotify','stellarionNotify'
+  ];
+  var NOTIF_STORE_KEY = 'stellarion:notif-dedupe:1573';
+  var NOTIF_TTL = 1000 * 60 * 60 * 24 * 7;
 
   var typingUntil = 0;
   var lastSnap = null;
+  var restoreTimer = 0;
   var restoreRaf = 0;
+  var renderStats = Object.create(null);
   var pendingRender = Object.create(null);
   var lastRenderAt = Object.create(null);
-  var renderStats = Object.create(null);
-  var nativeInnerHTML = null;
-  var pendingHTML = new WeakMap();
-  var pendingHTMLTimer = new WeakMap();
-  var lastAppHTMLSet = 0;
+  var pendingDOMWrite = new WeakMap();
+  var pendingDOMTimer = new WeakMap();
+  var lastDOMWriteAt = new WeakMap();
+  var notifStore = loadNotifStore();
+  var notifStats = { suppressed:0, seen:0, wrapped:[], domRemoved:0 };
 
   function now(){ return (window.performance && performance.now) ? performance.now() : Date.now(); }
+  function wall(){ return Date.now(); }
+  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
-  function isEditable(el){
-    return !!(el && el.nodeType === 1 && el.matches && el.matches(EDITABLE_SELECTOR));
+  function loadNotifStore(){
+    try {
+      var raw = localStorage.getItem(NOTIF_STORE_KEY);
+      var data = raw ? JSON.parse(raw) : {};
+      var t = wall();
+      Object.keys(data).forEach(function(k){ if (!data[k] || t - data[k] > NOTIF_TTL) delete data[k]; });
+      return data || {};
+    } catch(_e){ return {}; }
+  }
+  function saveNotifStore(){ try { localStorage.setItem(NOTIF_STORE_KEY, JSON.stringify(notifStore)); } catch(_e){} }
+
+  function hashText(text){
+    text = String(text || '').replace(/\s+/g,' ').trim().toLowerCase();
+    var h = 2166136261;
+    for (var i=0;i<text.length;i++){
+      h ^= text.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return 'h' + (h >>> 0).toString(36);
   }
 
-  function isInsideMessageArea(el){
-    return !!(el && el.nodeType === 1 && el.closest && el.closest(MESSAGE_HINT_SELECTOR));
+  function normText(text){ return String(text || '').replace(/\s+/g,' ').trim(); }
+  function isEditable(el){ return !!(el && el.nodeType === 1 && el.matches && el.matches(EDITABLE_SELECTOR)); }
+  function isInAuth(el){ return !!(el && el.closest && el.closest('#auth-screen'));
   }
-
-  function activeEditable(){
-    var el = document.activeElement;
-    return isEditable(el) ? el : null;
+  function isInApp(el){ return !!(el && el.closest && el.closest('#app'));
   }
+  function shouldProtectEditable(el){
+    if (!isEditable(el) || isInAuth(el)) return false;
+    // On protège tout champ du jeu : messages, annonces alliance, recherche joueur, coordonnées, etc.
+    return isInApp(el) || !!(el.closest && el.closest(DYNAMIC_ROOT_SELECTOR));
+  }
+  function activeEditable(){ var el = document.activeElement; return shouldProtectEditable(el) ? el : null; }
 
   function cssEscapeLoose(value){
+    value = String(value || '');
     if (!value) return '';
-    if (window.CSS && CSS.escape) return CSS.escape(String(value));
-    return String(value).replace(/([ #;?%&,.+*~':"!^$[\]()=>|/@])/g, '\\$1');
+    if (window.CSS && CSS.escape) return CSS.escape(value);
+    return value.replace(/([ #;?%&,.+*~':"!^$[\]()=>|/@])/g, '\\$1');
   }
 
   function makePath(el){
     var parts = [];
     var node = el;
-    while (node && node.nodeType === 1 && node !== document.body && parts.length < 6){
-      var tag = node.tagName ? node.tagName.toLowerCase() : '';
+    while (node && node.nodeType === 1 && node !== document.body && parts.length < 7){
+      var tag = (node.tagName || '').toLowerCase();
       if (!tag) break;
       var id = node.id ? ('#' + cssEscapeLoose(node.id)) : '';
       var cls = '';
       if (!id && node.classList && node.classList.length){
-        cls = '.' + Array.prototype.slice.call(node.classList).slice(0,2).map(cssEscapeLoose).join('.');
+        cls = '.' + Array.prototype.slice.call(node.classList).slice(0,3).map(cssEscapeLoose).join('.');
       }
       parts.unshift(tag + id + cls);
       node = node.parentElement;
@@ -127,18 +169,27 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     return parts.join(' > ');
   }
 
+  function textAround(el){
+    try {
+      var p = el.closest('.card,.panel,.modal,.overlay,section,article,form,div') || el.parentElement;
+      return normText(p ? p.textContent : '').slice(0, 220);
+    } catch(_e){ return ''; }
+  }
+
   function stableKey(el){
     if (!el) return '';
     if (el.id) return 'id:' + el.id;
     if (el.name) return 'name:' + el.name;
-    var ph = el.getAttribute && (el.getAttribute('placeholder') || el.getAttribute('aria-label') || el.getAttribute('data-testid'));
-    if (ph) return 'hint:' + ph;
-    return 'path:' + makePath(el);
+    var hint = '';
+    if (el.getAttribute) hint = el.getAttribute('placeholder') || el.getAttribute('aria-label') || el.getAttribute('data-testid') || el.getAttribute('data-role') || '';
+    if (hint) return 'hint:' + hint;
+    return 'path:' + makePath(el) + '|ctx:' + hashText(textAround(el));
   }
 
   function snapEditable(el){
-    if (!isEditable(el)) return null;
-    var value = ('value' in el) ? el.value : el.textContent;
+    if (!shouldProtectEditable(el)) return null;
+    var value = '';
+    try { value = ('value' in el) ? el.value : el.textContent; } catch(_e) {}
     var s = 0, e = 0;
     try { s = el.selectionStart || 0; e = el.selectionEnd || s; } catch(_err) {}
     return {
@@ -148,102 +199,96 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
       id: el.id || '',
       name: el.name || '',
       type: el.type || '',
-      className: el.className || '',
+      className: String(el.className || ''),
       placeholder: el.getAttribute ? (el.getAttribute('placeholder') || '') : '',
       aria: el.getAttribute ? (el.getAttribute('aria-label') || '') : '',
       path: makePath(el),
+      contextHash: hashText(textAround(el)),
       value: value == null ? '' : String(value),
-      selectionStart: s,
-      selectionEnd: e,
-      inMessageArea: isInsideMessageArea(el)
+      selectionStart: clamp(s,0,String(value || '').length),
+      selectionEnd: clamp(e,0,String(value || '').length)
     };
   }
 
   function rememberTyping(el, ms){
-    if (!isEditable(el)) return;
+    if (!shouldProtectEditable(el)) return;
     lastSnap = snapEditable(el);
-    typingUntil = Math.max(typingUntil, now() + (ms || 1800));
+    typingUntil = Math.max(typingUntil, now() + (ms || 2600));
   }
 
   function isTypingProtected(){
     if (now() > typingUntil) return false;
     var el = activeEditable();
-    if (el && (isInsideMessageArea(el) || (lastSnap && lastSnap.inMessageArea))) return true;
-    return !!(lastSnap && lastSnap.inMessageArea && now() - lastSnap.time < 2500);
+    if (el) return true;
+    return !!(lastSnap && now() - lastSnap.time < 4200);
   }
+
+  function queryOneSafe(q){ try { return document.querySelector(q); } catch(_e){ return null; } }
 
   function findReplacement(snap){
     if (!snap) return null;
     var q;
-    if (snap.id){
-      q = document.getElementById(snap.id);
-      if (isEditable(q)) return q;
-    }
-    if (snap.name){
-      q = document.querySelector(snap.tag + '[name="' + cssEscapeLoose(snap.name) + '"]');
-      if (isEditable(q)) return q;
-    }
-    if (snap.placeholder){
-      q = document.querySelector(snap.tag + '[placeholder="' + cssEscapeLoose(snap.placeholder) + '"]');
-      if (isEditable(q)) return q;
-    }
-    if (snap.aria){
-      q = document.querySelector(snap.tag + '[aria-label="' + cssEscapeLoose(snap.aria) + '"]');
-      if (isEditable(q)) return q;
-    }
-    var list = Array.prototype.slice.call(document.querySelectorAll(EDITABLE_SELECTOR));
-    var msgList = list.filter(isInsideMessageArea);
-    if (msgList.length) {
-      var sameTag = msgList.filter(function(el){ return (el.tagName || '').toLowerCase() === snap.tag; });
-      if (sameTag.length) return sameTag[sameTag.length - 1];
-      return msgList[msgList.length - 1];
-    }
-    return null;
+    if (snap.id){ q = document.getElementById(snap.id); if (shouldProtectEditable(q)) return q; }
+    if (snap.name){ q = queryOneSafe(snap.tag + '[name="' + cssEscapeLoose(snap.name) + '"]'); if (shouldProtectEditable(q)) return q; }
+    if (snap.placeholder){ q = queryOneSafe(snap.tag + '[placeholder="' + cssEscapeLoose(snap.placeholder) + '"]'); if (shouldProtectEditable(q)) return q; }
+    if (snap.aria){ q = queryOneSafe(snap.tag + '[aria-label="' + cssEscapeLoose(snap.aria) + '"]'); if (shouldProtectEditable(q)) return q; }
+
+    var all = Array.prototype.slice.call(document.querySelectorAll(EDITABLE_SELECTOR)).filter(shouldProtectEditable);
+    if (!all.length) return null;
+
+    var sameTag = all.filter(function(el){ return (el.tagName || '').toLowerCase() === snap.tag; });
+    var candidates = sameTag.length ? sameTag : all;
+    var sameContext = candidates.filter(function(el){ return hashText(textAround(el)) === snap.contextHash; });
+    if (sameContext.length) return sameContext[sameContext.length - 1];
+    return candidates[candidates.length - 1];
   }
 
-  function restoreFocusSoon(){
-    if (restoreRaf) return;
-    restoreRaf = requestAnimationFrame(function(){
-      restoreRaf = 0;
-      if (!lastSnap || now() > typingUntil + 600) return;
-      var current = activeEditable();
-      if (current && document.body.contains(current)) return;
-      var el = findReplacement(lastSnap);
-      if (!el) return;
-      try {
-        if ('value' in el && el.value !== lastSnap.value) el.value = lastSnap.value;
-        else if (!('value' in el) && el.textContent !== lastSnap.value) el.textContent = lastSnap.value;
-      } catch(_err) {}
-      try { el.focus({ preventScroll: true }); } catch(_err2) { try { el.focus(); } catch(_err3) {} }
-      try {
-        if ('setSelectionRange' in el) el.setSelectionRange(lastSnap.selectionStart, lastSnap.selectionEnd);
-      } catch(_err4) {}
-    });
+  function restoreFocusSoon(forceDelay){
+    if (restoreTimer) clearTimeout(restoreTimer);
+    restoreTimer = setTimeout(function(){
+      restoreTimer = 0;
+      if (restoreRaf) cancelAnimationFrame(restoreRaf);
+      restoreRaf = requestAnimationFrame(function(){
+        restoreRaf = 0;
+        if (!lastSnap || now() > typingUntil + 1000) return;
+        var current = activeEditable();
+        if (current && document.body.contains(current)) return;
+        var el = findReplacement(lastSnap);
+        if (!el) return;
+        try {
+          if ('value' in el && el.value !== lastSnap.value) {
+            el.value = lastSnap.value;
+            el.dispatchEvent(new Event('input', { bubbles:true }));
+          } else if (!('value' in el) && el.textContent !== lastSnap.value) {
+            el.textContent = lastSnap.value;
+          }
+        } catch(_err) {}
+        try { el.focus({ preventScroll:true }); } catch(_err2) { try { el.focus(); } catch(_err3){} }
+        try {
+          if ('setSelectionRange' in el) el.setSelectionRange(lastSnap.selectionStart, lastSnap.selectionEnd);
+        } catch(_err4) {}
+      });
+    }, forceDelay || 0);
   }
 
-  ['focusin','beforeinput','input','keydown','keyup','compositionstart','compositionupdate','compositionend','paste'].forEach(function(type){
+  ['focusin','beforeinput','input','keydown','keyup','compositionstart','compositionupdate','compositionend','paste','change'].forEach(function(type){
     document.addEventListener(type, function(ev){
       var el = ev.target;
-      if (!isEditable(el)) return;
-      var ms = (type.indexOf('composition') === 0) ? 3000 : 1800;
-      rememberTyping(el, ms);
+      if (!shouldProtectEditable(el)) return;
+      rememberTyping(el, type.indexOf('composition') === 0 ? 4200 : 2800);
     }, true);
   });
 
   document.addEventListener('blur', function(ev){
-    if (!isEditable(ev.target)) return;
-    if (isTypingProtected()) restoreFocusSoon();
+    if (!shouldProtectEditable(ev.target)) return;
+    if (isTypingProtected()) restoreFocusSoon(0);
   }, true);
-
-  new MutationObserver(function(){
-    if (isTypingProtected()) restoreFocusSoon();
-  }).observe(document.documentElement, { childList:true, subtree:true });
 
   function wrapRender(name){
     var fn = window[name];
-    if (typeof fn !== 'function' || fn.__stellarionFocusFlickerFix1572) return false;
+    if (typeof fn !== 'function' || fn.__stellarionFocusAllianceNotifFix1573) return false;
     lastRenderAt[name] = 0;
-    renderStats[name] = { calls:0, skippedWhileTyping:0, batched:0 };
+    renderStats[name] = renderStats[name] || { calls:0, blockedWhileTyping:0, batched:0 };
     var wrapped = function(){
       var args = arguments;
       var ctx = this;
@@ -251,92 +296,290 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
       renderStats[name].calls++;
 
       if (isTypingProtected()){
-        renderStats[name].skippedWhileTyping++;
+        renderStats[name].blockedWhileTyping++;
         clearTimeout(pendingRender[name]);
         pendingRender[name] = setTimeout(function(){
           if (!isTypingProtected()) {
             try { fn.apply(ctx, args); } catch(e){ console.error(e); }
+          } else {
+            restoreFocusSoon(0);
           }
-        }, 520);
-        restoreFocusSoon();
+        }, 850);
+        restoreFocusSoon(0);
         return;
       }
 
-      // Un render par frame suffit. Ça évite les flashs quand plusieurs systèmes se réveillent en même temps.
-      if (t - lastRenderAt[name] < 90){
+      if (t - lastRenderAt[name] < 120){
         renderStats[name].batched++;
         clearTimeout(pendingRender[name]);
         pendingRender[name] = setTimeout(function(){
           try { wrapped.apply(ctx, args); } catch(e){ console.error(e); }
-        }, 95);
+        }, 135);
         return;
       }
       lastRenderAt[name] = t;
       return fn.apply(ctx, args);
     };
-    wrapped.__stellarionFocusFlickerFix1572 = true;
+    wrapped.__stellarionFocusAllianceNotifFix1573 = true;
     wrapped.__original = fn;
     window[name] = wrapped;
     return true;
   }
 
-  ['render','renderApp','renderUI','renderView','renderMessages','draw','drawApp','updateUI','refreshUI'].forEach(wrapRender);
-
-  // Dernier filet de sécurité : si #app est reconstruit pendant l’écriture d’un message, on diffère la destruction.
-  try {
-    var proto = Element.prototype;
-    nativeInnerHTML = Object.getOwnPropertyDescriptor(proto, 'innerHTML') || Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerHTML');
-    if (nativeInnerHTML && nativeInnerHTML.set && nativeInnerHTML.get && !proto.__stellarionInnerHTMLGuard1572){
-      Object.defineProperty(proto, 'innerHTML', {
-        configurable: true,
-        enumerable: nativeInnerHTML.enumerable,
-        get: function(){ return nativeInnerHTML.get.call(this); },
-        set: function(value){
-          var isApp = this && this.id === 'app';
-          var t = now();
-          if (isApp && isTypingProtected()){
-            pendingHTML.set(this, value);
-            clearTimeout(pendingHTMLTimer.get(this));
-            var target = this;
-            var timer = setTimeout(function(){
-              if (!isTypingProtected() && pendingHTML.has(target)){
-                var v = pendingHTML.get(target);
-                pendingHTML.delete(target);
-                nativeInnerHTML.set.call(target, v);
-              }
-            }, 650);
-            pendingHTMLTimer.set(this, timer);
-            restoreFocusSoon();
-            return;
-          }
-          if (isApp && t - lastAppHTMLSet < 35){
-            // micro-batch anti-flash : ignore les doubles écritures instantanées strictement identiques
-            if (nativeInnerHTML.get.call(this) === value) return;
-          }
-          if (isApp) lastAppHTMLSet = t;
-          return nativeInnerHTML.set.call(this, value);
-        }
-      });
-      proto.__stellarionInnerHTMLGuard1572 = true;
+  function shouldDelayDOMWrite(target){
+    if (!target || target.nodeType !== 1 || !isTypingProtected()) return false;
+    if (target.closest && target.closest('#auth-screen')) return false;
+    var active = document.activeElement;
+    if (active && shouldProtectEditable(active) && target.contains && target.contains(active)) return true;
+    if (target.id === 'app') return true;
+    if (target.closest && target.closest('#app')) {
+      if (lastSnap && now() - lastSnap.time < 4200) return true;
     }
-  } catch(e){
-    console.warn('Stellarion focus/flicker innerHTML guard non installé:', e);
+    return false;
   }
 
-  window.stellarionFocusFlickerAudit1572 = function(){
+  function installDOMGuards(){
+    try {
+      var proto = Element.prototype;
+      var desc = Object.getOwnPropertyDescriptor(proto, 'innerHTML') || Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerHTML');
+      if (desc && desc.set && desc.get && !proto.__stellarionInnerHTMLGuard1573){
+        Object.defineProperty(proto, 'innerHTML', {
+          configurable:true,
+          enumerable:desc.enumerable,
+          get:function(){ return desc.get.call(this); },
+          set:function(value){
+            if (shouldDelayDOMWrite(this)){
+              pendingDOMWrite.set(this, { type:'innerHTML', value:value });
+              clearTimeout(pendingDOMTimer.get(this));
+              var target = this;
+              var timer = setTimeout(function(){
+                if (!isTypingProtected() && pendingDOMWrite.has(target)){
+                  var item = pendingDOMWrite.get(target);
+                  pendingDOMWrite.delete(target);
+                  try { desc.set.call(target, item.value); } catch(e){ console.error(e); }
+                } else {
+                  restoreFocusSoon(0);
+                }
+              }, 900);
+              pendingDOMTimer.set(this, timer);
+              restoreFocusSoon(0);
+              return;
+            }
+            var t = now();
+            var last = lastDOMWriteAt.get(this) || 0;
+            if ((this.id === 'app' || (this.closest && this.closest('#app'))) && t - last < 35){
+              try { if (desc.get.call(this) === value) return; } catch(_e) {}
+            }
+            lastDOMWriteAt.set(this, t);
+            return desc.set.call(this, value);
+          }
+        });
+        proto.__stellarionInnerHTMLGuard1573 = true;
+      }
+    } catch(e){ console.warn('Stellarion 1573 innerHTML guard non installé:', e); }
+
+    try {
+      var nativeReplaceChildren = Element.prototype.replaceChildren;
+      if (nativeReplaceChildren && !Element.prototype.__stellarionReplaceChildrenGuard1573){
+        Element.prototype.replaceChildren = function(){
+          var args = arguments;
+          if (shouldDelayDOMWrite(this)){
+            var target = this;
+            clearTimeout(pendingDOMTimer.get(this));
+            var timer = setTimeout(function(){
+              if (!isTypingProtected()) {
+                try { nativeReplaceChildren.apply(target, args); } catch(e){ console.error(e); }
+              } else {
+                restoreFocusSoon(0);
+              }
+            }, 900);
+            pendingDOMTimer.set(this, timer);
+            restoreFocusSoon(0);
+            return;
+          }
+          return nativeReplaceChildren.apply(this, args);
+        };
+        Element.prototype.__stellarionReplaceChildrenGuard1573 = true;
+      }
+    } catch(e2){ console.warn('Stellarion 1573 replaceChildren guard non installé:', e2); }
+  }
+
+  function canonicalNotifFromArgs(args){
+    var text = '';
+    for (var i=0;i<args.length;i++){
+      var a = args[i];
+      if (a == null) continue;
+      if (typeof a === 'string' || typeof a === 'number') text += ' ' + a;
+      else if (typeof a === 'object') {
+        try { text += ' ' + (a.title || a.subject || a.message || a.body || a.text || a.content || JSON.stringify(a).slice(0,500)); } catch(_e){}
+      }
+    }
+    return canonicalNotifText(text);
+  }
+
+  function canonicalNotifText(text){
+    text = normText(text);
+    if (!text) return '';
+    // On garde les infos qui définissent un message : sujet + expéditeur + extrait, pas les compteurs dynamiques.
+    return text
+      .replace(/\b(il y a|depuis)\s+\d+\s*(s|sec|secondes|min|minutes|h|heures)\b/ig, '')
+      .replace(/\b\d{1,2}:\d{2}(:\d{2})?\b/g, '')
+      .replace(/\s+/g,' ')
+      .trim()
+      .slice(0, 650);
+  }
+
+  function isMessageNotificationText(text){
+    var t = String(text || '').toLowerCase();
+    if (!t || t.length < 8) return false;
+    return (
+      (t.indexOf('message') !== -1 && (t.indexOf('de :') !== -1 || t.indexOf('de:') !== -1 || t.indexOf('ouvrir') !== -1)) ||
+      t.indexOf('message joueur') !== -1 ||
+      t.indexOf('nouveau message') !== -1 ||
+      t.indexOf('ré:') !== -1 ||
+      t.indexOf('re:') !== -1
+    );
+  }
+
+  function shouldSuppressNotifText(text){
+    var canon = canonicalNotifText(text);
+    if (!canon || !isMessageNotificationText(canon)) return false;
+    var key = hashText(canon);
+    var t = wall();
+    if (notifStore[key] && t - notifStore[key] < NOTIF_TTL){
+      notifStats.suppressed++;
+      return true;
+    }
+    notifStore[key] = t;
+    notifStats.seen++;
+    saveNotifStore();
+    return false;
+  }
+
+  function wrapNotify(name){
+    var fn = window[name];
+    if (typeof fn !== 'function' || fn.__stellarionNotifDedupe1573) return false;
+    var wrapped = function(){
+      try {
+        var canon = canonicalNotifFromArgs(arguments);
+        if (shouldSuppressNotifText(canon)) return null;
+      } catch(_e) {}
+      return fn.apply(this, arguments);
+    };
+    wrapped.__stellarionNotifDedupe1573 = true;
+    wrapped.__original = fn;
+    window[name] = wrapped;
+    notifStats.wrapped.push(name);
+    return true;
+  }
+
+  function isPossibleNotifNode(node){
+    if (!node || node.nodeType !== 1) return false;
+    var el = node;
+    var cls = String(el.className || '').toLowerCase();
+    var id = String(el.id || '').toLowerCase();
+    var txt = normText(el.textContent || '');
+    if (!txt) return false;
+    return isMessageNotificationText(txt) || cls.indexOf('notif') !== -1 || cls.indexOf('toast') !== -1 || id.indexOf('notif') !== -1 || id.indexOf('toast') !== -1;
+  }
+
+  function cleanNotifNode(node){
+    if (!isPossibleNotifNode(node)) return;
+    var txt = canonicalNotifText(node.textContent || '');
+    if (!isMessageNotificationText(txt)) return;
+    if (shouldSuppressNotifText(txt)){
+      try {
+        node.style.transition = 'opacity .12s ease';
+        node.style.opacity = '0';
+        setTimeout(function(){ try { if (node.parentNode) node.parentNode.removeChild(node); } catch(_e){} }, 140);
+        notifStats.domRemoved++;
+      } catch(_err){ try { if (node.parentNode) node.parentNode.removeChild(node); } catch(_e2){} }
+    }
+  }
+
+  function scanExistingNotifs(){
+    var nodes = Array.prototype.slice.call(document.querySelectorAll('[class*="notif" i], [id*="notif" i], [class*="toast" i], [id*="toast" i], .notification, .toast'));
+    nodes.forEach(cleanNotifNode);
+  }
+
+  function installNotificationGuards(){
+    NOTIFY_NAMES.forEach(wrapNotify);
+    try {
+      if (window.Notification && !window.Notification.__stellarionNotifDedupe1573){
+        var NativeNotification = window.Notification;
+        var WrappedNotification = function(title, options){
+          var body = options && options.body ? options.body : '';
+          if (shouldSuppressNotifText(String(title || '') + ' ' + String(body || ''))) return { close:function(){} };
+          return new NativeNotification(title, options);
+        };
+        Object.keys(NativeNotification).forEach(function(k){ try { WrappedNotification[k] = NativeNotification[k]; } catch(_e){} });
+        WrappedNotification.prototype = NativeNotification.prototype;
+        WrappedNotification.__stellarionNotifDedupe1573 = true;
+        window.Notification = WrappedNotification;
+      }
+    } catch(_e) {}
+  }
+
+  function installObservers(){
+    new MutationObserver(function(muts){
+      if (isTypingProtected()) restoreFocusSoon(0);
+      muts.forEach(function(m){
+        if (!m.addedNodes) return;
+        Array.prototype.forEach.call(m.addedNodes, function(n){
+          if (n && n.nodeType === 1){
+            cleanNotifNode(n);
+            try {
+              var children = n.querySelectorAll ? n.querySelectorAll('[class*="notif" i], [id*="notif" i], [class*="toast" i], [id*="toast" i], .notification, .toast') : [];
+              Array.prototype.forEach.call(children, cleanNotifNode);
+            } catch(_e) {}
+          }
+        });
+      });
+    }).observe(document.documentElement, { childList:true, subtree:true });
+  }
+
+  function installAll(){
+    RENDER_NAMES.forEach(wrapRender);
+    NOTIFY_NAMES.forEach(wrapNotify);
+  }
+
+  installDOMGuards();
+  installNotificationGuards();
+  installObservers();
+  installAll();
+  setTimeout(scanExistingNotifs, 500);
+
+  // Plusieurs patchs du jeu attachent leurs fonctions avec retard : on réessaie quelques secondes.
+  var retryCount = 0;
+  var retry = setInterval(function(){
+    retryCount++;
+    installAll();
+    if (retryCount > 20) clearInterval(retry);
+  }, 500);
+
+  window.stellarionFocusAllianceNotifAudit1573 = function(){
     var a = document.activeElement;
     return {
-      patch: 'focus-flicker-1572',
-      active: a ? { tag:a.tagName, id:a.id || '', name:a.name || '', className:a.className || '', value:('value' in a ? a.value : undefined) } : null,
+      patch: 'focus-alliance-notifs-' + VERSION,
+      active: a ? { tag:a.tagName, id:a.id || '', name:a.name || '', className:String(a.className || ''), value:('value' in a ? a.value : undefined) } : null,
       typingProtected: isTypingProtected(),
       typingRemainingMs: Math.max(0, Math.round(typingUntil - now())),
-      lastSnap: lastSnap,
-      renderStats: renderStats,
-      wrapped: ['render','renderApp','renderUI','renderView','renderMessages','draw','drawApp','updateUI','refreshUI'].filter(function(n){ return window[n] && window[n].__stellarionFocusFlickerFix1572; })
+      lastSnap:lastSnap,
+      renderStats:renderStats,
+      notifStats:notifStats,
+      notifStoreSize:Object.keys(notifStore).length,
+      wrappedRender: RENDER_NAMES.filter(function(n){ return window[n] && window[n].__stellarionFocusAllianceNotifFix1573; }),
+      wrappedNotify: NOTIFY_NAMES.filter(function(n){ return window[n] && window[n].__stellarionNotifDedupe1573; })
     };
   };
 
-  console.log('✅ STELLARION focus + anti-scintillement 1.5.72 actif — audit: stellarionFocusFlickerAudit1572()');
+  window.stellarionClearNotifDedupe1573 = function(){
+    notifStore = {};
+    try { localStorage.removeItem(NOTIF_STORE_KEY); } catch(_e){}
+    return 'Notifications dedupe 1573 vidé';
+  };
+
+  console.log('✅ STELLARION focus global + alliance + notifications 1.5.73 actif — audit: stellarionFocusAllianceNotifAudit1573()');
 })();
 </script>
 
