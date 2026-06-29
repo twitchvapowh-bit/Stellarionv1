@@ -59,71 +59,78 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
 <script src="js/main.js"></script>
 <script src="js/fragment-shop-stripe-patch.js"></script>
-<script id="stellarion-focus-alliance-notifications-fix-1573">
+<script id="stellarion-focus-selection-notifications-fix-1574">
 /* =========================================================
-   STELLARION — FIX FOCUS GLOBAL + ALLIANCE + NOTIFS 1.5.73
-   À charger APRÈS js/main.js et les patchs client.
+   STELLARION — FIX FOCUS SANS AUTO-FOCUS + SELECTION TEXTE 1.5.74
+   À charger APRÈS js/main.js.
 
-   Corrige :
-   - perte de focus dans les messages ET dans les annonces alliance ;
-   - scintillement causé par les render()/innerHTML pendant la saisie ;
-   - notifications de message déjà affichées qui reviennent en boucle.
+   But :
+   - arrêter l'ancien comportement insupportable qui remet le focus de force ;
+   - permettre de sélectionner du texte dans Alliance / Annonces ;
+   - éviter que les rendus reconstruisent #app pendant l'écriture ;
+   - dédoublonner les notifications de messages déjà vues.
+
+   Règle importante : ce patch ne fait JAMAIS .focus() et ne modifie JAMAIS
+   setSelectionRange(). Il préfère retarder les render() plutôt que voler le curseur.
    ========================================================= */
 (function(){
   'use strict';
-  if (window.__stellarionFocusAllianceNotifFix1573) return;
-  window.__stellarionFocusAllianceNotifFix1573 = true;
+  if (window.__stellarionFocusSelectionNotifFix1574) return;
+  window.__stellarionFocusSelectionNotifFix1574 = true;
 
-  var VERSION = '1.5.73';
+  var VERSION = '1.5.74';
   var EDITABLE_SELECTOR = [
     'textarea',
     'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])',
     'select',
     '[contenteditable="true"]'
   ].join(',');
-  var DYNAMIC_ROOT_SELECTOR = '#app, main, [data-view], [data-page], .app, .screen, .page, .panel, .card, .modal, .overlay';
+
   var RENDER_NAMES = [
     'render','renderApp','renderUI','renderView','renderPage','renderCurrentView','rerender','redraw','draw','drawApp',
-    'updateUI','refreshUI','refreshApp','refreshView','renderMessages','renderNotifications','renderNotifs',
+    'updateUI','refreshUI','refreshApp','refreshView',
+    'renderMessages','renderNotifications','renderNotifs',
     'renderAlliance','renderAlliancePage','renderAllianceAnnouncements','renderAllianceView'
   ];
+
   var NOTIFY_NAMES = [
     'notify','notification','showNotification','pushNotification','addNotification','createNotification',
     'toast','showToast','pushToast','addToast','createToast','notifyUser','gameNotify','stellarionNotify'
   ];
-  var NOTIF_STORE_KEY = 'stellarion:notif-dedupe:1573';
+
+  var NOTIF_KEY = 'stellarion:notif-dedupe:1574';
   var NOTIF_TTL = 1000 * 60 * 60 * 24 * 7;
 
-  var typingUntil = 0;
-  var lastSnap = null;
-  var restoreTimer = 0;
-  var restoreRaf = 0;
+  var editingUntil = 0;
+  var selectingUntil = 0;
+  var isMouseDown = false;
+  var isComposing = false;
+  var lastActiveEditableKey = '';
   var renderStats = Object.create(null);
   var pendingRender = Object.create(null);
   var lastRenderAt = Object.create(null);
   var pendingDOMWrite = new WeakMap();
   var pendingDOMTimer = new WeakMap();
-  var lastDOMWriteAt = new WeakMap();
+  var notifStats = { seen:0, suppressed:0, domRemoved:0, wrapped:[] };
   var notifStore = loadNotifStore();
-  var notifStats = { suppressed:0, seen:0, wrapped:[], domRemoved:0 };
 
   function now(){ return (window.performance && performance.now) ? performance.now() : Date.now(); }
   function wall(){ return Date.now(); }
-  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+  function norm(text){ return String(text || '').replace(/\s+/g,' ').trim(); }
 
   function loadNotifStore(){
     try {
-      var raw = localStorage.getItem(NOTIF_STORE_KEY);
+      var raw = localStorage.getItem(NOTIF_KEY);
       var data = raw ? JSON.parse(raw) : {};
       var t = wall();
       Object.keys(data).forEach(function(k){ if (!data[k] || t - data[k] > NOTIF_TTL) delete data[k]; });
       return data || {};
     } catch(_e){ return {}; }
   }
-  function saveNotifStore(){ try { localStorage.setItem(NOTIF_STORE_KEY, JSON.stringify(notifStore)); } catch(_e){} }
+  function saveNotifStore(){ try { localStorage.setItem(NOTIF_KEY, JSON.stringify(notifStore)); } catch(_e){} }
 
   function hashText(text){
-    text = String(text || '').replace(/\s+/g,' ').trim().toLowerCase();
+    text = norm(text).toLowerCase();
     var h = 2166136261;
     for (var i=0;i<text.length;i++){
       h ^= text.charCodeAt(i);
@@ -132,18 +139,18 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     return 'h' + (h >>> 0).toString(36);
   }
 
-  function normText(text){ return String(text || '').replace(/\s+/g,' ').trim(); }
-  function isEditable(el){ return !!(el && el.nodeType === 1 && el.matches && el.matches(EDITABLE_SELECTOR)); }
-  function isInAuth(el){ return !!(el && el.closest && el.closest('#auth-screen'));
+  function isEditable(el){
+    return !!(el && el.nodeType === 1 && el.matches && el.matches(EDITABLE_SELECTOR));
   }
-  function isInApp(el){ return !!(el && el.closest && el.closest('#app'));
+
+  function isGameEditable(el){
+    return !!(isEditable(el) && el.closest && el.closest('#app') && !el.closest('#auth-screen'));
   }
-  function shouldProtectEditable(el){
-    if (!isEditable(el) || isInAuth(el)) return false;
-    // On protège tout champ du jeu : messages, annonces alliance, recherche joueur, coordonnées, etc.
-    return isInApp(el) || !!(el.closest && el.closest(DYNAMIC_ROOT_SELECTOR));
+
+  function activeEditable(){
+    var el = document.activeElement;
+    return isGameEditable(el) ? el : null;
   }
-  function activeEditable(){ var el = document.activeElement; return shouldProtectEditable(el) ? el : null; }
 
   function cssEscapeLoose(value){
     value = String(value || '');
@@ -152,301 +159,235 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     return value.replace(/([ #;?%&,.+*~':"!^$[\]()=>|/@])/g, '\\$1');
   }
 
-  function makePath(el){
-    var parts = [];
-    var node = el;
-    while (node && node.nodeType === 1 && node !== document.body && parts.length < 7){
-      var tag = (node.tagName || '').toLowerCase();
-      if (!tag) break;
-      var id = node.id ? ('#' + cssEscapeLoose(node.id)) : '';
-      var cls = '';
-      if (!id && node.classList && node.classList.length){
-        cls = '.' + Array.prototype.slice.call(node.classList).slice(0,3).map(cssEscapeLoose).join('.');
-      }
-      parts.unshift(tag + id + cls);
-      node = node.parentElement;
-    }
-    return parts.join(' > ');
-  }
-
-  function textAround(el){
-    try {
-      var p = el.closest('.card,.panel,.modal,.overlay,section,article,form,div') || el.parentElement;
-      return normText(p ? p.textContent : '').slice(0, 220);
-    } catch(_e){ return ''; }
-  }
-
-  function stableKey(el){
+  function editableKey(el){
     if (!el) return '';
     if (el.id) return 'id:' + el.id;
     if (el.name) return 'name:' + el.name;
-    var hint = '';
-    if (el.getAttribute) hint = el.getAttribute('placeholder') || el.getAttribute('aria-label') || el.getAttribute('data-testid') || el.getAttribute('data-role') || '';
-    if (hint) return 'hint:' + hint;
-    return 'path:' + makePath(el) + '|ctx:' + hashText(textAround(el));
+    var ph = el.getAttribute ? (el.getAttribute('placeholder') || el.getAttribute('aria-label') || '') : '';
+    if (ph) return 'ph:' + ph;
+    var tag = (el.tagName || '').toLowerCase();
+    var cls = el.classList && el.classList.length ? Array.prototype.slice.call(el.classList).slice(0,3).map(cssEscapeLoose).join('.') : '';
+    return tag + ':' + cls;
   }
 
-  function snapEditable(el){
-    if (!shouldProtectEditable(el)) return null;
-    var value = '';
-    try { value = ('value' in el) ? el.value : el.textContent; } catch(_e) {}
-    var s = 0, e = 0;
-    try { s = el.selectionStart || 0; e = el.selectionEnd || s; } catch(_err) {}
-    return {
-      time: now(),
-      key: stableKey(el),
-      tag: (el.tagName || '').toLowerCase(),
-      id: el.id || '',
-      name: el.name || '',
-      type: el.type || '',
-      className: String(el.className || ''),
-      placeholder: el.getAttribute ? (el.getAttribute('placeholder') || '') : '',
-      aria: el.getAttribute ? (el.getAttribute('aria-label') || '') : '',
-      path: makePath(el),
-      contextHash: hashText(textAround(el)),
-      value: value == null ? '' : String(value),
-      selectionStart: clamp(s,0,String(value || '').length),
-      selectionEnd: clamp(e,0,String(value || '').length)
-    };
-  }
-
-  function rememberTyping(el, ms){
-    if (!shouldProtectEditable(el)) return;
-    lastSnap = snapEditable(el);
-    typingUntil = Math.max(typingUntil, now() + (ms || 2600));
-  }
-
-  function isTypingProtected(){
-    if (now() > typingUntil) return false;
+  function markEditing(ms){
+    editingUntil = Math.max(editingUntil, now() + (ms || 1200));
     var el = activeEditable();
-    if (el) return true;
-    return !!(lastSnap && now() - lastSnap.time < 4200);
+    if (el) lastActiveEditableKey = editableKey(el);
   }
 
-  function queryOneSafe(q){ try { return document.querySelector(q); } catch(_e){ return null; } }
-
-  function findReplacement(snap){
-    if (!snap) return null;
-    var q;
-    if (snap.id){ q = document.getElementById(snap.id); if (shouldProtectEditable(q)) return q; }
-    if (snap.name){ q = queryOneSafe(snap.tag + '[name="' + cssEscapeLoose(snap.name) + '"]'); if (shouldProtectEditable(q)) return q; }
-    if (snap.placeholder){ q = queryOneSafe(snap.tag + '[placeholder="' + cssEscapeLoose(snap.placeholder) + '"]'); if (shouldProtectEditable(q)) return q; }
-    if (snap.aria){ q = queryOneSafe(snap.tag + '[aria-label="' + cssEscapeLoose(snap.aria) + '"]'); if (shouldProtectEditable(q)) return q; }
-
-    var all = Array.prototype.slice.call(document.querySelectorAll(EDITABLE_SELECTOR)).filter(shouldProtectEditable);
-    if (!all.length) return null;
-
-    var sameTag = all.filter(function(el){ return (el.tagName || '').toLowerCase() === snap.tag; });
-    var candidates = sameTag.length ? sameTag : all;
-    var sameContext = candidates.filter(function(el){ return hashText(textAround(el)) === snap.contextHash; });
-    if (sameContext.length) return sameContext[sameContext.length - 1];
-    return candidates[candidates.length - 1];
+  function hasInputSelection(el){
+    if (!isGameEditable(el)) return false;
+    try {
+      if (typeof el.selectionStart === 'number' && typeof el.selectionEnd === 'number') {
+        return el.selectionStart !== el.selectionEnd;
+      }
+    } catch(_e) {}
+    return false;
   }
 
-  function restoreFocusSoon(forceDelay){
-    if (restoreTimer) clearTimeout(restoreTimer);
-    restoreTimer = setTimeout(function(){
-      restoreTimer = 0;
-      if (restoreRaf) cancelAnimationFrame(restoreRaf);
-      restoreRaf = requestAnimationFrame(function(){
-        restoreRaf = 0;
-        if (!lastSnap || now() > typingUntil + 1000) return;
-        var current = activeEditable();
-        if (current && document.body.contains(current)) return;
-        var el = findReplacement(lastSnap);
-        if (!el) return;
-        try {
-          if ('value' in el && el.value !== lastSnap.value) {
-            el.value = lastSnap.value;
-            el.dispatchEvent(new Event('input', { bubbles:true }));
-          } else if (!('value' in el) && el.textContent !== lastSnap.value) {
-            el.textContent = lastSnap.value;
-          }
-        } catch(_err) {}
-        try { el.focus({ preventScroll:true }); } catch(_err2) { try { el.focus(); } catch(_err3){} }
-        try {
-          if ('setSelectionRange' in el) el.setSelectionRange(lastSnap.selectionStart, lastSnap.selectionEnd);
-        } catch(_err4) {}
-      });
-    }, forceDelay || 0);
+  function hasPageSelectionInsideApp(){
+    try {
+      var sel = window.getSelection && window.getSelection();
+      if (!sel || sel.isCollapsed || sel.rangeCount < 1) return false;
+      var node = sel.anchorNode;
+      if (node && node.nodeType === 3) node = node.parentElement;
+      return !!(node && node.closest && node.closest('#app'));
+    } catch(_e){ return false; }
   }
 
-  ['focusin','beforeinput','input','keydown','keyup','compositionstart','compositionupdate','compositionend','paste','change'].forEach(function(type){
+  function userIsSelecting(){
+    var el = activeEditable();
+    if (el && hasInputSelection(el)) return true;
+    if (hasPageSelectionInsideApp()) return true;
+    return isMouseDown || now() < selectingUntil;
+  }
+
+  function shouldProtectDOM(){
+    var el = activeEditable();
+    if (isComposing) return true;
+    if (el && (now() < editingUntil || userIsSelecting())) return true;
+    if (userIsSelecting() && hasPageSelectionInsideApp()) return true;
+    return false;
+  }
+
+  document.addEventListener('pointerdown', function(ev){
+    if (ev.target && ev.target.closest && ev.target.closest('#app')) {
+      isMouseDown = true;
+      selectingUntil = Math.max(selectingUntil, now() + 1200);
+    }
+  }, true);
+
+  document.addEventListener('pointerup', function(){
+    setTimeout(function(){ isMouseDown = false; }, 120);
+    selectingUntil = Math.max(selectingUntil, now() + 600);
+  }, true);
+
+  document.addEventListener('mousedown', function(ev){
+    if (ev.target && ev.target.closest && ev.target.closest('#app')) {
+      isMouseDown = true;
+      selectingUntil = Math.max(selectingUntil, now() + 1200);
+    }
+  }, true);
+
+  document.addEventListener('mouseup', function(){
+    setTimeout(function(){ isMouseDown = false; }, 120);
+    selectingUntil = Math.max(selectingUntil, now() + 600);
+  }, true);
+
+  document.addEventListener('selectionchange', function(){
+    if (hasPageSelectionInsideApp() || hasInputSelection(activeEditable())) {
+      selectingUntil = Math.max(selectingUntil, now() + 1200);
+    }
+  }, true);
+
+  ['focusin','beforeinput','input','keydown','keyup','paste','change'].forEach(function(type){
     document.addEventListener(type, function(ev){
-      var el = ev.target;
-      if (!shouldProtectEditable(el)) return;
-      rememberTyping(el, type.indexOf('composition') === 0 ? 4200 : 2800);
+      if (!isGameEditable(ev.target)) return;
+      markEditing(type === 'input' || type === 'beforeinput' || type === 'keydown' ? 1500 : 900);
     }, true);
   });
 
-  document.addEventListener('blur', function(ev){
-    if (!shouldProtectEditable(ev.target)) return;
-    if (isTypingProtected()) restoreFocusSoon(0);
-  }, true);
+  document.addEventListener('compositionstart', function(ev){ if (isGameEditable(ev.target)) { isComposing = true; markEditing(3500); } }, true);
+  document.addEventListener('compositionupdate', function(ev){ if (isGameEditable(ev.target)) { isComposing = true; markEditing(3500); } }, true);
+  document.addEventListener('compositionend', function(ev){ if (isGameEditable(ev.target)) { isComposing = false; markEditing(900); } }, true);
+
+  function scheduleWhenIdle(fn, key, delay){
+    clearTimeout(pendingRender[key]);
+    pendingRender[key] = setTimeout(function retry(){
+      if (shouldProtectDOM()) {
+        pendingRender[key] = setTimeout(retry, 350);
+        return;
+      }
+      try { fn(); } catch(e){ console.error(e); }
+    }, delay || 500);
+  }
 
   function wrapRender(name){
     var fn = window[name];
-    if (typeof fn !== 'function' || fn.__stellarionFocusAllianceNotifFix1573) return false;
+    if (typeof fn !== 'function' || fn.__stellarionFocusSelectionFix1574) return false;
+    renderStats[name] = renderStats[name] || { calls:0, delayed:0, batched:0 };
     lastRenderAt[name] = 0;
-    renderStats[name] = renderStats[name] || { calls:0, blockedWhileTyping:0, batched:0 };
     var wrapped = function(){
       var args = arguments;
       var ctx = this;
       var t = now();
       renderStats[name].calls++;
 
-      if (isTypingProtected()){
-        renderStats[name].blockedWhileTyping++;
-        clearTimeout(pendingRender[name]);
-        pendingRender[name] = setTimeout(function(){
-          if (!isTypingProtected()) {
-            try { fn.apply(ctx, args); } catch(e){ console.error(e); }
-          } else {
-            restoreFocusSoon(0);
-          }
-        }, 850);
-        restoreFocusSoon(0);
+      if (shouldProtectDOM()) {
+        renderStats[name].delayed++;
+        scheduleWhenIdle(function(){ fn.apply(ctx, args); }, 'render:' + name, 500);
         return;
       }
 
-      if (t - lastRenderAt[name] < 120){
+      if (t - lastRenderAt[name] < 100) {
         renderStats[name].batched++;
-        clearTimeout(pendingRender[name]);
-        pendingRender[name] = setTimeout(function(){
-          try { wrapped.apply(ctx, args); } catch(e){ console.error(e); }
-        }, 135);
+        scheduleWhenIdle(function(){ fn.apply(ctx, args); }, 'batch:' + name, 120);
         return;
       }
+
       lastRenderAt[name] = t;
       return fn.apply(ctx, args);
     };
-    wrapped.__stellarionFocusAllianceNotifFix1573 = true;
+    wrapped.__stellarionFocusSelectionFix1574 = true;
     wrapped.__original = fn;
     window[name] = wrapped;
     return true;
   }
 
-  function shouldDelayDOMWrite(target){
-    if (!target || target.nodeType !== 1 || !isTypingProtected()) return false;
-    if (target.closest && target.closest('#auth-screen')) return false;
-    var active = document.activeElement;
-    if (active && shouldProtectEditable(active) && target.contains && target.contains(active)) return true;
-    if (target.id === 'app') return true;
-    if (target.closest && target.closest('#app')) {
-      if (lastSnap && now() - lastSnap.time < 4200) return true;
-    }
-    return false;
+  function targetTouchesActiveEditable(target){
+    var el = activeEditable();
+    return !!(el && target && target.nodeType === 1 && (target === el || target.contains(el) || target.id === 'app' || (target.closest && target.closest('#app'))));
   }
 
   function installDOMGuards(){
     try {
       var proto = Element.prototype;
       var desc = Object.getOwnPropertyDescriptor(proto, 'innerHTML') || Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerHTML');
-      if (desc && desc.set && desc.get && !proto.__stellarionInnerHTMLGuard1573){
+      if (desc && desc.set && desc.get && !proto.__stellarionInnerHTMLGuard1574) {
         Object.defineProperty(proto, 'innerHTML', {
           configurable:true,
           enumerable:desc.enumerable,
           get:function(){ return desc.get.call(this); },
           set:function(value){
-            if (shouldDelayDOMWrite(this)){
-              pendingDOMWrite.set(this, { type:'innerHTML', value:value });
-              clearTimeout(pendingDOMTimer.get(this));
+            if (shouldProtectDOM() && targetTouchesActiveEditable(this)) {
               var target = this;
-              var timer = setTimeout(function(){
-                if (!isTypingProtected() && pendingDOMWrite.has(target)){
-                  var item = pendingDOMWrite.get(target);
-                  pendingDOMWrite.delete(target);
-                  try { desc.set.call(target, item.value); } catch(e){ console.error(e); }
-                } else {
-                  restoreFocusSoon(0);
+              pendingDOMWrite.set(target, { value:value });
+              clearTimeout(pendingDOMTimer.get(target));
+              var timer = setTimeout(function retry(){
+                if (shouldProtectDOM()) {
+                  pendingDOMTimer.set(target, setTimeout(retry, 350));
+                  return;
                 }
-              }, 900);
-              pendingDOMTimer.set(this, timer);
-              restoreFocusSoon(0);
+                var item = pendingDOMWrite.get(target);
+                pendingDOMWrite.delete(target);
+                if (item) {
+                  try { desc.set.call(target, item.value); } catch(e){ console.error(e); }
+                }
+              }, 350);
+              pendingDOMTimer.set(target, timer);
               return;
             }
-            var t = now();
-            var last = lastDOMWriteAt.get(this) || 0;
-            if ((this.id === 'app' || (this.closest && this.closest('#app'))) && t - last < 35){
-              try { if (desc.get.call(this) === value) return; } catch(_e) {}
-            }
-            lastDOMWriteAt.set(this, t);
             return desc.set.call(this, value);
           }
         });
-        proto.__stellarionInnerHTMLGuard1573 = true;
+        proto.__stellarionInnerHTMLGuard1574 = true;
       }
-    } catch(e){ console.warn('Stellarion 1573 innerHTML guard non installé:', e); }
+    } catch(e){ console.warn('Stellarion 1574 innerHTML guard non installé:', e); }
 
     try {
       var nativeReplaceChildren = Element.prototype.replaceChildren;
-      if (nativeReplaceChildren && !Element.prototype.__stellarionReplaceChildrenGuard1573){
+      if (nativeReplaceChildren && !Element.prototype.__stellarionReplaceChildrenGuard1574) {
         Element.prototype.replaceChildren = function(){
+          var target = this;
           var args = arguments;
-          if (shouldDelayDOMWrite(this)){
-            var target = this;
-            clearTimeout(pendingDOMTimer.get(this));
-            var timer = setTimeout(function(){
-              if (!isTypingProtected()) {
-                try { nativeReplaceChildren.apply(target, args); } catch(e){ console.error(e); }
-              } else {
-                restoreFocusSoon(0);
+          if (shouldProtectDOM() && targetTouchesActiveEditable(target)) {
+            clearTimeout(pendingDOMTimer.get(target));
+            var timer = setTimeout(function retry(){
+              if (shouldProtectDOM()) {
+                pendingDOMTimer.set(target, setTimeout(retry, 350));
+                return;
               }
-            }, 900);
-            pendingDOMTimer.set(this, timer);
-            restoreFocusSoon(0);
+              try { nativeReplaceChildren.apply(target, args); } catch(e){ console.error(e); }
+            }, 350);
+            pendingDOMTimer.set(target, timer);
             return;
           }
           return nativeReplaceChildren.apply(this, args);
         };
-        Element.prototype.__stellarionReplaceChildrenGuard1573 = true;
+        Element.prototype.__stellarionReplaceChildrenGuard1574 = true;
       }
-    } catch(e2){ console.warn('Stellarion 1573 replaceChildren guard non installé:', e2); }
-  }
-
-  function canonicalNotifFromArgs(args){
-    var text = '';
-    for (var i=0;i<args.length;i++){
-      var a = args[i];
-      if (a == null) continue;
-      if (typeof a === 'string' || typeof a === 'number') text += ' ' + a;
-      else if (typeof a === 'object') {
-        try { text += ' ' + (a.title || a.subject || a.message || a.body || a.text || a.content || JSON.stringify(a).slice(0,500)); } catch(_e){}
-      }
-    }
-    return canonicalNotifText(text);
+    } catch(e2){ console.warn('Stellarion 1574 replaceChildren guard non installé:', e2); }
   }
 
   function canonicalNotifText(text){
-    text = normText(text);
+    text = norm(text);
     if (!text) return '';
-    // On garde les infos qui définissent un message : sujet + expéditeur + extrait, pas les compteurs dynamiques.
     return text
       .replace(/\b(il y a|depuis)\s+\d+\s*(s|sec|secondes|min|minutes|h|heures)\b/ig, '')
       .replace(/\b\d{1,2}:\d{2}(:\d{2})?\b/g, '')
       .replace(/\s+/g,' ')
       .trim()
-      .slice(0, 650);
+      .slice(0, 700);
   }
 
-  function isMessageNotificationText(text){
+  function isMessageNotification(text){
     var t = String(text || '').toLowerCase();
-    if (!t || t.length < 8) return false;
-    return (
+    return !!(t && t.length > 6 && (
       (t.indexOf('message') !== -1 && (t.indexOf('de :') !== -1 || t.indexOf('de:') !== -1 || t.indexOf('ouvrir') !== -1)) ||
-      t.indexOf('message joueur') !== -1 ||
       t.indexOf('nouveau message') !== -1 ||
+      t.indexOf('message joueur') !== -1 ||
       t.indexOf('ré:') !== -1 ||
       t.indexOf('re:') !== -1
-    );
+    ));
   }
 
-  function shouldSuppressNotifText(text){
+  function shouldSuppressNotif(text){
     var canon = canonicalNotifText(text);
-    if (!canon || !isMessageNotificationText(canon)) return false;
+    if (!canon || !isMessageNotification(canon)) return false;
     var key = hashText(canon);
     var t = wall();
-    if (notifStore[key] && t - notifStore[key] < NOTIF_TTL){
+    if (notifStore[key] && t - notifStore[key] < NOTIF_TTL) {
       notifStats.suppressed++;
       return true;
     }
@@ -456,86 +397,84 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     return false;
   }
 
+  function textFromArgs(args){
+    var out = '';
+    for (var i=0;i<args.length;i++){
+      var a = args[i];
+      if (a == null) continue;
+      if (typeof a === 'string' || typeof a === 'number') out += ' ' + a;
+      else if (typeof a === 'object') {
+        try { out += ' ' + (a.title || a.subject || a.message || a.body || a.text || a.content || JSON.stringify(a).slice(0,500)); } catch(_e){}
+      }
+    }
+    return out;
+  }
+
   function wrapNotify(name){
     var fn = window[name];
-    if (typeof fn !== 'function' || fn.__stellarionNotifDedupe1573) return false;
+    if (typeof fn !== 'function' || fn.__stellarionNotifDedupe1574) return false;
     var wrapped = function(){
-      try {
-        var canon = canonicalNotifFromArgs(arguments);
-        if (shouldSuppressNotifText(canon)) return null;
-      } catch(_e) {}
+      try { if (shouldSuppressNotif(textFromArgs(arguments))) return null; } catch(_e) {}
       return fn.apply(this, arguments);
     };
-    wrapped.__stellarionNotifDedupe1573 = true;
+    wrapped.__stellarionNotifDedupe1574 = true;
     wrapped.__original = fn;
     window[name] = wrapped;
     notifStats.wrapped.push(name);
     return true;
   }
 
-  function isPossibleNotifNode(node){
+  function isNotifNode(node){
     if (!node || node.nodeType !== 1) return false;
-    var el = node;
-    var cls = String(el.className || '').toLowerCase();
-    var id = String(el.id || '').toLowerCase();
-    var txt = normText(el.textContent || '');
+    var txt = canonicalNotifText(node.textContent || '');
     if (!txt) return false;
-    return isMessageNotificationText(txt) || cls.indexOf('notif') !== -1 || cls.indexOf('toast') !== -1 || id.indexOf('notif') !== -1 || id.indexOf('toast') !== -1;
+    var cls = String(node.className || '').toLowerCase();
+    var id = String(node.id || '').toLowerCase();
+    return isMessageNotification(txt) || cls.indexOf('notif') !== -1 || cls.indexOf('toast') !== -1 || id.indexOf('notif') !== -1 || id.indexOf('toast') !== -1;
   }
 
   function cleanNotifNode(node){
-    if (!isPossibleNotifNode(node)) return;
+    if (!isNotifNode(node)) return;
     var txt = canonicalNotifText(node.textContent || '');
-    if (!isMessageNotificationText(txt)) return;
-    if (shouldSuppressNotifText(txt)){
-      try {
-        node.style.transition = 'opacity .12s ease';
-        node.style.opacity = '0';
-        setTimeout(function(){ try { if (node.parentNode) node.parentNode.removeChild(node); } catch(_e){} }, 140);
-        notifStats.domRemoved++;
-      } catch(_err){ try { if (node.parentNode) node.parentNode.removeChild(node); } catch(_e2){} }
+    if (!isMessageNotification(txt)) return;
+    if (shouldSuppressNotif(txt)) {
+      notifStats.domRemoved++;
+      try { node.remove(); } catch(_e) { try { if (node.parentNode) node.parentNode.removeChild(node); } catch(_e2){} }
     }
-  }
-
-  function scanExistingNotifs(){
-    var nodes = Array.prototype.slice.call(document.querySelectorAll('[class*="notif" i], [id*="notif" i], [class*="toast" i], [id*="toast" i], .notification, .toast'));
-    nodes.forEach(cleanNotifNode);
   }
 
   function installNotificationGuards(){
     NOTIFY_NAMES.forEach(wrapNotify);
     try {
-      if (window.Notification && !window.Notification.__stellarionNotifDedupe1573){
+      if (window.Notification && !window.Notification.__stellarionNotifDedupe1574) {
         var NativeNotification = window.Notification;
         var WrappedNotification = function(title, options){
           var body = options && options.body ? options.body : '';
-          if (shouldSuppressNotifText(String(title || '') + ' ' + String(body || ''))) return { close:function(){} };
+          if (shouldSuppressNotif(String(title || '') + ' ' + String(body || ''))) return { close:function(){} };
           return new NativeNotification(title, options);
         };
         Object.keys(NativeNotification).forEach(function(k){ try { WrappedNotification[k] = NativeNotification[k]; } catch(_e){} });
         WrappedNotification.prototype = NativeNotification.prototype;
-        WrappedNotification.__stellarionNotifDedupe1573 = true;
+        WrappedNotification.__stellarionNotifDedupe1574 = true;
         window.Notification = WrappedNotification;
       }
     } catch(_e) {}
-  }
 
-  function installObservers(){
-    new MutationObserver(function(muts){
-      if (isTypingProtected()) restoreFocusSoon(0);
-      muts.forEach(function(m){
-        if (!m.addedNodes) return;
-        Array.prototype.forEach.call(m.addedNodes, function(n){
-          if (n && n.nodeType === 1){
+    try {
+      new MutationObserver(function(muts){
+        muts.forEach(function(m){
+          if (!m.addedNodes) return;
+          Array.prototype.forEach.call(m.addedNodes, function(n){
+            if (!n || n.nodeType !== 1) return;
             cleanNotifNode(n);
             try {
               var children = n.querySelectorAll ? n.querySelectorAll('[class*="notif" i], [id*="notif" i], [class*="toast" i], [id*="toast" i], .notification, .toast') : [];
               Array.prototype.forEach.call(children, cleanNotifNode);
             } catch(_e) {}
-          }
+          });
         });
-      });
-    }).observe(document.documentElement, { childList:true, subtree:true });
+      }).observe(document.documentElement, { childList:true, subtree:true });
+    } catch(_e2) {}
   }
 
   function installAll(){
@@ -545,41 +484,40 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
   installDOMGuards();
   installNotificationGuards();
-  installObservers();
   installAll();
-  setTimeout(scanExistingNotifs, 500);
 
-  // Plusieurs patchs du jeu attachent leurs fonctions avec retard : on réessaie quelques secondes.
   var retryCount = 0;
   var retry = setInterval(function(){
     retryCount++;
     installAll();
-    if (retryCount > 20) clearInterval(retry);
+    if (retryCount > 24) clearInterval(retry);
   }, 500);
 
-  window.stellarionFocusAllianceNotifAudit1573 = function(){
+  window.stellarionFocusSelectionAudit1574 = function(){
     var a = document.activeElement;
     return {
-      patch: 'focus-alliance-notifs-' + VERSION,
-      active: a ? { tag:a.tagName, id:a.id || '', name:a.name || '', className:String(a.className || ''), value:('value' in a ? a.value : undefined) } : null,
-      typingProtected: isTypingProtected(),
-      typingRemainingMs: Math.max(0, Math.round(typingUntil - now())),
-      lastSnap:lastSnap,
+      patch:'focus-selection-notifs-' + VERSION,
+      active:a ? { tag:a.tagName, id:a.id || '', name:a.name || '', className:String(a.className || ''), editable:isGameEditable(a), selectionStart:a.selectionStart, selectionEnd:a.selectionEnd } : null,
+      shouldProtectDOM:shouldProtectDOM(),
+      userIsSelecting:userIsSelecting(),
+      editingRemainingMs:Math.max(0, Math.round(editingUntil - now())),
+      selectingRemainingMs:Math.max(0, Math.round(selectingUntil - now())),
+      lastActiveEditableKey:lastActiveEditableKey,
       renderStats:renderStats,
       notifStats:notifStats,
       notifStoreSize:Object.keys(notifStore).length,
-      wrappedRender: RENDER_NAMES.filter(function(n){ return window[n] && window[n].__stellarionFocusAllianceNotifFix1573; }),
-      wrappedNotify: NOTIFY_NAMES.filter(function(n){ return window[n] && window[n].__stellarionNotifDedupe1573; })
+      wrappedRender:RENDER_NAMES.filter(function(n){ return window[n] && window[n].__stellarionFocusSelectionFix1574; }),
+      wrappedNotify:NOTIFY_NAMES.filter(function(n){ return window[n] && window[n].__stellarionNotifDedupe1574; })
     };
   };
 
-  window.stellarionClearNotifDedupe1573 = function(){
+  window.stellarionClearNotifDedupe1574 = function(){
     notifStore = {};
-    try { localStorage.removeItem(NOTIF_STORE_KEY); } catch(_e){}
-    return 'Notifications dedupe 1573 vidé';
+    try { localStorage.removeItem(NOTIF_KEY); } catch(_e){}
+    return 'Notifications dédupliquées 1.5.74 vidées';
   };
 
-  console.log('✅ STELLARION focus global + alliance + notifications 1.5.73 actif — audit: stellarionFocusAllianceNotifAudit1573()');
+  console.log('✅ STELLARION focus sans auto-focus + sélection texte + notifications 1.5.74 actif — audit: stellarionFocusSelectionAudit1574()');
 })();
 </script>
 
