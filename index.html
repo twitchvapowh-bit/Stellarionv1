@@ -59,64 +59,99 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
 <script src="js/main.js"></script>
 <script src="js/fragment-shop-stripe-patch.js"></script>
-<script id="stellarion-focus-selection-notifications-fix-1574">
+<script id="stellarion-hard-focus-stop-1575">
 /* =========================================================
-   STELLARION — FIX FOCUS SANS AUTO-FOCUS + SELECTION TEXTE 1.5.74
+   STELLARION — HARD STOP FOCUS / SELECTION / NOTIFS 1.5.75
    À charger APRÈS js/main.js.
 
-   But :
-   - arrêter l'ancien comportement insupportable qui remet le focus de force ;
-   - permettre de sélectionner du texte dans Alliance / Annonces ;
-   - éviter que les rendus reconstruisent #app pendant l'écriture ;
-   - dédoublonner les notifications de messages déjà vues.
+   Objectif : arrêter le vol de focus à la racine côté navigateur.
+   - Aucun .focus() automatique accepté pendant sélection / écriture.
+   - Aucun .blur() automatique accepté pendant écriture.
+   - Les rendus / écritures DOM sur #app sont retardés pendant sélection / écriture.
+   - Les notifications de message déjà vues sont dédupliquées.
 
-   Règle importante : ce patch ne fait JAMAIS .focus() et ne modifie JAMAIS
-   setSelectionRange(). Il préfère retarder les render() plutôt que voler le curseur.
+   Ce patch ne tente pas de remettre le curseur : il empêche simplement le jeu
+   de voler le focus ou de reconstruire la zone utilisée par le joueur.
    ========================================================= */
 (function(){
   'use strict';
-  if (window.__stellarionFocusSelectionNotifFix1574) return;
-  window.__stellarionFocusSelectionNotifFix1574 = true;
+  if (window.__stellarionHardFocusStop1575) return;
+  window.__stellarionHardFocusStop1575 = true;
 
-  var VERSION = '1.5.74';
-  var EDITABLE_SELECTOR = [
-    'textarea',
-    'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])',
-    'select',
-    '[contenteditable="true"]'
-  ].join(',');
-
+  var VERSION = '1.5.75';
+  var EDITABLE_SELECTOR = 'textarea,input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),select,[contenteditable="true"]';
   var RENDER_NAMES = [
     'render','renderApp','renderUI','renderView','renderPage','renderCurrentView','rerender','redraw','draw','drawApp',
-    'updateUI','refreshUI','refreshApp','refreshView',
-    'renderMessages','renderNotifications','renderNotifs',
-    'renderAlliance','renderAlliancePage','renderAllianceAnnouncements','renderAllianceView'
+    'updateUI','refreshUI','refreshApp','refreshView','renderMessages','renderNotifications','renderNotifs',
+    'renderAlliance','renderAlliancePage','renderAllianceAnnouncements','renderAllianceView','renderAllianceHQ'
   ];
-
   var NOTIFY_NAMES = [
     'notify','notification','showNotification','pushNotification','addNotification','createNotification',
     'toast','showToast','pushToast','addToast','createToast','notifyUser','gameNotify','stellarionNotify'
   ];
 
-  var NOTIF_KEY = 'stellarion:notif-dedupe:1574';
-  var NOTIF_TTL = 1000 * 60 * 60 * 24 * 7;
-
-  var editingUntil = 0;
+  var focusBlocked = 0;
+  var blurBlocked = 0;
+  var domDelayed = 0;
+  var renderDelayed = 0;
+  var notifySuppressed = 0;
+  var mouseDownInApp = false;
   var selectingUntil = 0;
-  var isMouseDown = false;
-  var isComposing = false;
-  var lastActiveEditableKey = '';
-  var renderStats = Object.create(null);
-  var pendingRender = Object.create(null);
-  var lastRenderAt = Object.create(null);
-  var pendingDOMWrite = new WeakMap();
+  var editingUntil = 0;
+  var composingUntil = 0;
+  var lastPointerTarget = null;
+  var pendingRenders = Object.create(null);
   var pendingDOMTimer = new WeakMap();
-  var notifStats = { seen:0, suppressed:0, domRemoved:0, wrapped:[] };
+  var pendingDOMValue = new WeakMap();
   var notifStore = loadNotifStore();
+  var NOTIF_KEY = 'stellarion:notif-dedupe:1575';
+  var NOTIF_TTL = 1000 * 60 * 60 * 24 * 7;
 
   function now(){ return (window.performance && performance.now) ? performance.now() : Date.now(); }
   function wall(){ return Date.now(); }
-  function norm(text){ return String(text || '').replace(/\s+/g,' ').trim(); }
+  function app(){ return document.getElementById('app'); }
+  function norm(s){ return String(s || '').replace(/\s+/g,' ').trim(); }
+  function inApp(el){
+    try { return !!(el && el.nodeType === 1 && el.closest && el.closest('#app') && !el.closest('#auth-screen')); }
+    catch(_e){ return false; }
+  }
+  function isEditable(el){
+    try { return !!(el && el.nodeType === 1 && el.matches && el.matches(EDITABLE_SELECTOR)); }
+    catch(_e){ return false; }
+  }
+  function activeEditable(){
+    var el = document.activeElement;
+    return inApp(el) && isEditable(el) ? el : null;
+  }
+  function inputHasSelection(el){
+    try { return !!(isEditable(el) && typeof el.selectionStart === 'number' && typeof el.selectionEnd === 'number' && el.selectionStart !== el.selectionEnd); }
+    catch(_e){ return false; }
+  }
+  function pageSelectionInApp(){
+    try {
+      var sel = window.getSelection && window.getSelection();
+      if (!sel || sel.isCollapsed || sel.rangeCount < 1) return false;
+      var n = sel.anchorNode || sel.focusNode;
+      if (n && n.nodeType === 3) n = n.parentElement;
+      return !!(n && n.closest && n.closest('#app'));
+    } catch(_e){ return false; }
+  }
+  function selecting(){
+    return mouseDownInApp || now() < selectingUntil || pageSelectionInApp() || inputHasSelection(activeEditable());
+  }
+  function editing(){
+    return !!activeEditable() && now() < editingUntil;
+  }
+  function protectedMoment(){
+    return editing() || selecting() || now() < composingUntil;
+  }
+  function targetTouchesApp(target){
+    var a = app();
+    if (!a || !target || target.nodeType !== 1) return false;
+    return target === a || a.contains(target) || target.contains(a);
+  }
+  function markEditing(ms){ editingUntil = Math.max(editingUntil, now() + (ms || 1800)); }
+  function markSelecting(ms){ selectingUntil = Math.max(selectingUntil, now() + (ms || 1200)); }
 
   function loadNotifStore(){
     try {
@@ -128,275 +163,37 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     } catch(_e){ return {}; }
   }
   function saveNotifStore(){ try { localStorage.setItem(NOTIF_KEY, JSON.stringify(notifStore)); } catch(_e){} }
-
   function hashText(text){
     text = norm(text).toLowerCase();
     var h = 2166136261;
-    for (var i=0;i<text.length;i++){
-      h ^= text.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
+    for (var i=0;i<text.length;i++){ h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
     return 'h' + (h >>> 0).toString(36);
   }
-
-  function isEditable(el){
-    return !!(el && el.nodeType === 1 && el.matches && el.matches(EDITABLE_SELECTOR));
-  }
-
-  function isGameEditable(el){
-    return !!(isEditable(el) && el.closest && el.closest('#app') && !el.closest('#auth-screen'));
-  }
-
-  function activeEditable(){
-    var el = document.activeElement;
-    return isGameEditable(el) ? el : null;
-  }
-
-  function cssEscapeLoose(value){
-    value = String(value || '');
-    if (!value) return '';
-    if (window.CSS && CSS.escape) return CSS.escape(value);
-    return value.replace(/([ #;?%&,.+*~':"!^$[\]()=>|/@])/g, '\\$1');
-  }
-
-  function editableKey(el){
-    if (!el) return '';
-    if (el.id) return 'id:' + el.id;
-    if (el.name) return 'name:' + el.name;
-    var ph = el.getAttribute ? (el.getAttribute('placeholder') || el.getAttribute('aria-label') || '') : '';
-    if (ph) return 'ph:' + ph;
-    var tag = (el.tagName || '').toLowerCase();
-    var cls = el.classList && el.classList.length ? Array.prototype.slice.call(el.classList).slice(0,3).map(cssEscapeLoose).join('.') : '';
-    return tag + ':' + cls;
-  }
-
-  function markEditing(ms){
-    editingUntil = Math.max(editingUntil, now() + (ms || 1200));
-    var el = activeEditable();
-    if (el) lastActiveEditableKey = editableKey(el);
-  }
-
-  function hasInputSelection(el){
-    if (!isGameEditable(el)) return false;
-    try {
-      if (typeof el.selectionStart === 'number' && typeof el.selectionEnd === 'number') {
-        return el.selectionStart !== el.selectionEnd;
-      }
-    } catch(_e) {}
-    return false;
-  }
-
-  function hasPageSelectionInsideApp(){
-    try {
-      var sel = window.getSelection && window.getSelection();
-      if (!sel || sel.isCollapsed || sel.rangeCount < 1) return false;
-      var node = sel.anchorNode;
-      if (node && node.nodeType === 3) node = node.parentElement;
-      return !!(node && node.closest && node.closest('#app'));
-    } catch(_e){ return false; }
-  }
-
-  function userIsSelecting(){
-    var el = activeEditable();
-    if (el && hasInputSelection(el)) return true;
-    if (hasPageSelectionInsideApp()) return true;
-    return isMouseDown || now() < selectingUntil;
-  }
-
-  function shouldProtectDOM(){
-    var el = activeEditable();
-    if (isComposing) return true;
-    if (el && (now() < editingUntil || userIsSelecting())) return true;
-    if (userIsSelecting() && hasPageSelectionInsideApp()) return true;
-    return false;
-  }
-
-  document.addEventListener('pointerdown', function(ev){
-    if (ev.target && ev.target.closest && ev.target.closest('#app')) {
-      isMouseDown = true;
-      selectingUntil = Math.max(selectingUntil, now() + 1200);
-    }
-  }, true);
-
-  document.addEventListener('pointerup', function(){
-    setTimeout(function(){ isMouseDown = false; }, 120);
-    selectingUntil = Math.max(selectingUntil, now() + 600);
-  }, true);
-
-  document.addEventListener('mousedown', function(ev){
-    if (ev.target && ev.target.closest && ev.target.closest('#app')) {
-      isMouseDown = true;
-      selectingUntil = Math.max(selectingUntil, now() + 1200);
-    }
-  }, true);
-
-  document.addEventListener('mouseup', function(){
-    setTimeout(function(){ isMouseDown = false; }, 120);
-    selectingUntil = Math.max(selectingUntil, now() + 600);
-  }, true);
-
-  document.addEventListener('selectionchange', function(){
-    if (hasPageSelectionInsideApp() || hasInputSelection(activeEditable())) {
-      selectingUntil = Math.max(selectingUntil, now() + 1200);
-    }
-  }, true);
-
-  ['focusin','beforeinput','input','keydown','keyup','paste','change'].forEach(function(type){
-    document.addEventListener(type, function(ev){
-      if (!isGameEditable(ev.target)) return;
-      markEditing(type === 'input' || type === 'beforeinput' || type === 'keydown' ? 1500 : 900);
-    }, true);
-  });
-
-  document.addEventListener('compositionstart', function(ev){ if (isGameEditable(ev.target)) { isComposing = true; markEditing(3500); } }, true);
-  document.addEventListener('compositionupdate', function(ev){ if (isGameEditable(ev.target)) { isComposing = true; markEditing(3500); } }, true);
-  document.addEventListener('compositionend', function(ev){ if (isGameEditable(ev.target)) { isComposing = false; markEditing(900); } }, true);
-
-  function scheduleWhenIdle(fn, key, delay){
-    clearTimeout(pendingRender[key]);
-    pendingRender[key] = setTimeout(function retry(){
-      if (shouldProtectDOM()) {
-        pendingRender[key] = setTimeout(retry, 350);
-        return;
-      }
-      try { fn(); } catch(e){ console.error(e); }
-    }, delay || 500);
-  }
-
-  function wrapRender(name){
-    var fn = window[name];
-    if (typeof fn !== 'function' || fn.__stellarionFocusSelectionFix1574) return false;
-    renderStats[name] = renderStats[name] || { calls:0, delayed:0, batched:0 };
-    lastRenderAt[name] = 0;
-    var wrapped = function(){
-      var args = arguments;
-      var ctx = this;
-      var t = now();
-      renderStats[name].calls++;
-
-      if (shouldProtectDOM()) {
-        renderStats[name].delayed++;
-        scheduleWhenIdle(function(){ fn.apply(ctx, args); }, 'render:' + name, 500);
-        return;
-      }
-
-      if (t - lastRenderAt[name] < 100) {
-        renderStats[name].batched++;
-        scheduleWhenIdle(function(){ fn.apply(ctx, args); }, 'batch:' + name, 120);
-        return;
-      }
-
-      lastRenderAt[name] = t;
-      return fn.apply(ctx, args);
-    };
-    wrapped.__stellarionFocusSelectionFix1574 = true;
-    wrapped.__original = fn;
-    window[name] = wrapped;
-    return true;
-  }
-
-  function targetTouchesActiveEditable(target){
-    var el = activeEditable();
-    return !!(el && target && target.nodeType === 1 && (target === el || target.contains(el) || target.id === 'app' || (target.closest && target.closest('#app'))));
-  }
-
-  function installDOMGuards(){
-    try {
-      var proto = Element.prototype;
-      var desc = Object.getOwnPropertyDescriptor(proto, 'innerHTML') || Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerHTML');
-      if (desc && desc.set && desc.get && !proto.__stellarionInnerHTMLGuard1574) {
-        Object.defineProperty(proto, 'innerHTML', {
-          configurable:true,
-          enumerable:desc.enumerable,
-          get:function(){ return desc.get.call(this); },
-          set:function(value){
-            if (shouldProtectDOM() && targetTouchesActiveEditable(this)) {
-              var target = this;
-              pendingDOMWrite.set(target, { value:value });
-              clearTimeout(pendingDOMTimer.get(target));
-              var timer = setTimeout(function retry(){
-                if (shouldProtectDOM()) {
-                  pendingDOMTimer.set(target, setTimeout(retry, 350));
-                  return;
-                }
-                var item = pendingDOMWrite.get(target);
-                pendingDOMWrite.delete(target);
-                if (item) {
-                  try { desc.set.call(target, item.value); } catch(e){ console.error(e); }
-                }
-              }, 350);
-              pendingDOMTimer.set(target, timer);
-              return;
-            }
-            return desc.set.call(this, value);
-          }
-        });
-        proto.__stellarionInnerHTMLGuard1574 = true;
-      }
-    } catch(e){ console.warn('Stellarion 1574 innerHTML guard non installé:', e); }
-
-    try {
-      var nativeReplaceChildren = Element.prototype.replaceChildren;
-      if (nativeReplaceChildren && !Element.prototype.__stellarionReplaceChildrenGuard1574) {
-        Element.prototype.replaceChildren = function(){
-          var target = this;
-          var args = arguments;
-          if (shouldProtectDOM() && targetTouchesActiveEditable(target)) {
-            clearTimeout(pendingDOMTimer.get(target));
-            var timer = setTimeout(function retry(){
-              if (shouldProtectDOM()) {
-                pendingDOMTimer.set(target, setTimeout(retry, 350));
-                return;
-              }
-              try { nativeReplaceChildren.apply(target, args); } catch(e){ console.error(e); }
-            }, 350);
-            pendingDOMTimer.set(target, timer);
-            return;
-          }
-          return nativeReplaceChildren.apply(this, args);
-        };
-        Element.prototype.__stellarionReplaceChildrenGuard1574 = true;
-      }
-    } catch(e2){ console.warn('Stellarion 1574 replaceChildren guard non installé:', e2); }
-  }
-
   function canonicalNotifText(text){
-    text = norm(text);
-    if (!text) return '';
-    return text
+    return norm(text)
       .replace(/\b(il y a|depuis)\s+\d+\s*(s|sec|secondes|min|minutes|h|heures)\b/ig, '')
       .replace(/\b\d{1,2}:\d{2}(:\d{2})?\b/g, '')
       .replace(/\s+/g,' ')
       .trim()
-      .slice(0, 700);
+      .slice(0,700);
   }
-
   function isMessageNotification(text){
     var t = String(text || '').toLowerCase();
     return !!(t && t.length > 6 && (
       (t.indexOf('message') !== -1 && (t.indexOf('de :') !== -1 || t.indexOf('de:') !== -1 || t.indexOf('ouvrir') !== -1)) ||
-      t.indexOf('nouveau message') !== -1 ||
-      t.indexOf('message joueur') !== -1 ||
-      t.indexOf('ré:') !== -1 ||
-      t.indexOf('re:') !== -1
+      t.indexOf('nouveau message') !== -1 || t.indexOf('message joueur') !== -1 || t.indexOf('ré:') !== -1 || t.indexOf('re:') !== -1
     ));
   }
-
   function shouldSuppressNotif(text){
     var canon = canonicalNotifText(text);
     if (!canon || !isMessageNotification(canon)) return false;
     var key = hashText(canon);
     var t = wall();
-    if (notifStore[key] && t - notifStore[key] < NOTIF_TTL) {
-      notifStats.suppressed++;
-      return true;
-    }
+    if (notifStore[key] && t - notifStore[key] < NOTIF_TTL) { notifySuppressed++; return true; }
     notifStore[key] = t;
-    notifStats.seen++;
     saveNotifStore();
     return false;
   }
-
   function textFromArgs(args){
     var out = '';
     for (var i=0;i<args.length;i++){
@@ -410,114 +207,207 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     return out;
   }
 
+  // 1) Le verrou principal : empêcher les anciens patchs / timers de faire .focus() pendant la sélection ou l'écriture.
+  try {
+    var nativeFocus = HTMLElement.prototype.focus;
+    if (nativeFocus && !HTMLElement.prototype.__stellarionHardFocusGuard1575) {
+      HTMLElement.prototype.focus = function(){
+        if (inApp(this) && protectedMoment()) {
+          focusBlocked++;
+          return;
+        }
+        return nativeFocus.apply(this, arguments);
+      };
+      HTMLElement.prototype.__stellarionHardFocusGuard1575 = true;
+    }
+  } catch(e){ console.warn('Stellarion 1575 focus guard non installé:', e); }
+
+  // 2) Empêcher les anciens patchs de blur le champ pendant que le joueur écrit.
+  try {
+    var nativeBlur = HTMLElement.prototype.blur;
+    if (nativeBlur && !HTMLElement.prototype.__stellarionHardBlurGuard1575) {
+      HTMLElement.prototype.blur = function(){
+        if (inApp(this) && isEditable(this) && (editing() || now() < composingUntil)) {
+          blurBlocked++;
+          return;
+        }
+        return nativeBlur.apply(this, arguments);
+      };
+      HTMLElement.prototype.__stellarionHardBlurGuard1575 = true;
+    }
+  } catch(e2){ console.warn('Stellarion 1575 blur guard non installé:', e2); }
+
+  // 3) Marquer les phases utilisateur : écriture / sélection / drag.
+  document.addEventListener('pointerdown', function(ev){ if (ev.target && ev.target.closest && ev.target.closest('#app')) { mouseDownInApp = true; lastPointerTarget = ev.target; markSelecting(1600); } }, true);
+  document.addEventListener('mousedown', function(ev){ if (ev.target && ev.target.closest && ev.target.closest('#app')) { mouseDownInApp = true; lastPointerTarget = ev.target; markSelecting(1600); } }, true);
+  document.addEventListener('pointerup', function(){ setTimeout(function(){ mouseDownInApp = false; lastPointerTarget = null; }, 180); markSelecting(900); }, true);
+  document.addEventListener('mouseup', function(){ setTimeout(function(){ mouseDownInApp = false; lastPointerTarget = null; }, 180); markSelecting(900); }, true);
+  document.addEventListener('selectionchange', function(){ if (pageSelectionInApp() || inputHasSelection(activeEditable())) markSelecting(1600); }, true);
+  ['focusin','beforeinput','input','keydown','keyup','paste','change'].forEach(function(type){
+    document.addEventListener(type, function(ev){ if (inApp(ev.target) && isEditable(ev.target)) markEditing(type === 'input' || type === 'beforeinput' || type === 'keydown' ? 2200 : 1400); }, true);
+  });
+  document.addEventListener('compositionstart', function(ev){ if (inApp(ev.target) && isEditable(ev.target)) { composingUntil = Math.max(composingUntil, now()+5000); markEditing(5000); } }, true);
+  document.addEventListener('compositionupdate', function(ev){ if (inApp(ev.target) && isEditable(ev.target)) { composingUntil = Math.max(composingUntil, now()+5000); markEditing(5000); } }, true);
+  document.addEventListener('compositionend', function(ev){ if (inApp(ev.target) && isEditable(ev.target)) { composingUntil = Math.max(composingUntil, now()+1200); markEditing(1200); } }, true);
+
+  // 4) Retarder les reconstructions DOM de #app pendant sélection / écriture.
+  function deferDOM(target, apply){
+    domDelayed++;
+    clearTimeout(pendingDOMTimer.get(target));
+    var timer = setTimeout(function retry(){
+      if (protectedMoment()) {
+        pendingDOMTimer.set(target, setTimeout(retry, 300));
+        return;
+      }
+      try { apply(); } catch(e){ console.error(e); }
+    }, 300);
+    pendingDOMTimer.set(target, timer);
+  }
+  try {
+    var proto = Element.prototype;
+    var htmlDesc = Object.getOwnPropertyDescriptor(proto, 'innerHTML') || Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerHTML');
+    if (htmlDesc && htmlDesc.set && htmlDesc.get && !proto.__stellarionHardInnerHTMLGuard1575) {
+      Object.defineProperty(proto, 'innerHTML', {
+        configurable:true,
+        enumerable:htmlDesc.enumerable,
+        get:function(){ return htmlDesc.get.call(this); },
+        set:function(value){
+          var target = this;
+          if (protectedMoment() && targetTouchesApp(target)) {
+            pendingDOMValue.set(target, value);
+            deferDOM(target, function(){
+              var v = pendingDOMValue.get(target);
+              pendingDOMValue.delete(target);
+              htmlDesc.set.call(target, v);
+            });
+            return;
+          }
+          return htmlDesc.set.call(target, value);
+        }
+      });
+      proto.__stellarionHardInnerHTMLGuard1575 = true;
+    }
+  } catch(e3){ console.warn('Stellarion 1575 innerHTML guard non installé:', e3); }
+  try {
+    var nativeReplaceChildren = Element.prototype.replaceChildren;
+    if (nativeReplaceChildren && !Element.prototype.__stellarionHardReplaceChildrenGuard1575) {
+      Element.prototype.replaceChildren = function(){
+        var target = this, args = arguments;
+        if (protectedMoment() && targetTouchesApp(target)) {
+          deferDOM(target, function(){ nativeReplaceChildren.apply(target, args); });
+          return;
+        }
+        return nativeReplaceChildren.apply(this, args);
+      };
+      Element.prototype.__stellarionHardReplaceChildrenGuard1575 = true;
+    }
+  } catch(e4){ console.warn('Stellarion 1575 replaceChildren guard non installé:', e4); }
+  try {
+    var nativeInsertAdjacentHTML = Element.prototype.insertAdjacentHTML;
+    if (nativeInsertAdjacentHTML && !Element.prototype.__stellarionHardInsertAdjacentHTMLGuard1575) {
+      Element.prototype.insertAdjacentHTML = function(pos, html){
+        var target = this, args = arguments;
+        if (protectedMoment() && targetTouchesApp(target)) {
+          deferDOM(target, function(){ nativeInsertAdjacentHTML.apply(target, args); });
+          return;
+        }
+        return nativeInsertAdjacentHTML.apply(this, args);
+      };
+      Element.prototype.__stellarionHardInsertAdjacentHTMLGuard1575 = true;
+    }
+  } catch(e5){ console.warn('Stellarion 1575 insertAdjacentHTML guard non installé:', e5); }
+
+  // 5) Enrober les rendus publics si le jeu les expose sur window.
+  function wrapRender(name){
+    var fn = window[name];
+    if (typeof fn !== 'function' || fn.__stellarionHardRenderGuard1575) return false;
+    var wrapped = function(){
+      var args = arguments, ctx = this;
+      if (protectedMoment()) {
+        renderDelayed++;
+        clearTimeout(pendingRenders[name]);
+        pendingRenders[name] = setTimeout(function retry(){
+          if (protectedMoment()) { pendingRenders[name] = setTimeout(retry, 300); return; }
+          try { fn.apply(ctx, args); } catch(e){ console.error(e); }
+        }, 300);
+        return;
+      }
+      return fn.apply(ctx, args);
+    };
+    wrapped.__stellarionHardRenderGuard1575 = true;
+    wrapped.__original = fn;
+    window[name] = wrapped;
+    return true;
+  }
+  function installRenderGuards(){ RENDER_NAMES.forEach(wrapRender); }
+  installRenderGuards();
+  var renderRetry = setInterval(installRenderGuards, 500);
+  setTimeout(function(){ clearInterval(renderRetry); }, 15000);
+
+  // 6) Dédupliquer les notifications message répétées.
   function wrapNotify(name){
     var fn = window[name];
-    if (typeof fn !== 'function' || fn.__stellarionNotifDedupe1574) return false;
+    if (typeof fn !== 'function' || fn.__stellarionHardNotifGuard1575) return false;
     var wrapped = function(){
       try { if (shouldSuppressNotif(textFromArgs(arguments))) return null; } catch(_e) {}
       return fn.apply(this, arguments);
     };
-    wrapped.__stellarionNotifDedupe1574 = true;
+    wrapped.__stellarionHardNotifGuard1575 = true;
     wrapped.__original = fn;
     window[name] = wrapped;
-    notifStats.wrapped.push(name);
     return true;
   }
-
-  function isNotifNode(node){
-    if (!node || node.nodeType !== 1) return false;
-    var txt = canonicalNotifText(node.textContent || '');
-    if (!txt) return false;
+  function cleanNotifNode(node){
+    if (!node || node.nodeType !== 1) return;
     var cls = String(node.className || '').toLowerCase();
     var id = String(node.id || '').toLowerCase();
-    return isMessageNotification(txt) || cls.indexOf('notif') !== -1 || cls.indexOf('toast') !== -1 || id.indexOf('notif') !== -1 || id.indexOf('toast') !== -1;
-  }
-
-  function cleanNotifNode(node){
-    if (!isNotifNode(node)) return;
     var txt = canonicalNotifText(node.textContent || '');
-    if (!isMessageNotification(txt)) return;
-    if (shouldSuppressNotif(txt)) {
-      notifStats.domRemoved++;
-      try { node.remove(); } catch(_e) { try { if (node.parentNode) node.parentNode.removeChild(node); } catch(_e2){} }
+    var maybeNotif = cls.indexOf('notif') !== -1 || cls.indexOf('toast') !== -1 || id.indexOf('notif') !== -1 || id.indexOf('toast') !== -1 || isMessageNotification(txt);
+    if (maybeNotif && isMessageNotification(txt) && shouldSuppressNotif(txt)) {
+      try { node.remove(); } catch(_e){ if (node.parentNode) node.parentNode.removeChild(node); }
     }
   }
-
-  function installNotificationGuards(){
-    NOTIFY_NAMES.forEach(wrapNotify);
-    try {
-      if (window.Notification && !window.Notification.__stellarionNotifDedupe1574) {
-        var NativeNotification = window.Notification;
-        var WrappedNotification = function(title, options){
-          var body = options && options.body ? options.body : '';
-          if (shouldSuppressNotif(String(title || '') + ' ' + String(body || ''))) return { close:function(){} };
-          return new NativeNotification(title, options);
-        };
-        Object.keys(NativeNotification).forEach(function(k){ try { WrappedNotification[k] = NativeNotification[k]; } catch(_e){} });
-        WrappedNotification.prototype = NativeNotification.prototype;
-        WrappedNotification.__stellarionNotifDedupe1574 = true;
-        window.Notification = WrappedNotification;
-      }
-    } catch(_e) {}
-
-    try {
-      new MutationObserver(function(muts){
-        muts.forEach(function(m){
-          if (!m.addedNodes) return;
-          Array.prototype.forEach.call(m.addedNodes, function(n){
-            if (!n || n.nodeType !== 1) return;
-            cleanNotifNode(n);
-            try {
-              var children = n.querySelectorAll ? n.querySelectorAll('[class*="notif" i], [id*="notif" i], [class*="toast" i], [id*="toast" i], .notification, .toast') : [];
-              Array.prototype.forEach.call(children, cleanNotifNode);
-            } catch(_e) {}
-          });
+  function installNotifGuards(){ NOTIFY_NAMES.forEach(wrapNotify); }
+  installNotifGuards();
+  var notifRetry = setInterval(installNotifGuards, 500);
+  setTimeout(function(){ clearInterval(notifRetry); }, 15000);
+  try {
+    new MutationObserver(function(muts){
+      muts.forEach(function(m){
+        Array.prototype.forEach.call(m.addedNodes || [], function(n){
+          if (!n || n.nodeType !== 1) return;
+          cleanNotifNode(n);
+          try { Array.prototype.forEach.call(n.querySelectorAll ? n.querySelectorAll('[class*="notif" i], [id*="notif" i], [class*="toast" i], [id*="toast" i], .notification, .toast') : [], cleanNotifNode); } catch(_e){}
         });
-      }).observe(document.documentElement, { childList:true, subtree:true });
-    } catch(_e2) {}
-  }
+      });
+    }).observe(document.documentElement, { childList:true, subtree:true });
+  } catch(_e) {}
 
-  function installAll(){
-    RENDER_NAMES.forEach(wrapRender);
-    NOTIFY_NAMES.forEach(wrapNotify);
-  }
-
-  installDOMGuards();
-  installNotificationGuards();
-  installAll();
-
-  var retryCount = 0;
-  var retry = setInterval(function(){
-    retryCount++;
-    installAll();
-    if (retryCount > 24) clearInterval(retry);
-  }, 500);
-
-  window.stellarionFocusSelectionAudit1574 = function(){
+  window.stellarionHardFocusAudit1575 = function(){
     var a = document.activeElement;
     return {
-      patch:'focus-selection-notifs-' + VERSION,
-      active:a ? { tag:a.tagName, id:a.id || '', name:a.name || '', className:String(a.className || ''), editable:isGameEditable(a), selectionStart:a.selectionStart, selectionEnd:a.selectionEnd } : null,
-      shouldProtectDOM:shouldProtectDOM(),
-      userIsSelecting:userIsSelecting(),
-      editingRemainingMs:Math.max(0, Math.round(editingUntil - now())),
+      patch:'hard-focus-stop-' + VERSION,
+      active:a ? { tag:a.tagName, id:a.id || '', name:a.name || '', className:String(a.className || ''), inApp:inApp(a), editable:isEditable(a), selectionStart:a.selectionStart, selectionEnd:a.selectionEnd } : null,
+      mouseDownInApp:mouseDownInApp,
+      lastPointerTarget:lastPointerTarget ? { tag:lastPointerTarget.tagName, id:lastPointerTarget.id || '', className:String(lastPointerTarget.className || '').slice(0,120) } : null,
+      selecting:selecting(),
+      editing:editing(),
+      protectedMoment:protectedMoment(),
       selectingRemainingMs:Math.max(0, Math.round(selectingUntil - now())),
-      lastActiveEditableKey:lastActiveEditableKey,
-      renderStats:renderStats,
-      notifStats:notifStats,
-      notifStoreSize:Object.keys(notifStore).length,
-      wrappedRender:RENDER_NAMES.filter(function(n){ return window[n] && window[n].__stellarionFocusSelectionFix1574; }),
-      wrappedNotify:NOTIFY_NAMES.filter(function(n){ return window[n] && window[n].__stellarionNotifDedupe1574; })
+      editingRemainingMs:Math.max(0, Math.round(editingUntil - now())),
+      composingRemainingMs:Math.max(0, Math.round(composingUntil - now())),
+      focusBlocked:focusBlocked,
+      blurBlocked:blurBlocked,
+      domDelayed:domDelayed,
+      renderDelayed:renderDelayed,
+      notifySuppressed:notifySuppressed,
+      wrappedRender:RENDER_NAMES.filter(function(n){ return window[n] && window[n].__stellarionHardRenderGuard1575; }),
+      wrappedNotify:NOTIFY_NAMES.filter(function(n){ return window[n] && window[n].__stellarionHardNotifGuard1575; })
     };
   };
+  window.stellarionClearNotifDedupe1575 = function(){ notifStore = {}; try { localStorage.removeItem(NOTIF_KEY); } catch(_e){} return 'Notifications dédupliquées 1.5.75 vidées'; };
 
-  window.stellarionClearNotifDedupe1574 = function(){
-    notifStore = {};
-    try { localStorage.removeItem(NOTIF_KEY); } catch(_e){}
-    return 'Notifications dédupliquées 1.5.74 vidées';
-  };
-
-  console.log('✅ STELLARION focus sans auto-focus + sélection texte + notifications 1.5.74 actif — audit: stellarionFocusSelectionAudit1574()');
+  console.log('✅ STELLARION HARD STOP focus/sélection/notifications 1.5.75 actif — audit: stellarionHardFocusAudit1575()');
 })();
 </script>
 
