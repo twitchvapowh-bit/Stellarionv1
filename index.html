@@ -57,203 +57,304 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 </div>
 <div id="app"></div>
 
-<script src="js/main.js"></script>
-<script src="js/fragment-shop-stripe-patch.js"></script>
-<script id="stellarion-focus-no-lag-root-guard-1576">
-/* =========================================================
-   STELLARION — FIX FOCUS NO-LAG 1.5.76
-   À charger APRÈS js/main.js.
-
-   Objectif : annuler les effets agressifs des anciens patches
-   Alliance QG Focus Guard 1566 et Alliance Editor Focus Lock 1567
-   SANS bloquer render(), SANS bloquer innerHTML, SANS ralentir les onglets.
-
-   Ce patch ne reconstruit pas le DOM et ne retarde pas les changements de page.
-   Il bloque seulement les focus/setSelectionRange automatiques qui ne viennent
-   pas d'une action directe du joueur.
-   ========================================================= */
+<!-- STELLARION 1.5.77 — Alliance focus root clean
+     À charger AVANT js/main.js pour empêcher les anciens patches Alliance 1566/1567 de s'installer. -->
+<script id="stellarion-alliance-focus-root-clean-pre-1577">
 (function(){
   'use strict';
-  if (window.__stellarionNoLagFocusRootGuard1576) return;
-  window.__stellarionNoLagFocusRootGuard1576 = true;
+  if (window.__stellarionAllianceFocusRootCleanPre1577) return;
+  window.__stellarionAllianceFocusRootCleanPre1577 = true;
 
-  var VERSION = '1.5.76';
+  var VERSION = '1.5.77';
+  var blockedListeners = 0;
+  var blockedByType = Object.create(null);
+
+  // Ces deux flags servent à faire sortir immédiatement les anciens IIFE si leur code les vérifie.
+  // On ne touche pas au correctif messagerie.
+  window.__stellarionAllianceQGFocusGuard1566 = true;
+  window.__stellarionAllianceEditorFocusLock1567 = true;
+
+  var nativeAddEventListener = EventTarget.prototype.addEventListener;
+  window.__stellarionNativeAddEventListener1577 = nativeAddEventListener;
+
+  function fnSource(fn){
+    try { return Function.prototype.toString.call(fn); } catch(e){ return ''; }
+  }
+
+  function isOldAllianceFocusListener(type, listener){
+    if (!listener) return false;
+    var src = fnSource(listener);
+    if (!src && typeof listener === 'object' && listener.handleEvent) src = fnSource(listener.handleEvent);
+    if (!src) return false;
+
+    var s = src.slice(0, 12000);
+    var explicit =
+      s.indexOf('__stellarionAllianceQGFocusGuard1566') !== -1 ||
+      s.indexOf('__stellarionAllianceEditorFocusLock1567') !== -1 ||
+      s.indexOf('stellarion-alliance-editing1567') !== -1 ||
+      s.indexOf('Alliance QG Focus Guard') !== -1 ||
+      s.indexOf('Alliance editor hard focus') !== -1 ||
+      s.indexOf('alliance editor hard focus') !== -1;
+
+    if (explicit) return true;
+
+    var hasAlliance =
+      s.indexOf('allianceCx') !== -1 ||
+      s.indexOf('alliance-cx') !== -1 ||
+      s.indexOf('Alliance') !== -1 ||
+      s.indexOf('alliance') !== -1;
+
+    var hasFocus =
+      s.indexOf('.focus') !== -1 ||
+      s.indexOf('focus(') !== -1 ||
+      s.indexOf('setSelectionRange') !== -1 ||
+      s.indexOf('selectionStart') !== -1 ||
+      s.indexOf('selectionEnd') !== -1 ||
+      s.indexOf('restoreFocus') !== -1 ||
+      s.indexOf('activeElement') !== -1;
+
+    var looksLikeGuard =
+      s.indexOf('1566') !== -1 ||
+      s.indexOf('1567') !== -1 ||
+      s.indexOf('editing1567') !== -1 ||
+      s.indexOf('Focus Guard') !== -1 ||
+      s.indexOf('FocusLock') !== -1 ||
+      s.indexOf('focus lock') !== -1;
+
+    // On ne bloque que les listeners clairement orientés focus/sélection Alliance.
+    return !!(hasAlliance && hasFocus && looksLikeGuard);
+  }
+
+  EventTarget.prototype.addEventListener = function(type, listener, options){
+    try {
+      var hostIsGlobal = this === window || this === document || this === document.body || this === document.documentElement;
+      if (hostIsGlobal && isOldAllianceFocusListener(type, listener)) {
+        blockedListeners++;
+        blockedByType[type] = (blockedByType[type] || 0) + 1;
+        return;
+      }
+    } catch(e) {}
+    return nativeAddEventListener.call(this, type, listener, options);
+  };
+
+  window.stellarionAllianceRootCleanPreAudit1577 = function(){
+    return {
+      patch: 'alliance-focus-root-clean-pre-' + VERSION,
+      blockedListeners: blockedListeners,
+      blockedByType: Object.assign({}, blockedByType),
+      flagsForced: {
+        qg1566: window.__stellarionAllianceQGFocusGuard1566 === true,
+        editor1567: window.__stellarionAllianceEditorFocusLock1567 === true
+      }
+    };
+  };
+})();
+</script>
+
+
+<script src="js/main.js"></script>
+<script src="js/fragment-shop-stripe-patch.js"></script>
+<!-- STELLARION 1.5.77 — Alliance focus root clean POST
+     À charger APRÈS js/main.js. Pas de blocage de render(), pas de blocage d'onglets. -->
+<script id="stellarion-alliance-focus-root-clean-post-1577">
+(function(){
+  'use strict';
+  if (window.__stellarionAllianceFocusRootCleanPost1577) return;
+  window.__stellarionAllianceFocusRootCleanPost1577 = true;
+
+  var VERSION = '1.5.77';
   var lastPointerAt = 0;
   var lastPointerTarget = null;
   var lastKeyboardAt = 0;
-  var selectingUntil = 0;
   var blockedFocus = 0;
   var blockedSelection = 0;
+  var cleanedClasses = 0;
 
   function now(){ return Date.now(); }
+
+  function isAlliancePage(){
+    try {
+      var view = window.state && String(window.state.view || '').toLowerCase();
+      if (view.indexOf('alliance') !== -1) return true;
+      return !!document.querySelector('.alliance-cx-dashboard,.alliance-cx-wrap,.alliance-cx-directory,#allianceCxModal,[id^="allianceCx"]');
+    } catch(e){ return false; }
+  }
 
   function isAllianceArea(el){
     try {
       return !!(el && el.closest && el.closest(
         '.alliance-cx-dashboard,.alliance-cx-wrap,.alliance-cx-directory,#allianceCxModal,' +
-        '[id^="allianceCx"],.alliance-cx-field,.alliance-cx-card,.alliance-cx-main,.alliance-cx-side-actions'
+        '[id^="allianceCx"],.alliance-cx-field,.alliance-cx-card,.alliance-cx-main,.alliance-cx-side-actions,' +
+        '[data-view="alliance"],[data-page="alliance"],.alliance-page,.alliance-panel,.alliance-layout'
       ));
     } catch(e){ return false; }
   }
 
-  function isAllianceEditor(el){
+  function isEditable(el){
     try {
       if (!el || !el.tagName) return false;
       var tag = String(el.tagName).toLowerCase();
-      if (!/^(textarea|input|select)$/.test(tag)) return false;
-      if (String(el.type || '').toLowerCase() === 'hidden') return false;
-      if (String(el.id || '').indexOf('allianceCx') === 0) return true;
-      if (el.classList && el.classList.contains('alliance-cx-field')) return true;
-      return isAllianceArea(el);
+      if (tag === 'textarea' || tag === 'select') return true;
+      if (tag === 'input') {
+        var type = String(el.type || 'text').toLowerCase();
+        return !/^(hidden|button|submit|reset|checkbox|radio|file|color|range)$/.test(type);
+      }
+      return el.isContentEditable === true;
     } catch(e){ return false; }
   }
 
-  function activeIsAllianceEditor(){
-    return isAllianceEditor(document.activeElement);
+  function isAllianceEditable(el){
+    return isEditable(el) && (isAllianceArea(el) || isAlliancePage());
   }
 
-  function directUserActionFor(el){
+  function isInteractiveNonText(el){
+    try {
+      if (!el || !el.closest) return false;
+      var hit = el.closest('button,a,[role="tab"],[role="button"],.tab,.alliance-cx-tab,.alliance-tab,[data-tab],[data-action]');
+      return !!(hit && !isEditable(hit));
+    } catch(e){ return false; }
+  }
+
+  function directUserFocusFor(el){
     var t = now();
-    if (lastPointerTarget && (el === lastPointerTarget || (lastPointerTarget.closest && lastPointerTarget.closest('#' + safeId(el)) === el))) {
-      return t - lastPointerAt < 1200;
-    }
-    if (lastPointerTarget && lastPointerTarget.closest && el && el.contains && el.contains(lastPointerTarget)) {
-      return t - lastPointerAt < 1200;
-    }
-    if (document.activeElement === el && t - lastKeyboardAt < 900) return true;
+    if (lastPointerTarget && (el === lastPointerTarget || (el.contains && el.contains(lastPointerTarget)))) return t - lastPointerAt < 1200;
+    if (document.activeElement === el && t - lastKeyboardAt < 1200) return true;
     return false;
   }
 
-  function safeId(el){
-    var id = el && el.id;
-    if (!id) return '__never__';
-    if (window.CSS && CSS.escape) return CSS.escape(id);
-    return String(id).replace(/([ #;?%&,.+*~':"!^$[\]()=>|\/@])/g, '\\$1');
-  }
-
-  function userIsSelecting(){
-    if (now() < selectingUntil) return true;
+  function cleanAllianceEditingClass(){
     try {
-      var s = window.getSelection && window.getSelection();
-      return !!(s && !s.isCollapsed && String(s.toString() || '').length > 0);
-    } catch(e){ return false; }
+      if (document.body && document.body.classList && document.body.classList.contains('stellarion-alliance-editing1567')) {
+        document.body.classList.remove('stellarion-alliance-editing1567');
+        cleanedClasses++;
+      }
+    } catch(e) {}
   }
 
   document.addEventListener('pointerdown', function(e){
     lastPointerAt = now();
     lastPointerTarget = e.target;
-    selectingUntil = now() + 1400;
-
-    // Quand le joueur clique sur un bouton/onglet Alliance, on retire la classe visuelle
-    // de l'ancien lock 1567 pour éviter l'état "édition" fantôme.
-    try {
-      if (isAllianceArea(e.target) && !isAllianceEditor(e.target)) {
-        document.body && document.body.classList && document.body.classList.remove('stellarion-alliance-editing1567');
-      }
-    } catch(_e) {}
+    if (isAlliancePage() && isInteractiveNonText(e.target)) cleanAllianceEditingClass();
   }, true);
 
   document.addEventListener('mousedown', function(e){
     lastPointerAt = now();
     lastPointerTarget = e.target;
-    selectingUntil = now() + 1400;
+    if (isAlliancePage() && isInteractiveNonText(e.target)) cleanAllianceEditingClass();
   }, true);
 
-  document.addEventListener('mousemove', function(e){
-    if (e.buttons) selectingUntil = now() + 350;
+  document.addEventListener('keydown', function(e){
+    lastKeyboardAt = now();
+    if (e.key === 'Escape') cleanAllianceEditingClass();
   }, true);
 
-  document.addEventListener('selectstart', function(){
-    selectingUntil = now() + 1600;
+  document.addEventListener('input', function(e){
+    if (isAllianceEditable(e.target)) lastKeyboardAt = now();
   }, true);
 
-  document.addEventListener('selectionchange', function(){
-    try {
-      var s = window.getSelection && window.getSelection();
-      if (s && !s.isCollapsed) selectingUntil = now() + 1000;
-    } catch(e) {}
+  document.addEventListener('click', function(e){
+    if (isAlliancePage() && isInteractiveNonText(e.target)) cleanAllianceEditingClass();
   }, true);
 
-  document.addEventListener('keydown', function(){ lastKeyboardAt = now(); }, true);
-  document.addEventListener('input', function(e){ if (isAllianceEditor(e.target)) lastKeyboardAt = now(); }, true);
+  // Empêche le vieux lock de remettre son état visuel qui perturbait les onglets.
+  try {
+    var nativeTokenAdd = DOMTokenList.prototype.add;
+    if (nativeTokenAdd && !DOMTokenList.prototype.__stellarionAllianceClassGuard1577) {
+      DOMTokenList.prototype.add = function(){
+        try {
+          var args = Array.prototype.slice.call(arguments);
+          var filtered = args.filter(function(c){ return c !== 'stellarion-alliance-editing1567'; });
+          if (filtered.length !== args.length) cleanedClasses++;
+          if (!filtered.length) return;
+          return nativeTokenAdd.apply(this, filtered);
+        } catch(e){ return nativeTokenAdd.apply(this, arguments); }
+      };
+      DOMTokenList.prototype.__stellarionAllianceClassGuard1577 = true;
+    }
+  } catch(e) {}
 
-  // 1) Bloque uniquement les focus automatiques Alliance qui ne viennent pas d'un clic direct.
+  // Ne bloque pas les boutons/onglets. Ne bloque que les focus programmatiques vers un champ Alliance
+  // alors que l'utilisateur vient de cliquer ailleurs dans Alliance.
   try {
     var nativeFocus = HTMLElement.prototype.focus;
-    if (nativeFocus && !HTMLElement.prototype.__stellarionNoLagFocusGuard1576) {
-      HTMLElement.prototype.focus = function(options){
-        if (isAllianceEditor(this)) {
+    if (nativeFocus && !HTMLElement.prototype.__stellarionAllianceFocusRootClean1577) {
+      HTMLElement.prototype.focus = function(){
+        if (isAllianceEditable(this)) {
           var t = now();
-          var clickedElsewhereRecently = lastPointerTarget && !this.contains(lastPointerTarget) && t - lastPointerAt < 1600;
-          var selecting = userIsSelecting();
-          var legitimate = directUserActionFor(this);
-
-          if ((clickedElsewhereRecently || selecting) && !legitimate) {
+          var userClickedElsewhere = lastPointerTarget && !this.contains(lastPointerTarget) && t - lastPointerAt < 1800;
+          var activeIsOther = document.activeElement && document.activeElement !== this && isEditable(document.activeElement);
+          var legitimate = directUserFocusFor(this);
+          if ((userClickedElsewhere || activeIsOther) && !legitimate) {
             blockedFocus++;
             return;
           }
         }
         return nativeFocus.apply(this, arguments);
       };
-      HTMLElement.prototype.__stellarionNoLagFocusGuard1576 = true;
+      HTMLElement.prototype.__stellarionAllianceFocusRootClean1577 = true;
     }
-  } catch(e){ console.warn('Stellarion 1576 focus guard non installé:', e); }
+  } catch(e) {}
 
-  // 2) Bloque les setSelectionRange automatiques pendant que le joueur sélectionne/clic.
-  function guardSelectionRange(proto, label){
+  function guardSetSelectionRange(proto){
     try {
-      if (!proto || !proto.setSelectionRange || proto.__stellarionNoLagSelectionGuard1576) return;
-      var nativeSetSelectionRange = proto.setSelectionRange;
+      if (!proto || !proto.setSelectionRange || proto.__stellarionAllianceSelectionRootClean1577) return;
+      var nativeSet = proto.setSelectionRange;
       proto.setSelectionRange = function(){
-        if (isAllianceEditor(this)) {
+        if (isAllianceEditable(this)) {
           var t = now();
-          var clickedElsewhereRecently = lastPointerTarget && !this.contains(lastPointerTarget) && t - lastPointerAt < 1600;
-          if (userIsSelecting() || clickedElsewhereRecently) {
+          var userClickedElsewhere = lastPointerTarget && !this.contains(lastPointerTarget) && t - lastPointerAt < 1800;
+          if (userClickedElsewhere && !directUserFocusFor(this)) {
             blockedSelection++;
             return;
           }
         }
-        return nativeSetSelectionRange.apply(this, arguments);
+        return nativeSet.apply(this, arguments);
       };
-      proto.__stellarionNoLagSelectionGuard1576 = true;
-    } catch(e){ console.warn('Stellarion 1576 selection guard non installé '+label+':', e); }
+      proto.__stellarionAllianceSelectionRootClean1577 = true;
+    } catch(e) {}
   }
-  guardSelectionRange(window.HTMLInputElement && HTMLInputElement.prototype, 'input');
-  guardSelectionRange(window.HTMLTextAreaElement && HTMLTextAreaElement.prototype, 'textarea');
+  guardSetSelectionRange(window.HTMLInputElement && HTMLInputElement.prototype);
+  guardSetSelectionRange(window.HTMLTextAreaElement && HTMLTextAreaElement.prototype);
 
-  // 3) Audit et nettoyage manuel si besoin.
-  window.stellarionNoLagFocusAudit1576 = function(){
+  // Nettoyage régulier léger, sans toucher à render/innerHTML.
+  setInterval(cleanAllianceEditingClass, 500);
+  try {
+    var mo = new MutationObserver(cleanAllianceEditingClass);
+    if (document.body) mo.observe(document.body, { attributes:true, attributeFilter:['class'] });
+  } catch(e) {}
+
+  window.stellarionAllianceFocusAudit1577 = function(){
     var ae = document.activeElement;
     return {
-      patch:'focus-no-lag-root-guard-' + VERSION,
-      activeElement: ae ? { tag:ae.tagName, id:ae.id || '', className:String(ae.className || ''), allianceEditor:isAllianceEditor(ae) } : null,
-      lastPointerTarget: lastPointerTarget ? { tag:lastPointerTarget.tagName, id:lastPointerTarget.id || '', className:String(lastPointerTarget.className || '').slice(0,120) } : null,
-      activeIsAllianceEditor: activeIsAllianceEditor(),
-      userIsSelecting:userIsSelecting(),
-      selectingRemainingMs:Math.max(0, selectingUntil - now()),
-      blockedFocus:blockedFocus,
-      blockedSelection:blockedSelection,
-      oldGuardsDetected:{
-        qg1566:!!window.__stellarionAllianceQGFocusGuard1566,
-        editor1567:!!window.__stellarionAllianceEditorFocusLock1567,
-        index1572:!!window.__stellarionFocusFlickerFix1572,
-        index1573:!!window.__stellarionFocusAllianceNotifFix1573,
-        index1574:!!window.__stellarionFocusSelectionNotifFix1574,
-        index1575:!!window.__stellarionHardFocusStop1575
+      patch: 'alliance-focus-root-clean-' + VERSION,
+      pre: window.stellarionAllianceRootCleanPreAudit1577 ? window.stellarionAllianceRootCleanPreAudit1577() : null,
+      activeElement: ae ? { tag: ae.tagName, id: ae.id || '', className: String(ae.className || '').slice(0,160), allianceEditable: isAllianceEditable(ae) } : null,
+      lastPointerTarget: lastPointerTarget ? { tag: lastPointerTarget.tagName, id: lastPointerTarget.id || '', className: String(lastPointerTarget.className || '').slice(0,160) } : null,
+      alliancePage: isAlliancePage(),
+      blockedFocus: blockedFocus,
+      blockedSelection: blockedSelection,
+      cleanedClasses: cleanedClasses,
+      bodyHasOldEditingClass: !!(document.body && document.body.classList && document.body.classList.contains('stellarion-alliance-editing1567')),
+      oldFlags: {
+        qg1566: !!window.__stellarionAllianceQGFocusGuard1566,
+        editor1567: !!window.__stellarionAllianceEditorFocusLock1567,
+        messageFocusPatch: !!window.__stellarionFocusRenderFixV1
       }
     };
   };
 
-  window.stellarionReleaseAllianceFocus1576 = function(){
-    try { document.body && document.body.classList && document.body.classList.remove('stellarion-alliance-editing1567'); } catch(e){}
-    try { if (document.activeElement && isAllianceEditor(document.activeElement)) document.activeElement.blur(); } catch(e){}
+  window.stellarionReleaseAllianceFocus1577 = function(){
+    cleanAllianceEditingClass();
+    try {
+      if (document.activeElement && isAllianceEditable(document.activeElement)) document.activeElement.blur();
+    } catch(e) {}
     lastPointerTarget = document.body;
     lastPointerAt = now();
-    selectingUntil = now() + 1200;
-    return stellarionNoLagFocusAudit1576();
+    return window.stellarionAllianceFocusAudit1577();
   };
 
-  console.log('✅ STELLARION focus no-lag 1.5.76 actif — audit: stellarionNoLagFocusAudit1576()');
+  cleanAllianceEditingClass();
+  console.log('✅ STELLARION Alliance focus root clean 1.5.77 actif — audit: stellarionAllianceFocusAudit1577()');
 })();
 </script>
 
