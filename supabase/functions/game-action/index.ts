@@ -21,6 +21,7 @@ const ECONOMY = {
   lateBuildingCostScale: 1.55,
   softEmbassyLimit: 30,
   unitPriceMultiplier: 5,
+  buildQueue2Price: 1500,
 };
 
 const BUILDINGS: Record<string, BuildingDef> = (() => {
@@ -98,6 +99,8 @@ Deno.serve(async (req) => {
       message = "Etat serveur charge.";
     } else if (action === "buy_building") {
       message = await buyBuilding(admin, user.id, body);
+    } else if (action === "buy_build_queue_2") {
+      message = await buyBuildQueue2(admin, user.id);
     } else if (action === "finish_building") {
       message = await finishBuilding(admin, user.id, body);
     } else if (action === "buy_ship") {
@@ -159,6 +162,7 @@ async function ensurePlayer(admin: any, playerId: string, snapshotPayload: any) 
   const existing = await admin.from("game_resources").select("player_id").eq("player_id", playerId).maybeSingle();
   if (!existing.error && existing.data) {
     await admin.from("game_buildings").upsert({ player_id:playerId, planet_id:"home", building_id:"command_center", level:1, updated_at:new Date().toISOString() }, { onConflict:"player_id,planet_id,building_id", ignoreDuplicates:true });
+    await admin.from("game_security_profile").upsert({ player_id:playerId, updated_at:new Date().toISOString() }, { onConflict:"player_id" });
     return;
   }
 
@@ -313,10 +317,9 @@ async function buyBuilding(admin: any, playerId: string, body: any) {
   const planetId = safePlanet(body.planet_id || body.planetId || "home");
   const def = BUILDINGS[buildingId];
   if (!def) throw new Error("batiment_inconnu");
-  const qCount = await admin.from("game_build_queue").select("id", { count:"exact", head:true }).eq("player_id", playerId).eq("planet_id", planetId);
+  const qCount = await admin.from("game_build_queue").select("id", { count:"exact", head:true }).eq("player_id", playerId);
   if (qCount.error) throw qCount.error;
-  const cc = await buildingLevel(admin, playerId, planetId, "command_center");
-  const maxQueue = Math.min(3, 1 + Math.floor(cc / 10));
+  const maxQueue = await maxBuildQueue(admin, playerId);
   if ((qCount.count || 0) >= maxQueue) throw new Error("file_construction_pleine");
 
   const rowLevel = await buildingLevel(admin, playerId, planetId, buildingId);
@@ -333,6 +336,28 @@ async function buyBuilding(admin: any, playerId: string, body: any) {
   const ins = await admin.from("game_build_queue").insert({ player_id:playerId, planet_id:planetId, building_id:buildingId, from_level:from, to_level:to, start_at:startsAt, finish_at:isoPlus(buildTime(def, to)) });
   if (ins.error) throw ins.error;
   return `Construction serveur lancee : ${buildingId} niveau ${to}`;
+}
+async function maxBuildQueue(admin: any, playerId: string) {
+  const pr = await admin.from("game_security_profile").select("build_queue_2_permanent").eq("player_id", playerId).maybeSingle();
+  if (pr.error) throw pr.error;
+  return pr.data?.build_queue_2_permanent ? 2 : 1;
+}
+async function buyBuildQueue2(admin: any, playerId: string) {
+  const pr = await admin.from("game_security_profile").select("build_queue_2_permanent").eq("player_id", playerId).maybeSingle();
+  if (pr.error) throw pr.error;
+  if (pr.data?.build_queue_2_permanent) return "File auxiliaire deja active.";
+  const r = await currentResources(admin, playerId);
+  if (n(r.fragments) < ECONOMY.buildQueue2Price) throw new Error("fragments_insuffisants");
+  r.fragments = n(r.fragments) - ECONOMY.buildQueue2Price;
+  await setResources(admin, playerId, r);
+  const up = await admin.from("game_security_profile").upsert({
+    player_id: playerId,
+    build_queue_2_permanent: true,
+    build_queue_2_purchased_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }, { onConflict:"player_id" });
+  if (up.error) throw up.error;
+  return "File auxiliaire permanente debloquee.";
 }
 async function buildingLevel(admin: any, playerId: string, planetId: string, buildingId: string) {
   const br = await admin.from("game_buildings").select("level").eq("player_id", playerId).eq("planet_id", planetId).eq("building_id", buildingId).maybeSingle();
@@ -469,14 +494,15 @@ async function launchFleet(admin: any, playerId: string, body: any) {
 }
 
 async function snapshot(admin: any, playerId: string) {
-  const [res, b, bq, ships, sq, fleets] = await Promise.all([
+  const [res, b, bq, ships, sq, fleets, profile] = await Promise.all([
     admin.from("game_resources").select("*").eq("player_id", playerId).maybeSingle(),
     admin.from("game_buildings").select("planet_id,building_id,level").eq("player_id", playerId),
     admin.from("game_build_queue").select("*").eq("player_id", playerId).order("finish_at", { ascending:true }),
     admin.from("game_ships").select("planet_id,ship_id,qty").eq("player_id", playerId),
     admin.from("game_ship_queue").select("*").eq("player_id", playerId).order("finish_at", { ascending:true }),
     admin.from("game_fleets").select("*").eq("player_id", playerId).order("ends_at", { ascending:true }),
+    admin.from("game_security_profile").select("build_queue_2_permanent,build_queue_2_purchased_at").eq("player_id", playerId).maybeSingle(),
   ]);
-  for (const r of [res,b,bq,ships,sq,fleets]) if (r.error) throw r.error;
-  return { serverTime: new Date().toISOString(), resources: res.data, buildings:b.data || [], buildQueue:bq.data || [], ships:ships.data || [], shipQueue:sq.data || [], fleets:fleets.data || [] };
+  for (const r of [res,b,bq,ships,sq,fleets,profile]) if (r.error) throw r.error;
+  return { serverTime: new Date().toISOString(), resources: res.data, buildings:b.data || [], buildQueue:bq.data || [], ships:ships.data || [], shipQueue:sq.data || [], fleets:fleets.data || [], upgrades:{ buildQueue2Permanent: !!profile.data?.build_queue_2_permanent, buildQueue2PurchasedAt: profile.data?.build_queue_2_purchased_at || null } };
 }

@@ -73,9 +73,16 @@ create table if not exists public.game_fleets (
 create table if not exists public.game_security_profile (
   player_id uuid primary key references auth.users(id) on delete cascade,
   migration_locked boolean not null default false,
+  build_queue_2_permanent boolean not null default false,
+  build_queue_2_purchased_at timestamptz,
   migrated_at timestamptz,
   updated_at timestamptz not null default now()
 );
+
+alter table public.game_security_profile
+  add column if not exists build_queue_2_permanent boolean not null default false;
+alter table public.game_security_profile
+  add column if not exists build_queue_2_purchased_at timestamptz;
 
 create table if not exists public.game_security_audit (
   id bigint generated always as identity primary key,
