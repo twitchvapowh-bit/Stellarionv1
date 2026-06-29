@@ -63,7 +63,7 @@ create table if not exists public.game_fleets (
   mission text not null default 'explore',
   ships jsonb not null default '{}'::jsonb,
   cargo jsonb not null default '{}'::jsonb,
-  returning boolean not null default false,
+  "returning" boolean not null default false,
   start_at timestamptz not null default now(),
   ends_at timestamptz not null,
   payload jsonb not null default '{}'::jsonb,
