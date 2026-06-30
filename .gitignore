@@ -1,2 +1,19 @@
+# Secrets / environnement
+.env
+.env.*
+!.env.example
+
+# Vercel local link - ne pas partager / commit
 .vercel
-.env*
+
+# Dependencies / build
+node_modules
+dist
+build
+.cache
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
