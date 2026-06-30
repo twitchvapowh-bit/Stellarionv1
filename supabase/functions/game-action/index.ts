@@ -423,10 +423,23 @@ async function markFleetReturningAfterCombat(admin: any, supaUser: any, playerId
   const loot = result.loot || { titanium:0, xenite:0, antimatter:0, fragments:0 };
   const lootTotal = n(loot.titanium) + n(loot.xenite) + n(loot.antimatter) + n(loot.fragments);
   if (lootTotal > 0) await addResources(admin, playerId, loot);
-  // V7 : le rapport affiche un butin déjà crédité au stock cloud.
-  // Le cargo retour reste vide pour éviter un double crédit au retour de flotte.
+  const resourcesAfter = await currentResources(admin, playerId);
+  const creditedResult = {
+    ...result,
+    serverResolved:true,
+    lootCredited:true,
+    lootCreditedAt: lootTotal > 0 ? now : null,
+    attackerResourcesAfter:{
+      titanium:n(resourcesAfter.titanium),
+      xenite:n(resourcesAfter.xenite),
+      antimatter:n(resourcesAfter.antimatter),
+      fragments:n(resourcesAfter.fragments),
+    },
+  };
+  // V8 : le rapport contient le stock attaquant exact après crédit.
+  // Le cargo retour reste vide pour éviter tout double crédit au retour de flotte.
   const cargo = { titanium:0, xenite:0, antimatter:0, fragments:0 };
-  const nextPayload = { ...payload, serverCombat: result, combatResolvedAt: now, combatLootCreditedAt: lootTotal > 0 ? now : null, combatResolver: "v7-server-authority-1589" };
+  const nextPayload = { ...payload, serverCombat: creditedResult, combatResolvedAt: now, combatLootCreditedAt: lootTotal > 0 ? now : null, combatResolver: "v8-server-authority-1590" };
   const up = await admin.from("game_fleets")
     .update({ returning:true, ships:returningShips, cargo, payload:nextPayload, start_at:now, ends_at:isoPlus(combatReturnSeconds(f)), updated_at:now })
     .eq("id", f.id).eq("player_id", playerId);
@@ -443,7 +456,7 @@ async function markFleetReturningAfterCombat(admin: any, supaUser: any, playerId
       updated_at:now,
     }).eq("id", String(f.id));
   } catch (_) {}
-  return result;
+  return creditedResult;
 }
 async function resolvePlayerAttackNow(admin: any, supaUser: any, playerId: string, body: any) {
   const id = String(body.fleet_id || body.id || "");
@@ -457,7 +470,7 @@ async function resolvePlayerAttackNow(admin: any, supaUser: any, playerId: strin
   const dueAt = Date.parse(f.ends_at || "");
   if (Number.isFinite(dueAt) && dueAt > Date.now() + 1500) throw new Error("attaque_pas_encore_arrivee");
   const result = await markFleetReturningAfterCombat(admin, supaUser, playerId, f);
-  return result.victory ? "Combat résolu côté serveur : butin placé dans le cargo retour." : "Combat résolu côté serveur : retour flotte en cours.";
+  return result.victory ? "Combat résolu côté serveur : butin crédité au stock." : "Combat résolu côté serveur : retour flotte en cours.";
 }
 
 async function processQueues(admin: any, maybeSupaUser: any, maybePlayerId?: string) {
