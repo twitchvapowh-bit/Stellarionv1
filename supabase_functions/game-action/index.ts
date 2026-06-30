@@ -1,5 +1,5 @@
 // STELLARION — Edge Function : game-action
-// Version 1.5.70 SERVER AUTHORITY
+// Version 1.5.91 SERVER AUTHORITY — combat loot/report stable
 // Le navigateur ne décide plus des ressources / bâtiments / vaisseaux / files / flottes.
 // Il demande une action; cette fonction authentifie, vérifie, applique et renvoie l'état canonique.
 
@@ -92,11 +92,29 @@ Deno.serve(async (req) => {
   try {
     await ensurePlayer(admin, user.id, body.snapshot || null);
     await accrueResources(admin, user.id);
-    await processQueues(admin, user.id);
+
+    // V13 1.5.94 : une ouverture de coffre ne doit jamais être bloquée par une
+    // flotte/attaque en attente. Avant, game-action appelait processQueues()
+    // avant TOUTE action ; si une attaque posait problème, open_chest échouait
+    // aussi, ce qui donnait l'impression que plus aucun coffre ne s'ouvrait.
+    const isolateChestAction = action === "open_chest";
+    let queueWarning: string | null = null;
+    if (!isolateChestAction) {
+      await processQueues(admin, supaUser, user.id);
+    } else {
+      try { await processQueuesSafeNoCombat(admin, user.id); }
+      catch (qe) { queueWarning = String((qe as Error)?.message || qe); }
+    }
 
     let message = "ok";
+    let extra: Record<string, unknown> = {};
+    if (queueWarning) extra.queueWarning = queueWarning;
     if (action === "bootstrap" || action === "state") {
       message = "Etat serveur charge.";
+    } else if (action === "open_chest") {
+      const chest = await openChest(admin, user.id, body);
+      message = chest.message;
+      extra.chest = chest;
     } else if (action === "buy_building") {
       message = await buyBuilding(admin, user.id, body);
     } else if (action === "buy_build_queue_2") {
@@ -109,6 +127,8 @@ Deno.serve(async (req) => {
       message = await finishShip(admin, user.id, body);
     } else if (action === "launch_fleet") {
       message = await launchFleet(admin, user.id, body);
+    } else if (action === "resolve_player_attack") {
+      message = await resolvePlayerAttackNow(admin, supaUser, user.id, body);
     } else if (action === "process") {
       message = "Files et flottes traitees.";
     } else {
@@ -117,9 +137,14 @@ Deno.serve(async (req) => {
     }
 
     await accrueResources(admin, user.id);
-    await processQueues(admin, user.id);
-    await audit(admin, user.id, action, true, { message });
-    return json({ ok:true, message, state: await snapshot(admin, user.id) }, 200);
+    if (!isolateChestAction) {
+      await processQueues(admin, supaUser, user.id);
+    } else {
+      try { await processQueuesSafeNoCombat(admin, user.id); }
+      catch (qe) { extra.queueWarningAfter = String((qe as Error)?.message || qe); }
+    }
+    await audit(admin, user.id, action, true, { message, ...extra });
+    return json({ ok:true, message, ...extra, state: await snapshot(admin, user.id) }, 200);
   } catch (e) {
     await audit(admin, user.id, action, false, { error:String((e as Error)?.message || e) });
     return json({ ok:false, error:String((e as Error)?.message || e), state: await snapshot(admin, user.id).catch(() => null) }, 400);
@@ -260,7 +285,309 @@ async function accrueResources(admin: any, playerId: string) {
   if (up.error) throw up.error;
 }
 
-async function processQueues(admin: any, playerId: string) {
+function shipCargoCapacity(ships: any) {
+  let total = 0;
+  for (const [shipId, qtyRaw] of Object.entries(ships || {})) {
+    const def = SHIPS[String(shipId)];
+    if (!def) continue;
+    total += n(qtyRaw, 0, 1000000) * n(def.cargo);
+  }
+  return total;
+}
+function shipAttackPower(ships: any) {
+  let total = 0;
+  for (const [shipId, qtyRaw] of Object.entries(ships || {})) {
+    const def = SHIPS[String(shipId)];
+    if (!def) continue;
+    total += n(qtyRaw, 0, 1000000) * n(def.attack);
+  }
+  return total;
+}
+function targetNum(target: any, key: string, fallback = 0) {
+  return n(target && target[key] !== undefined ? target[key] : fallback, 0, 100000000);
+}
+function fitLootToCargo(loot: any, cap: number) {
+  cap = n(cap, 0, 100000000);
+  const physical = n(loot.titanium) + n(loot.xenite) + n(loot.antimatter);
+  if (cap <= 0) return { titanium:0, xenite:0, antimatter:0, fragments:n(loot.fragments,0,100000) };
+  if (physical <= cap) return {
+    titanium:n(loot.titanium), xenite:n(loot.xenite), antimatter:n(loot.antimatter), fragments:n(loot.fragments,0,100000)
+  };
+  const ratio = cap / physical;
+  let titanium = Math.floor(n(loot.titanium) * ratio);
+  let xenite = Math.floor(n(loot.xenite) * ratio);
+  let antimatter = Math.floor(n(loot.antimatter) * ratio);
+  let used = titanium + xenite + antimatter;
+  if (used < cap && n(loot.titanium) > titanium) titanium += Math.min(cap - used, n(loot.titanium) - titanium);
+  used = titanium + xenite + antimatter;
+  if (used < cap && n(loot.xenite) > xenite) xenite += Math.min(cap - used, n(loot.xenite) - xenite);
+  used = titanium + xenite + antimatter;
+  if (used < cap && n(loot.antimatter) > antimatter) antimatter += Math.min(cap - used, n(loot.antimatter) - antimatter);
+  return { titanium, xenite, antimatter, fragments:n(loot.fragments,0,100000) };
+}
+function serverAttackResult(f: any) {
+  const ships = f.ships || {};
+  const payload = f.payload || {};
+  const target = payload.target || {};
+  const cargoCap = shipCargoCapacity(ships);
+  const attack = shipAttackPower(ships);
+  const danger = Math.max(1, targetNum(target, "danger", 1));
+  const richness = Math.max(1, targetNum(target, "richness", 1));
+  const enemyPower = Math.max(
+    160,
+    targetNum(target, "enemyPower", 0) || targetNum(target, "power", 0) || Math.round(danger * 620 + richness * 220),
+  );
+  const victory = attack > 0 && attack >= Math.round(enemyPower * 0.55);
+  const rawLoot = victory ? {
+    titanium: Math.round((900 + enemyPower * 0.55) * richness),
+    xenite: Math.round((420 + enemyPower * 0.32) * richness),
+    antimatter: Math.round((35 + enemyPower * 0.035) * richness),
+    fragments: target.aiThreat ? 2 : 0,
+  } : { titanium:0, xenite:0, antimatter:0, fragments:0 };
+  const loot = fitLootToCargo(rawLoot, cargoCap);
+  return {
+    patch:"v6-attack-loot-1588",
+    targetName:String(f.target_name || target.name || "Cible"),
+    victory,
+    attackPower:attack,
+    enemyPower,
+    cargoCap,
+    loot,
+    resolvedAt:new Date().toISOString(),
+  };
+}
+
+
+function combatReturnSeconds(f: any) {
+  const payload = f && f.payload || {};
+  const original = n(payload.durationSeconds || payload.duration || 60, 10, 3600);
+  return Math.max(6, Math.min(900, Math.round(original * 0.75)) || 45);
+}
+function normalizeAiCombatResult(result: any, f: any) {
+  const ships = f.ships || {};
+  return {
+    ...result,
+    patch: "v7-ai-server-combat-1589",
+    serverResolved: true,
+    target: (f.payload && f.payload.target) || {},
+    sentShips: ships,
+    shipsSent: ships,
+    playerRemaining: ships,
+    playerLost: {},
+    attackerLosses: {},
+    attackerPower: n(result.attackPower),
+    playerAttack: n(result.attackPower),
+    defenderPower: n(result.enemyPower),
+    enemyPower: n(result.enemyPower),
+    attackRoll: n(result.attackPower),
+    defenseRoll: n(result.enemyPower),
+    loot: result.loot || { titanium:0, xenite:0, antimatter:0, fragments:0 },
+  };
+}
+function normalizePvpCombatResult(data: any, target: any, sentShips: any) {
+  data = data || {};
+  const remaining = data.attackerRemaining || data.playerRemaining || sentShips || {};
+  const cargoCap = shipCargoCapacity(remaining);
+  const loot = fitLootToCargo(data.loot || {}, cargoCap);
+  return {
+    version: data.version || "v7-pvp-server-combat-1589",
+    patch: "v7-pvp-server-combat-1589",
+    serverResolved: true,
+    victory: !!data.victory,
+    target: target || {},
+    targetName: String((target && (target.homePlanetName || target.name || target.username)) || "Planète ennemie"),
+    sentShips: sentShips || {},
+    shipsSent: sentShips || {},
+    playerRemaining: remaining,
+    playerLost: data.attackerLost || {},
+    attackerLosses: data.attackerLost || {},
+    loot,
+    attackerPower: n(data.attackerPower || data.attackerAttack),
+    playerAttack: n(data.attackerAttack || data.attackerPower),
+    playerDefense: n(data.attackerHull),
+    defenderPower: n(data.defenderPower || data.defenderAttack || data.defenderHull),
+    enemyAttack: n(data.defenderAttack),
+    enemyDefense: n(data.defenderHull),
+    attackRoll: n(data.attackRoll || data.attackerPower),
+    defenseRoll: n(data.defenseRoll || data.defenderPower),
+    defenderShipsBefore: data.defenderShipsBefore || {},
+    defenderShipsInFlight: data.defenderShipsInFlight || {},
+    defenderShipsExcludedFromDefense: data.defenderShipsExcludedFromDefense || data.defenderShipsInFlight || {},
+    defenderShipsLost: data.defenderShipsLost || {},
+    defenderShipsRemaining: data.defenderShipsRemaining || {},
+    defenderDefensesBefore: data.defenderDefensesBefore || {},
+    defenderDefensesLost: data.defenderDefensesLost || {},
+    defenderDefensesRemaining: data.defenderDefensesRemaining || {},
+    stockBefore: data.stockBefore || {},
+    stockAfter: data.stockAfter || {},
+    deductedFromTargetStock: data.deductedFromTargetStock || data.loot || {},
+  };
+}
+async function resolveFleetAttack(admin: any, supaUser: any, playerId: string, f: any) {
+  const payload = f.payload || {};
+  const target = payload.target || {};
+  if (target && target.playerId && supaUser && typeof supaUser.rpc === "function") {
+    const targetPlanetId = String(target.homePlanetId || target.planetId || target.home_planet_id || "") || null;
+    const rpc = await supaUser.rpc("stellarion_resolve_player_attack", {
+      target_player_id: String(target.playerId),
+      target_planet_id: targetPlanetId,
+      attacker_ships: f.ships || {},
+    });
+    if (rpc.error) throw rpc.error;
+    return normalizePvpCombatResult(rpc.data || {}, target, f.ships || {});
+  }
+  return normalizeAiCombatResult(serverAttackResult(f), f);
+}
+async function markFleetReturningAfterCombat(admin: any, supaUser: any, playerId: string, f: any) {
+  const now = new Date().toISOString();
+  const payload = f.payload || {};
+  const result = await resolveFleetAttack(admin, supaUser, playerId, f);
+  const returningShips = result.playerRemaining || f.ships || {};
+  const loot = result.loot || { titanium:0, xenite:0, antimatter:0, fragments:0 };
+  const lootTotal = n(loot.titanium) + n(loot.xenite) + n(loot.antimatter) + n(loot.fragments);
+  if (lootTotal > 0) await addResources(admin, playerId, loot);
+  const resourcesAfter = await currentResources(admin, playerId);
+  const creditedResult = {
+    ...result,
+    serverResolved:true,
+    lootCredited:true,
+    lootCreditedAt: lootTotal > 0 ? now : null,
+    attackerResourcesAfter:{
+      titanium:n(resourcesAfter.titanium),
+      xenite:n(resourcesAfter.xenite),
+      antimatter:n(resourcesAfter.antimatter),
+      fragments:n(resourcesAfter.fragments),
+    },
+  };
+  // V11 1.5.92 : le rapport ne dépend plus de la durée de vie de la ligne game_fleets.
+  // On écrit un message serveur persistant immédiatement après la résolution du combat.
+  // Ainsi, même si la flotte revient/supprimée avant que le client voie payload.serverCombat,
+  // le rapport reste disponible dans la messagerie et contient le stock exact après crédit.
+  await insertPersistentCombatMessage(admin, playerId, f, creditedResult);
+  // V8 : le rapport contient le stock attaquant exact après crédit.
+  // Le cargo retour reste vide pour éviter tout double crédit au retour de flotte.
+  const cargo = { titanium:0, xenite:0, antimatter:0, fragments:0 };
+  const nextPayload = { ...payload, serverCombat: creditedResult, combatResolvedAt: now, combatLootCreditedAt: lootTotal > 0 ? now : null, combatResolver: "v8-server-authority-1590" };
+  const up = await admin.from("game_fleets")
+    .update({ returning:true, ships:returningShips, cargo, payload:nextPayload, start_at:now, ends_at:isoPlus(combatReturnSeconds(f)), updated_at:now })
+    .eq("id", f.id).eq("player_id", playerId);
+  if (up.error) throw up.error;
+  try {
+    await admin.from("public_missions").update({
+      from_x:n((payload.target || {}).x, -999999, 999999),
+      from_y:n((payload.target || {}).y, -999999, 999999),
+      to_x:n((payload.from || {}).x, -999999, 999999),
+      to_y:n((payload.from || {}).y, -999999, 999999),
+      is_returning:true,
+      started_at:now,
+      ends_at:isoPlus(combatReturnSeconds(f)),
+      updated_at:now,
+    }).eq("id", String(f.id));
+  } catch (_) {}
+  return creditedResult;
+}
+
+function reportFmt(v: unknown) { return n(v).toLocaleString("fr-FR"); }
+function reportLootLine(loot: any) {
+  loot = loot || {};
+  return `${reportFmt(loot.titanium)} Titane · ${reportFmt(loot.xenite)} Xénite · ${reportFmt(loot.antimatter)} Antimatière${n(loot.fragments) ? ` · ${reportFmt(loot.fragments)} fragments` : ""}`;
+}
+function reportShipsLine(ships: any) {
+  const entries = Object.entries(ships || {}).filter(([, qty]) => n(qty) > 0);
+  if (!entries.length) return "Aucun vaisseau";
+  return entries.map(([id, qty]) => `${id} x${reportFmt(qty)}`).join(" · ");
+}
+async function insertPersistentCombatMessage(admin: any, playerId: string, f: any, result: any) {
+  try {
+    const payload = f?.payload || {};
+    const target = payload.target || result?.target || {};
+    const name = String(target.name || target.username || target.homePlanetName || result?.targetName || f?.target_name || "cible");
+    const marker = `[stellarion-combat-report:${String(f?.id || "unknown")}]`;
+    const stock = result?.attackerResourcesAfter || {};
+    const stockMarker = `[stellarion-combat-stock-json:${JSON.stringify({
+      titanium:n(stock.titanium),
+      xenite:n(stock.xenite),
+      antimatter:n(stock.antimatter),
+      fragments:n(stock.fragments),
+    })}]`;
+    try {
+      const existing = await admin.from("messages")
+        .select("id")
+        .eq("recipient_id", playerId)
+        .ilike("body", `%${marker}%`)
+        .limit(1);
+      if (!existing.error && Array.isArray(existing.data) && existing.data.length > 0) return;
+    } catch (_) {}
+    const victory = !!result?.victory;
+    const subject = `${target?.playerId ? "Rapport de combat joueur" : "Rapport de combat"} : ${name}`;
+    const body = [
+      `Rapport de combat — ${name}`,
+      ``,
+      `Résultat : ${victory ? "Victoire" : "Défaite"}`,
+      `Butin ajouté au stock : ${reportLootLine(result?.loot || {})}`,
+      `Puissance attaque : ${reportFmt(result?.attackerPower || result?.playerAttack || result?.attackRoll || 0)}`,
+      `Puissance défense : ${reportFmt(result?.defenderPower || result?.enemyPower || result?.defenseRoll || 0)}`,
+      `Vaisseaux revenus : ${reportShipsLine(result?.playerRemaining || f?.ships || {})}`,
+      `Pertes : ${reportShipsLine(result?.playerLost || {})}`,
+      ``,
+      `Stock après combat : ${reportFmt(stock.titanium)} Titane · ${reportFmt(stock.xenite)} Xénite · ${reportFmt(stock.antimatter)} Antimatière · ${reportFmt(stock.fragments)} fragments`,
+      ``,
+      `Ce rapport est écrit côté serveur au moment exact où le butin est crédité.`,
+      marker,
+      stockMarker,
+    ].join("\n");
+    const ins = await admin.from("messages").insert({
+      sender_id: playerId,
+      recipient_id: playerId,
+      subject,
+      body,
+      created_at: new Date().toISOString(),
+      read: false,
+    });
+    if (ins.error) console.warn("insertPersistentCombatMessage", ins.error.message || ins.error);
+  } catch (e) {
+    console.warn("insertPersistentCombatMessage", String((e as Error)?.message || e));
+  }
+}
+
+async function resolvePlayerAttackNow(admin: any, supaUser: any, playerId: string, body: any) {
+  const id = String(body.fleet_id || body.id || "");
+  if (!id) throw new Error("fleet_id_missing");
+  const row = await admin.from("game_fleets").select("*").eq("player_id", playerId).eq("id", id).maybeSingle();
+  if (row.error) throw row.error;
+  const f = row.data;
+  if (!f) throw new Error("flotte_introuvable");
+  if (String(f.mission || "") !== "attack") throw new Error("mission_non_combat");
+  if (f.returning) return "Combat déjà résolu, retour en cours.";
+  const dueAt = Date.parse(f.ends_at || "");
+  if (Number.isFinite(dueAt) && dueAt > Date.now() + 1500) throw new Error("attaque_pas_encore_arrivee");
+  const result = await markFleetReturningAfterCombat(admin, supaUser, playerId, f);
+  return result.victory ? "Combat résolu côté serveur : butin crédité au stock." : "Combat résolu côté serveur : retour flotte en cours.";
+}
+
+async function processQueuesSafeNoCombat(admin: any, playerId: string) {
+  // Même logique que processQueues pour bâtiments/vaisseaux, mais sans toucher
+  // aux flottes. Utilisé pour les coffres afin qu'une erreur combat ne bloque
+  // pas une action boutique/collection indépendante.
+  const now = new Date().toISOString();
+  const bq = await admin.from("game_build_queue").select("*").eq("player_id", playerId).lte("finish_at", now);
+  if (bq.error) throw bq.error;
+  for (const q of bq.data || []) {
+    await admin.from("game_buildings").upsert({ player_id:playerId, planet_id:q.planet_id, building_id:q.building_id, level:q.to_level, updated_at:now }, { onConflict:"player_id,planet_id,building_id" });
+    await admin.from("game_build_queue").delete().eq("id", q.id).eq("player_id", playerId);
+  }
+
+  const sq = await admin.from("game_ship_queue").select("*").eq("player_id", playerId).lte("finish_at", now);
+  if (sq.error) throw sq.error;
+  for (const q of sq.data || []) {
+    await addShips(admin, playerId, q.planet_id, q.ship_id, n(q.qty,1,100000));
+    await admin.from("game_ship_queue").delete().eq("id", q.id).eq("player_id", playerId);
+  }
+}
+
+async function processQueues(admin: any, maybeSupaUser: any, maybePlayerId?: string) {
+  const supaUser = maybePlayerId ? maybeSupaUser : null;
+  const playerId = String(maybePlayerId || maybeSupaUser);
   const now = new Date().toISOString();
   const bq = await admin.from("game_build_queue").select("*").eq("player_id", playerId).lte("finish_at", now);
   if (bq.error) throw bq.error;
@@ -283,10 +610,26 @@ async function processQueues(admin: any, playerId: string) {
       const ships = f.ships || {};
       for (const [shipId, qty] of Object.entries(ships)) if (SHIPS[shipId]) await addShips(admin, playerId, f.origin_planet_id, shipId, n(qty,0,1000000));
       const cargo = f.cargo || {};
-      if (Object.keys(cargo).length) await addResources(admin, playerId, cargo);
+      if (n(cargo.titanium)+n(cargo.xenite)+n(cargo.antimatter)+n(cargo.fragments) > 0) await addResources(admin, playerId, cargo);
       await admin.from("game_fleets").delete().eq("id", f.id).eq("player_id", playerId);
     } else {
-      await admin.from("game_fleets").update({ returning:true, start_at:now, ends_at:isoPlus(45), updated_at:now }).eq("id", f.id).eq("player_id", playerId);
+      const mission = String(f.mission || "");
+      let cargo = f.cargo || {};
+      let payload = f.payload || {};
+
+      // V6 1.5.88 : une attaque doit générer son butin à l'arrivée,
+      // le stocker dans le cargo du trajet retour, puis l'ajouter aux
+      // ressources canoniques au retour. Avant, le serveur mettait juste
+      // returning=true avec cargo vide : le rapport parlait de butin, mais
+      // game_resources ne recevait jamais les ressources.
+      if (mission === "attack") {
+        await markFleetReturningAfterCombat(admin, supaUser, playerId, f);
+        continue;
+      }
+
+      await admin.from("game_fleets")
+        .update({ returning:true, cargo, payload, start_at:now, ends_at:isoPlus(combatReturnSeconds(f)), updated_at:now })
+        .eq("id", f.id).eq("player_id", playerId);
     }
   }
 }
@@ -491,6 +834,132 @@ async function launchFleet(admin: any, playerId: string, body: any) {
     });
   } catch (_) {}
   return `Mission serveur lancee : ${mission} avec ${shipCount} vaisseau(x).`;
+}
+
+
+type ChestRoll = { kind: string; rarity?: string; res?: string; min?: number; max?: number; weight: number; label: string; boost?: string };
+type ChestDef = { id: string; name: string; cost: number; rolls: number; table: ChestRoll[] };
+
+const CHESTS: Record<string, ChestDef> = {
+  supply: {
+    id: "supply", name: "Coffre standard", cost: 10, rolls: 2,
+    table: [
+      { kind:"apparat", rarity:"Common", weight:42, label:"Apparat commun" },
+      { kind:"fragments", min:1, max:3, weight:22, label:"Fragments bonus" },
+      { kind:"resource", res:"titanium", min:2000, max:8000, weight:14, label:"Titane" },
+      { kind:"resource", res:"xenite", min:1000, max:4000, weight:10, label:"Xénite" },
+      { kind:"resource", res:"antimatter", min:250, max:1200, weight:5, label:"Antimatière" },
+      { kind:"boost", boost:"prod", weight:7, label:"Boost production 30 min" },
+    ],
+  },
+  military: {
+    id: "military", name: "Coffre rare", cost: 25, rolls: 2,
+    table: [
+      { kind:"apparat", rarity:"Rare", weight:34, label:"Apparat rare" },
+      { kind:"apparat", rarity:"Epic", weight:9, label:"Apparat épique" },
+      { kind:"fragments", min:2, max:6, weight:22, label:"Fragments bonus" },
+      { kind:"resource", res:"titanium", min:8000, max:20000, weight:12, label:"Titane" },
+      { kind:"resource", res:"xenite", min:4000, max:12000, weight:10, label:"Xénite" },
+      { kind:"resource", res:"antimatter", min:1500, max:5000, weight:5, label:"Antimatière" },
+      { kind:"boost", boost:"fleet", weight:8, label:"Boost flotte 30 min" },
+    ],
+  },
+  relic: {
+    id: "relic", name: "Coffre épique", cost: 50, rolls: 3,
+    table: [
+      { kind:"apparat", rarity:"Epic", weight:30, label:"Apparat épique" },
+      { kind:"apparat", rarity:"Legendary", weight:16, label:"Apparat légendaire" },
+      { kind:"apparat", rarity:"Mythic", weight:7, label:"Apparat mythique" },
+      { kind:"apparat", rarity:"Ancient", weight:3, label:"Artefact antique" },
+      { kind:"apparat", rarity:"Rare", weight:14, label:"Apparat rare" },
+      { kind:"fragments", min:5, max:12, weight:18, label:"Fragments bonus" },
+      { kind:"resource", res:"titanium", min:15000, max:35000, weight:5, label:"Titane" },
+      { kind:"resource", res:"xenite", min:8000, max:22000, weight:5, label:"Xénite" },
+      { kind:"resource", res:"antimatter", min:4000, max:12000, weight:2, label:"Antimatière" },
+    ],
+  },
+};
+
+function rand01() {
+  const a = new Uint32Array(1);
+  crypto.getRandomValues(a);
+  return a[0] / 4294967296;
+}
+function randRange(min = 0, max = 0) {
+  min = n(min, 0, 1_000_000_000); max = n(max, min, 1_000_000_000);
+  return Math.floor(min + rand01() * (max - min + 1));
+}
+function chooseWeighted(table: ChestRoll[]) {
+  const total = table.reduce((sum, x) => sum + n(x.weight, 0, 1_000_000), 0);
+  let r = rand01() * Math.max(1, total);
+  for (const item of table) { r -= n(item.weight, 0, 1_000_000); if (r <= 0) return item; }
+  return table[table.length - 1];
+}
+function fmtServer(v: number) { return Math.round(v).toLocaleString("fr-FR"); }
+
+async function openChest(admin: any, playerId: string, body: any) {
+  const chestId = String(body.chest_id || body.chestId || "").replace(/[^a-z0-9_-]/gi, "");
+  const chest = CHESTS[chestId];
+  if (!chest) throw new Error("coffre_inconnu");
+
+  const rr = await admin.from("game_resources").select("*").eq("player_id", playerId).maybeSingle();
+  if (rr.error) throw rr.error;
+  if (!rr.data) throw new Error("stock_introuvable");
+  const before = rr.data;
+  const beforeFragments = n(before.fragments, 0, 100_000_000);
+  if (beforeFragments < chest.cost) throw new Error("fragments_insuffisants");
+
+  const gain = { titanium: 0, xenite: 0, antimatter: 0, fragments: 0 };
+  const rewards: any[] = [];
+  for (let i = 0; i < chest.rolls; i++) {
+    const item = chooseWeighted(chest.table);
+    if (item.kind === "resource") {
+      const amount = randRange(item.min || 0, item.max || 0);
+      if (item.res === "titanium") gain.titanium += amount;
+      if (item.res === "xenite") gain.xenite += amount;
+      if (item.res === "antimatter") gain.antimatter += amount;
+      rewards.push({ kind:"resource", res:item.res, label:item.label, amount, text:`+${fmtServer(amount)} ${item.label}` });
+    } else if (item.kind === "fragments") {
+      const amount = randRange(item.min || 0, item.max || 0);
+      gain.fragments += amount;
+      rewards.push({ kind:"fragments", label:"fragments", amount, text:`+${fmtServer(amount)} fragments` });
+    } else if (item.kind === "apparat") {
+      rewards.push({ kind:"apparat", rarity:item.rarity, label:item.label, text:item.label });
+    } else if (item.kind === "boost") {
+      rewards.push({ kind:"boost", boost:item.boost, label:item.label, text:item.label });
+    } else {
+      rewards.push({ kind:item.kind, label:item.label, text:item.label });
+    }
+  }
+
+  const stockAfter = {
+    titanium: n(before.titanium) + gain.titanium,
+    xenite: n(before.xenite) + gain.xenite,
+    antimatter: n(before.antimatter) + gain.antimatter,
+    fragments: Math.max(0, beforeFragments - chest.cost + gain.fragments),
+    updated_at: new Date().toISOString(),
+  };
+
+  // Garde anti double-clic : si les fragments ont changé entre la lecture et l'écriture,
+  // on refuse au lieu de risquer un débit/crédit incohérent.
+  const up = await admin.from("game_resources")
+    .update(stockAfter)
+    .eq("player_id", playerId)
+    .eq("fragments", before.fragments)
+    .select("titanium,xenite,antimatter,fragments")
+    .maybeSingle();
+  if (up.error) throw up.error;
+  if (!up.data) throw new Error("stock_modifie_reessaye");
+
+  return {
+    message: `Coffre ouvert : ${chest.name}.`,
+    chestId: chest.id,
+    chestName: chest.name,
+    cost: chest.cost,
+    rewards,
+    gain,
+    stockAfter: up.data,
+  };
 }
 
 async function snapshot(admin: any, playerId: string) {
