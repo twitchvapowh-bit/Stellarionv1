@@ -1,22 +1,19 @@
-# Stellarion secure clean V9
+# Stellarion Secure Clean V12
 
-Version basée sur V8, avec correctif combat V9.
+Base: V11.
 
-À déployer :
+Correctif ajouté : ouverture des coffres sous autorité serveur.
 
-1. Vercel : déposer le contenu de cette archive.
-2. Supabase : redéployer `supabase/functions/game-action/index.ts`.
+- Les coffres ne débitent plus les fragments en local avant confirmation.
+- Les ressources gagnées et les fragments consommés sont appliqués dans `game_resources` via `game-action`.
+- Le client reçoit le stock exact confirmé serveur et met à jour l'affichage.
+- Les récompenses cosmétiques/boosts restent traitées côté client après confirmation serveur.
+- Ajout audit console : `stellarionV12ChestAudit1593()`.
 
-Commande Supabase :
+Déploiement requis :
 
 ```bash
 supabase functions deploy game-action
 ```
 
-Audit navigateur après déploiement :
-
-```js
-stellarionV9CombatAudit1591()
-```
-
-Objectif V9 : ne plus laisser une attaque sans rapport ni crédit de butin.
+Puis redéployer Vercel avec les fichiers V12.

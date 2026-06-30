@@ -1,30 +1,24 @@
-# CLEANING REPORT — V9
+# Rapport V12
 
-## Base
-Version reprise depuis `stellarion_secure_clean_v8.zip`.
+## Problème corrigé
 
-## Correctifs ajoutés
+À l'ouverture d'un coffre, l'ancien code faisait :
 
-### Combat / attaque
-- Ajout du module `STELLARION 1.5.91 — V9 combat report + loot failsafe final`.
-- Le client ne dépend plus uniquement de l'ancien marqueur V7 `__serverCombatReportsV7`.
-- Un rapport serveur n'est plus considéré comme traité si le message n'a pas réellement été créé.
-- Si Supabase renvoie `attackerResourcesAfter`, le stock affiché est aligné sur le stock serveur exact.
-- Si Supabase ne renvoie pas de rapport après l'arrivée de l'attaque, un fallback local unique crée le rapport et crédite le butin une seule fois.
-- Protection anti double-crédit via `state.__combatLootCreditsV9`.
-- Audit disponible : `stellarionV9CombatAudit1591()`.
+1. débit fragments local ;
+2. crédit ressources local ;
+3. `save()` ;
+4. refresh/retour serveur ;
+5. le serveur renvoyait l'ancien stock `game_resources`, donc l'affichage donnait l'impression d'une réinitialisation.
 
-### Edge Function `game-action`
-- Conservation du crédit serveur à l'arrivée du combat.
-- Nettoyage d'un update de ressources inutile quand un cargo retour est vide.
+## Correction
 
-## Vérifications locales
+- Ajout de l'action serveur `open_chest` dans `supabase/functions/game-action/index.ts`.
+- Le serveur vérifie les fragments, tire les récompenses, débite/crédite `game_resources`, puis renvoie `stockAfter`.
+- `openChest1525()` est passé en `async` et ne modifie plus les ressources localement avant confirmation Supabase.
+- Historique des coffres conservé côté client après réponse serveur.
+- Audit disponible : `stellarionV12ChestAudit1593()`.
+
+## Vérification locale
+
 - `node --check js/main.js` : OK.
-- `tsc --noEmit` ne signale que les imports Deno/Supabase normaux hors environnement Supabase.
-
-## Déploiement obligatoire
-Après upload Vercel, redéployer aussi :
-
-```bash
-supabase functions deploy game-action
-```
+- `tsc --noEmit` sur l'Edge Function ne remonte que les erreurs attendues hors environnement Deno/Supabase (`Deno` et import URL), pas d'erreur syntaxique liée au patch V12.
