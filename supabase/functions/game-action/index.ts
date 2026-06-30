@@ -1,5 +1,5 @@
 // STELLARION — Edge Function : game-action
-// Version 1.5.70 SERVER AUTHORITY
+// Version 1.5.91 SERVER AUTHORITY — combat loot/report stable
 // Le navigateur ne décide plus des ressources / bâtiments / vaisseaux / files / flottes.
 // Il demande une action; cette fonction authentifie, vérifie, applique et renvoie l'état canonique.
 
@@ -498,7 +498,7 @@ async function processQueues(admin: any, maybeSupaUser: any, maybePlayerId?: str
       const ships = f.ships || {};
       for (const [shipId, qty] of Object.entries(ships)) if (SHIPS[shipId]) await addShips(admin, playerId, f.origin_planet_id, shipId, n(qty,0,1000000));
       const cargo = f.cargo || {};
-      if (Object.keys(cargo).length) await addResources(admin, playerId, cargo);
+      if (n(cargo.titanium)+n(cargo.xenite)+n(cargo.antimatter)+n(cargo.fragments) > 0) await addResources(admin, playerId, cargo);
       await admin.from("game_fleets").delete().eq("id", f.id).eq("player_id", playerId);
     } else {
       const mission = String(f.mission || "");
