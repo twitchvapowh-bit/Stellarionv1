@@ -29,3 +29,12 @@ La surcharge a été retirée. La fonction canonique crédite désormais :
 ## Note importante
 
 Le fichier `main.js` contient encore des wrappers historiques autour de `render`, `setView`, `queueBuilding`, etc. Ils n'ont pas été supprimés automatiquement, car ils portent des correctifs UI actifs. Les supprimer à l'aveugle risquerait de casser la version qui fonctionne. Le nettoyage fait ici vise les doublons sûrs et le bug de crédit clairement identifié.
+
+
+## Patch V2 — saisie clavier flotte
+
+- Remplace la quantité figée `<b>` du popup de mission par un champ `<input type="number">`.
+- Permet de taper directement `0`, `12`, `540`, etc. au clavier.
+- Clamp automatique entre 0 et le nombre de vaisseaux disponibles.
+- Mise à jour live des stats du popup sans re-render destructeur pendant la saisie.
+- Le bouton Attaquer/Transférer se réactive automatiquement après saisie.

@@ -28,3 +28,7 @@ Version nettoyée à partir de la version fonctionnelle envoyée.
    - `stripe-webhook`
 4. Définir les secrets serveur côté Supabase/Vercel.
 5. Tester : connexion, chargement cloud, alliance, quête `Réclamer`, rechargement page.
+
+
+### V2
+- Saisie clavier directe des quantités de vaisseaux dans le popup d'attaque/mission.
