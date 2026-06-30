@@ -39,9 +39,10 @@ Le fichier `main.js` contient encore des wrappers historiques autour de `render`
 - Mise à jour live des stats du popup sans re-render destructeur pendant la saisie.
 - Le bouton Attaquer/Transférer se réactive automatiquement après saisie.
 
-## V3 — Correctif final UI 1.5.85
 
-- Ajout d'une couche CSS/JS finale `STELLARION HOTFIX 1.5.85`.
-- Trajectoires galaxie : neutralisation des anciennes couches concurrentes et affichage d'une seule route stable, pleine, sans pointillés animés ni filtres lumineux responsables du scintillement.
-- Alliance : garde finale sur `render()` et `rerenderPreserveScroll()` pendant la saisie, restauration du curseur, blocage des `blur()` programmatiques, et setters d'alliance non destructeurs pendant l'écriture.
-- Audit disponible en console : `stellarionFinalUiAudit1585()`.
+## V4 — 2026-06-30
+- Base reprise depuis `stellarion_secure_clean_v2`, car la V3 ajoutait un guard récursif autour de `render()`/`blur()`.
+- Patch V3 1.5.85 non repris.
+- Ajout du patch `STELLARION 1.5.86` : aucun override de `HTMLElement.prototype.blur`, aucun wrapper supplémentaire de `render()`.
+- Trajectoire : suppression des `stroke-dasharray` et `drop-shadow`, masquage de la ligne `bg` concurrente, conservation d'une ligne unique `stellarion-route-full1583`.
+- Alliance : les fonctions de saisie mettent à jour `state` sans re-render à chaque frappe.
