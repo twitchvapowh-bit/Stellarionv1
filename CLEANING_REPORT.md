@@ -46,3 +46,15 @@ Le fichier `main.js` contient encore des wrappers historiques autour de `render`
 - Ajout du patch `STELLARION 1.5.86` : aucun override de `HTMLElement.prototype.blur`, aucun wrapper supplémentaire de `render()`.
 - Trajectoire : suppression des `stroke-dasharray` et `drop-shadow`, masquage de la ligne `bg` concurrente, conservation d'une ligne unique `stellarion-route-full1583`.
 - Alliance : les fonctions de saisie mettent à jour `state` sans re-render à chaque frappe.
+
+## V5 — correction définitive trajectoire galaxie (1.5.87)
+
+Cause racine trouvée : la V4 cachait la ligne native complète `line.bg` et comptait sur une ligne recréée après coup (`line.stellarion-route-full1583`). Or la couche SVG de mission est redessinée en continu avec `innerHTML`, ce qui supprimait cette ligne injectée entre deux passes de stabilisation. Résultat visible : le trait disparaissait puis réapparaissait pendant l'attaque ou le retour.
+
+Correction V5 :
+- `line.bg` redevient la ligne officielle complète de trajectoire ;
+- `line.bg` est visible immédiatement à chaque frame, sans attendre une injection secondaire ;
+- `line.stellarion-route-full1583` est masquée pour éviter une couche concurrente ;
+- `.live` et `.tail` restent masquées pour éviter le scintillement/progression partielle ;
+- ajout d'un audit console : `stellarionV5TrajectoryAudit1587()` ;
+- vérification syntaxe : `node --check js/main.js` OK.

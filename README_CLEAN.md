@@ -39,3 +39,14 @@ Version nettoyée à partir de la version fonctionnelle envoyée.
 - Suppression du patch V3 1.5.85 qui provoquait `Maximum call stack size exceeded`.
 - Trajectoires galaxie rendues en ligne pleine sans pointillés ni glow, pour éviter le scintillement.
 - Focus Alliance sécurisé sans monkey-patch de `render()`/`blur()` dangereux.
+
+## Version V5
+
+Cette V5 remplace la V4 pour corriger durablement le clignotement de la trajectoire d'attaque/retour sur la galaxie.
+La ligne complète native `line.bg` est maintenant la source visuelle unique. La ligne injectée `stellarion-route-full1583`, qui provoquait le retour du bug après redraw, est masquée.
+
+Audit après déploiement :
+
+```js
+stellarionV5TrajectoryAudit1587()
+```
