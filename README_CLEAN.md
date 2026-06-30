@@ -1,19 +1,24 @@
-# Stellarion Secure Clean V12
+# STELLARION Secure Clean V13
 
-Base: V11.
+Version basée sur V12, avec correctif critique des coffres.
 
-Correctif ajouté : ouverture des coffres sous autorité serveur.
+## À faire
 
-- Les coffres ne débitent plus les fragments en local avant confirmation.
-- Les ressources gagnées et les fragments consommés sont appliqués dans `game_resources` via `game-action`.
-- Le client reçoit le stock exact confirmé serveur et met à jour l'affichage.
-- Les récompenses cosmétiques/boosts restent traitées côté client après confirmation serveur.
-- Ajout audit console : `stellarionV12ChestAudit1593()`.
-
-Déploiement requis :
+1. Remplacer les fichiers du projet par ceux de cette archive.
+2. Déployer la fonction Supabase :
 
 ```bash
 supabase functions deploy game-action
 ```
 
-Puis redéployer Vercel avec les fichiers V12.
+3. Redéployer Vercel.
+4. Tester l'ouverture de coffre.
+5. En cas d'erreur, ouvrir la console et lancer :
+
+```js
+stellarionV13ChestAudit1594()
+```
+
+## Correction V13
+
+L'ouverture des coffres ne dépend plus du traitement des attaques/flottes en attente. Une erreur combat ne peut plus bloquer un coffre.

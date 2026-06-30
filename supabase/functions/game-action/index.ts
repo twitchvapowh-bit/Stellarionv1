@@ -92,10 +92,23 @@ Deno.serve(async (req) => {
   try {
     await ensurePlayer(admin, user.id, body.snapshot || null);
     await accrueResources(admin, user.id);
-    await processQueues(admin, supaUser, user.id);
+
+    // V13 1.5.94 : une ouverture de coffre ne doit jamais être bloquée par une
+    // flotte/attaque en attente. Avant, game-action appelait processQueues()
+    // avant TOUTE action ; si une attaque posait problème, open_chest échouait
+    // aussi, ce qui donnait l'impression que plus aucun coffre ne s'ouvrait.
+    const isolateChestAction = action === "open_chest";
+    let queueWarning: string | null = null;
+    if (!isolateChestAction) {
+      await processQueues(admin, supaUser, user.id);
+    } else {
+      try { await processQueuesSafeNoCombat(admin, user.id); }
+      catch (qe) { queueWarning = String((qe as Error)?.message || qe); }
+    }
 
     let message = "ok";
     let extra: Record<string, unknown> = {};
+    if (queueWarning) extra.queueWarning = queueWarning;
     if (action === "bootstrap" || action === "state") {
       message = "Etat serveur charge.";
     } else if (action === "open_chest") {
@@ -124,7 +137,12 @@ Deno.serve(async (req) => {
     }
 
     await accrueResources(admin, user.id);
-    await processQueues(admin, supaUser, user.id);
+    if (!isolateChestAction) {
+      await processQueues(admin, supaUser, user.id);
+    } else {
+      try { await processQueuesSafeNoCombat(admin, user.id); }
+      catch (qe) { extra.queueWarningAfter = String((qe as Error)?.message || qe); }
+    }
     await audit(admin, user.id, action, true, { message, ...extra });
     return json({ ok:true, message, ...extra, state: await snapshot(admin, user.id) }, 200);
   } catch (e) {
@@ -545,6 +563,26 @@ async function resolvePlayerAttackNow(admin: any, supaUser: any, playerId: strin
   if (Number.isFinite(dueAt) && dueAt > Date.now() + 1500) throw new Error("attaque_pas_encore_arrivee");
   const result = await markFleetReturningAfterCombat(admin, supaUser, playerId, f);
   return result.victory ? "Combat résolu côté serveur : butin crédité au stock." : "Combat résolu côté serveur : retour flotte en cours.";
+}
+
+async function processQueuesSafeNoCombat(admin: any, playerId: string) {
+  // Même logique que processQueues pour bâtiments/vaisseaux, mais sans toucher
+  // aux flottes. Utilisé pour les coffres afin qu'une erreur combat ne bloque
+  // pas une action boutique/collection indépendante.
+  const now = new Date().toISOString();
+  const bq = await admin.from("game_build_queue").select("*").eq("player_id", playerId).lte("finish_at", now);
+  if (bq.error) throw bq.error;
+  for (const q of bq.data || []) {
+    await admin.from("game_buildings").upsert({ player_id:playerId, planet_id:q.planet_id, building_id:q.building_id, level:q.to_level, updated_at:now }, { onConflict:"player_id,planet_id,building_id" });
+    await admin.from("game_build_queue").delete().eq("id", q.id).eq("player_id", playerId);
+  }
+
+  const sq = await admin.from("game_ship_queue").select("*").eq("player_id", playerId).lte("finish_at", now);
+  if (sq.error) throw sq.error;
+  for (const q of sq.data || []) {
+    await addShips(admin, playerId, q.planet_id, q.ship_id, n(q.qty,1,100000));
+    await admin.from("game_ship_queue").delete().eq("id", q.id).eq("player_id", playerId);
+  }
 }
 
 async function processQueues(admin: any, maybeSupaUser: any, maybePlayerId?: string) {

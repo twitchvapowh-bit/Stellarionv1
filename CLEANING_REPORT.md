@@ -1,24 +1,41 @@
-# Rapport V12
+# STELLARION Secure Clean V13 — 1.5.94
 
-## Problème corrigé
+## Correctif principal
 
-À l'ouverture d'un coffre, l'ancien code faisait :
+La V12 rendait l'ouverture des coffres dépendante du traitement global `processQueues()` de `game-action`.
+Conséquence : si une flotte/attaque en attente provoquait une erreur côté serveur, l'action `open_chest` échouait aussi. Résultat visible côté jeu : clic sur coffre = rien ne se passe.
 
-1. débit fragments local ;
-2. crédit ressources local ;
-3. `save()` ;
-4. refresh/retour serveur ;
-5. le serveur renvoyait l'ancien stock `game_resources`, donc l'affichage donnait l'impression d'une réinitialisation.
+## Corrections V13
 
-## Correction
+- `open_chest` est isolé des erreurs de combat/flotte.
+- Les files bâtiments/vaisseaux terminées restent traitées via `processQueuesSafeNoCombat()`.
+- Les flottes/attaques ne sont plus traitées pendant l'ouverture d'un coffre.
+- Le client ajoute un timeout de 12 secondes au lieu de laisser les boutons bloqués.
+- Les erreurs sont maintenant visibles dans le journal et la console.
+- Les boutons coffres se réactivent après erreur.
+- Le stock final reste appliqué depuis Supabase (`stockAfter`).
+- Aucun changement volontaire sur combat, rapports, trajectoires, focus alliance, quêtes ou planète.
 
-- Ajout de l'action serveur `open_chest` dans `supabase/functions/game-action/index.ts`.
-- Le serveur vérifie les fragments, tire les récompenses, débite/crédite `game_resources`, puis renvoie `stockAfter`.
-- `openChest1525()` est passé en `async` et ne modifie plus les ressources localement avant confirmation Supabase.
-- Historique des coffres conservé côté client après réponse serveur.
-- Audit disponible : `stellarionV12ChestAudit1593()`.
+## Déploiement obligatoire
 
-## Vérification locale
+Cette version modifie `supabase/functions/game-action/index.ts`.
+Il faut donc redéployer Supabase :
 
-- `node --check js/main.js` : OK.
-- `tsc --noEmit` sur l'Edge Function ne remonte que les erreurs attendues hors environnement Deno/Supabase (`Deno` et import URL), pas d'erreur syntaxique liée au patch V12.
+```bash
+supabase functions deploy game-action
+```
+
+Puis redéployer Vercel.
+
+## Audits console
+
+```js
+stellarionV13ChestAudit1594()
+stellarionV12ChestAudit1593()
+stellarionV11CombatReportAudit1592()
+```
+
+## Vérifications locales
+
+- `node --check js/main.js` : OK
+- TypeScript local : uniquement erreurs attendues hors environnement Deno/Supabase (`Deno`, imports https://esm.sh)
