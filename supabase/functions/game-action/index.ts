@@ -260,6 +260,77 @@ async function accrueResources(admin: any, playerId: string) {
   if (up.error) throw up.error;
 }
 
+function shipCargoCapacity(ships: any) {
+  let total = 0;
+  for (const [shipId, qtyRaw] of Object.entries(ships || {})) {
+    const def = SHIPS[String(shipId)];
+    if (!def) continue;
+    total += n(qtyRaw, 0, 1000000) * n(def.cargo);
+  }
+  return total;
+}
+function shipAttackPower(ships: any) {
+  let total = 0;
+  for (const [shipId, qtyRaw] of Object.entries(ships || {})) {
+    const def = SHIPS[String(shipId)];
+    if (!def) continue;
+    total += n(qtyRaw, 0, 1000000) * n(def.attack);
+  }
+  return total;
+}
+function targetNum(target: any, key: string, fallback = 0) {
+  return n(target && target[key] !== undefined ? target[key] : fallback, 0, 100000000);
+}
+function fitLootToCargo(loot: any, cap: number) {
+  cap = n(cap, 0, 100000000);
+  const physical = n(loot.titanium) + n(loot.xenite) + n(loot.antimatter);
+  if (cap <= 0 || physical <= cap) return {
+    titanium:n(loot.titanium), xenite:n(loot.xenite), antimatter:n(loot.antimatter), fragments:n(loot.fragments,0,100000)
+  };
+  const ratio = cap / physical;
+  let titanium = Math.floor(n(loot.titanium) * ratio);
+  let xenite = Math.floor(n(loot.xenite) * ratio);
+  let antimatter = Math.floor(n(loot.antimatter) * ratio);
+  let used = titanium + xenite + antimatter;
+  if (used < cap && n(loot.titanium) > titanium) titanium += Math.min(cap - used, n(loot.titanium) - titanium);
+  used = titanium + xenite + antimatter;
+  if (used < cap && n(loot.xenite) > xenite) xenite += Math.min(cap - used, n(loot.xenite) - xenite);
+  used = titanium + xenite + antimatter;
+  if (used < cap && n(loot.antimatter) > antimatter) antimatter += Math.min(cap - used, n(loot.antimatter) - antimatter);
+  return { titanium, xenite, antimatter, fragments:n(loot.fragments,0,100000) };
+}
+function serverAttackResult(f: any) {
+  const ships = f.ships || {};
+  const payload = f.payload || {};
+  const target = payload.target || {};
+  const cargoCap = shipCargoCapacity(ships);
+  const attack = shipAttackPower(ships);
+  const danger = Math.max(1, targetNum(target, "danger", 1));
+  const richness = Math.max(1, targetNum(target, "richness", 1));
+  const enemyPower = Math.max(
+    160,
+    targetNum(target, "enemyPower", 0) || targetNum(target, "power", 0) || Math.round(danger * 620 + richness * 220),
+  );
+  const victory = attack > 0 && attack >= Math.round(enemyPower * 0.55);
+  const rawLoot = victory ? {
+    titanium: Math.round((900 + enemyPower * 0.55) * richness),
+    xenite: Math.round((420 + enemyPower * 0.32) * richness),
+    antimatter: Math.round((35 + enemyPower * 0.035) * richness),
+    fragments: target.aiThreat ? 2 : 0,
+  } : { titanium:0, xenite:0, antimatter:0, fragments:0 };
+  const loot = fitLootToCargo(rawLoot, cargoCap);
+  return {
+    patch:"v6-attack-loot-1588",
+    targetName:String(f.target_name || target.name || "Cible"),
+    victory,
+    attackPower:attack,
+    enemyPower,
+    cargoCap,
+    loot,
+    resolvedAt:new Date().toISOString(),
+  };
+}
+
 async function processQueues(admin: any, playerId: string) {
   const now = new Date().toISOString();
   const bq = await admin.from("game_build_queue").select("*").eq("player_id", playerId).lte("finish_at", now);
@@ -286,7 +357,24 @@ async function processQueues(admin: any, playerId: string) {
       if (Object.keys(cargo).length) await addResources(admin, playerId, cargo);
       await admin.from("game_fleets").delete().eq("id", f.id).eq("player_id", playerId);
     } else {
-      await admin.from("game_fleets").update({ returning:true, start_at:now, ends_at:isoPlus(45), updated_at:now }).eq("id", f.id).eq("player_id", playerId);
+      const mission = String(f.mission || "");
+      let cargo = f.cargo || {};
+      let payload = f.payload || {};
+
+      // V6 1.5.88 : une attaque doit générer son butin à l'arrivée,
+      // le stocker dans le cargo du trajet retour, puis l'ajouter aux
+      // ressources canoniques au retour. Avant, le serveur mettait juste
+      // returning=true avec cargo vide : le rapport parlait de butin, mais
+      // game_resources ne recevait jamais les ressources.
+      if (mission === "attack") {
+        const result = serverAttackResult(f);
+        cargo = result.loot;
+        payload = { ...payload, serverCombat: result };
+      }
+
+      await admin.from("game_fleets")
+        .update({ returning:true, cargo, payload, start_at:now, ends_at:isoPlus(45), updated_at:now })
+        .eq("id", f.id).eq("player_id", playerId);
     }
   }
 }
