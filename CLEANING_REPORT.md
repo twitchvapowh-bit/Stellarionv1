@@ -38,3 +38,10 @@ Le fichier `main.js` contient encore des wrappers historiques autour de `render`
 - Clamp automatique entre 0 et le nombre de vaisseaux disponibles.
 - Mise à jour live des stats du popup sans re-render destructeur pendant la saisie.
 - Le bouton Attaquer/Transférer se réactive automatiquement après saisie.
+
+## V3 — Correctif final UI 1.5.85
+
+- Ajout d'une couche CSS/JS finale `STELLARION HOTFIX 1.5.85`.
+- Trajectoires galaxie : neutralisation des anciennes couches concurrentes et affichage d'une seule route stable, pleine, sans pointillés animés ni filtres lumineux responsables du scintillement.
+- Alliance : garde finale sur `render()` et `rerenderPreserveScroll()` pendant la saisie, restauration du curseur, blocage des `blur()` programmatiques, et setters d'alliance non destructeurs pendant l'écriture.
+- Audit disponible en console : `stellarionFinalUiAudit1585()`.

@@ -32,3 +32,8 @@ Version nettoyée à partir de la version fonctionnelle envoyée.
 
 ### V2
 - Saisie clavier directe des quantités de vaisseaux dans le popup d'attaque/mission.
+
+### V3 — UI stable
+
+Cette version ajoute le correctif `1.5.85` : ligne de trajectoire galaxie non scintillante et protection renforcée des champs de saisie Alliance.
+Audit console : `stellarionFinalUiAudit1585()`.
