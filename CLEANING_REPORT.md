@@ -1,30 +1,28 @@
-# Stellarion Secure Clean V6 — Rapport
+# Rapport V7 — corrections vérifiées
 
-Base reprise : V5 stable.
+## Butin d'attaque
 
-## Correctif V6 1.5.88
+Cause corrigée : les flottes cloud étaient encore parfois résolues par l'ancien `processFleets()` local. Le rapport affichait un butin côté navigateur, mais le stock cloud `game_resources` n'était pas crédité ou était ensuite ré-écrasé par Supabase.
 
-Problème corrigé : après une attaque, le rapport / trajet retour indiquait un butin, mais les ressources ne s'ajoutaient pas au stock.
+Corrections :
+- les flottes `serverAuthority` ne sont plus traitées par l'ancien moteur local ;
+- la résolution d'attaque passe par `game-action` côté Supabase ;
+- le résultat de combat serveur est stocké dans `payload.serverCombat` ;
+- le butin affiché dans le rapport est immédiatement crédité dans `game_resources` côté serveur ;
+- le cargo retour est volontairement remis à zéro pour éviter un double crédit ;
+- le rapport client est généré depuis le résultat serveur, pas depuis une simulation locale ;
+- correction de sécurité : si la capacité cargo est 0, aucun butin physique ne passe.
 
-Cause racine trouvée :
-- côté serveur `game-action`, `processQueues()` passait une flotte d'attaque en `returning=true` avec le cargo d'origine ;
-- pour une attaque, le cargo d'origine est vide ;
-- donc au retour, `addResources()` recevait `{}` et `game_resources` n'était jamais créditée.
+## Rotation planète / mode éco
 
-Corrections appliquées :
-- `supabase/functions/game-action/index.ts` calcule maintenant un butin serveur à l'arrivée d'une attaque ;
-- ce butin est stocké dans `game_fleets.cargo` pendant le retour ;
-- au retour, le serveur crédite `game_resources` avec ce cargo ;
-- côté client, le retour d'une flotte d'attaque sait aussi créditer `f.cargo` si `pendingLoot` est absent ;
-- `stellarionCreditLootToActivePlanet()` accepte maintenant `{ planetId }` pour créditer la planète de départ, pas une planète active au hasard ;
-- audit ajouté : `stellarionV6AttackLootAudit1588()`.
+Cause corrigée : les canvas `StellarionAtlasPlanet` de la colonne droite continuaient leur propre `requestAnimationFrame`, même quand le CSS stoppait certaines animations.
 
-## Vérification
+Corrections :
+- en mode `eco`, les canvas de planète dans la colonne droite sont réellement arrêtés (`stop + draw static`) ;
+- les orbites/apparats CSS de la colonne droite sont figés ;
+- en quittant le mode éco, les canvas peuvent reprendre leur rendu.
 
-- `node --check js/main.js` : OK.
+## Vérifications locales
 
-## Important déploiement
-
-Il faut redéployer :
-1. le front sur Vercel ;
-2. la fonction Supabase `game-action`, car le correctif principal est côté serveur.
+- `node --check js/main.js` : OK
+- `tsc --noEmit ... game-action/index.ts` : seulement erreurs attendues d'environnement Deno/import URL, aucune erreur de syntaxe TypeScript locale.

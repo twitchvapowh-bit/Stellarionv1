@@ -1,26 +1,17 @@
-# Stellarion Secure Clean V6
+# Stellarion — secure clean v7
 
-Version nettoyée basée sur la V5, avec correctif du butin d'attaque.
+Version basée sur la V6 stable, avec correction serveur du butin d'attaque et gouverneur éco des planètes.
 
-## Correction principale
+À déployer :
 
-Les ressources gagnées en attaque sont maintenant ajoutées au stock :
-- le serveur calcule le butin à l'arrivée de la flotte ;
-- le butin voyage dans le cargo du retour ;
-- au retour, `game_resources` est créditée ;
-- le client affiche aussi correctement le crédit sur la planète de départ.
+1. Remplacer les fichiers Vercel par ceux de l'archive.
+2. Redéployer l'Edge Function Supabase :
+   ```bash
+   supabase functions deploy game-action
+   ```
+3. Redéployer Vercel.
 
 Audit console après déploiement :
-
 ```js
-stellarionV6AttackLootAudit1588()
-```
-
-## Déploiement
-
-Remplacer les fichiers du projet puis redéployer Vercel.
-Redéployer aussi la Edge Function Supabase :
-
-```bash
-supabase functions deploy game-action
+stellarionV7CombatEcoAudit1589()
 ```
