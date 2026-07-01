@@ -137,7 +137,7 @@ create or replace function public.stellarion_strip_player_save_sensitive_1570()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
 begin
   new.payload = coalesce(new.payload, '{}'::jsonb)
