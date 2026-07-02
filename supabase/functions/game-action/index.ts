@@ -580,6 +580,10 @@ async function processQueuesSafeNoCombat(admin: any, playerId: string) {
   const sq = await admin.from("game_ship_queue").select("*").eq("player_id", playerId).lte("finish_at", now);
   if (sq.error) throw sq.error;
   for (const q of sq.data || []) {
+    if (!(await claimGameActionOnce(admin, playerId, "ship_queue", q.id))) {
+      await admin.from("game_ship_queue").delete().eq("id", q.id).eq("player_id", playerId);
+      continue;
+    }
     await addShips(admin, playerId, q.planet_id, q.ship_id, n(q.qty,1,100000));
     await admin.from("game_ship_queue").delete().eq("id", q.id).eq("player_id", playerId);
   }
@@ -599,6 +603,10 @@ async function processQueues(admin: any, maybeSupaUser: any, maybePlayerId?: str
   const sq = await admin.from("game_ship_queue").select("*").eq("player_id", playerId).lte("finish_at", now);
   if (sq.error) throw sq.error;
   for (const q of sq.data || []) {
+    if (!(await claimGameActionOnce(admin, playerId, "ship_queue", q.id))) {
+      await admin.from("game_ship_queue").delete().eq("id", q.id).eq("player_id", playerId);
+      continue;
+    }
     await addShips(admin, playerId, q.planet_id, q.ship_id, n(q.qty,1,100000));
     await admin.from("game_ship_queue").delete().eq("id", q.id).eq("player_id", playerId);
   }
@@ -607,6 +615,10 @@ async function processQueues(admin: any, maybeSupaUser: any, maybePlayerId?: str
   if (fl.error) throw fl.error;
   for (const f of fl.data || []) {
     if (f.returning) {
+      if (!(await claimGameActionOnce(admin, playerId, "fleet_return", f.id))) {
+        await admin.from("game_fleets").delete().eq("id", f.id).eq("player_id", playerId);
+        continue;
+      }
       const ships = f.ships || {};
       for (const [shipId, qty] of Object.entries(ships)) if (SHIPS[shipId]) await addShips(admin, playerId, f.origin_planet_id, shipId, n(qty,0,1000000));
       const cargo = f.cargo || {};
@@ -759,6 +771,23 @@ async function finishShip(admin: any, playerId: string, body: any) {
   await processQueues(admin, playerId);
   return `Formation terminee cote serveur avec ${price} fragments.`;
 }
+
+async function claimGameActionOnce(admin: any, playerId: string, kind: string, actionId: unknown) {
+  const id = String(actionId || "");
+  if (!id) return false;
+  const ins = await admin.from("game_action_claims").insert({
+    kind,
+    action_id: id,
+    player_id: playerId,
+  });
+  if (!ins.error) return true;
+  if (ins.error.code === "23505" || String(ins.error.message || "").toLowerCase().includes("duplicate")) return false;
+  if (String(ins.error.message || "").includes("game_action_claims")) {
+    throw new Error("table_game_action_claims_manquante_lance_SUPABASE_GAME_ACTION_IDEMPOTENCY_1609");
+  }
+  throw ins.error;
+}
+
 async function addShips(admin: any, playerId: string, planetId: string, shipId: string, qty: number) {
   const old = await admin.from("game_ships").select("qty").eq("player_id", playerId).eq("planet_id", planetId).eq("ship_id", shipId).maybeSingle();
   if (old.error) throw old.error;
@@ -773,6 +802,11 @@ async function launchFleet(admin: any, playerId: string, body: any) {
   const ships = body.ships || {};
   const cargo = body.cargo || {};
   const duration = n(body.durationSeconds || body.duration || 60, 10, 3600);
+  const target = body.target || {};
+  const launchKey = fleetLaunchClaimKey(playerId, planetId, mission, target.id || body.target_id || "", ships, cargo);
+  if (!(await claimGameActionOnce(admin, playerId, "fleet_launch", launchKey))) {
+    throw new Error("lancement_flotte_deja_en_cours");
+  }
   let shipCount = 0;
   let cargoCap = 0;
   for (const [shipId, qtyRaw] of Object.entries(ships)) {
@@ -800,7 +834,6 @@ async function launchFleet(admin: any, playerId: string, body: any) {
   }
   spend(r, cargo);
   await setResources(admin, playerId, r);
-  const target = body.target || {};
   const ends = isoPlus(duration);
   const ins = await admin.from("game_fleets").insert({
     player_id:playerId,
@@ -834,6 +867,13 @@ async function launchFleet(admin: any, playerId: string, body: any) {
     });
   } catch (_) {}
   return `Mission serveur lancee : ${mission} avec ${shipCount} vaisseau(x).`;
+}
+
+function fleetLaunchClaimKey(playerId: string, planetId: string, mission: string, targetId: unknown, ships: any, cargo: any) {
+  const shipSig = Object.keys(ships || {}).sort().map((k) => `${k}:${n(ships[k],0,1000000)}`).join(",");
+  const cargoSig = ["titanium","xenite","antimatter","fragments"].map((k) => `${k}:${n(cargo?.[k])}`).join(",");
+  const bucket = Math.floor(Date.now() / 5000);
+  return [playerId, planetId, mission, String(targetId || ""), shipSig, cargoSig, bucket].join("|").slice(0, 500);
 }
 
 
