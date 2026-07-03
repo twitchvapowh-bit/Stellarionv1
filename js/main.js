@@ -5362,6 +5362,13 @@ function captureScrollState(){
    if(el)entries.push({sel,i,top:el.scrollTop||0,left:el.scrollLeft||0});
   });
  });
+ /* 1.6.10 — filet générique : capture aussi les divs scrollés sans classe connue
+    (ex : vue construction classique avec style="overflow:auto" inline). */
+ try{
+  document.querySelectorAll("#center div").forEach((el,i)=>{
+   if(el && (el.scrollTop>0 || el.scrollLeft>0)) entries.push({sel:"#center div",i,top:el.scrollTop,left:el.scrollLeft});
+  });
+ }catch(e){}
  return {
   winX:window.scrollX||0,
   winY:window.scrollY||0,
@@ -7263,6 +7270,13 @@ function syncRightColumnToView1542h(){
 }
 
 function render(){
+ /* 1.6.10 — préservation globale du scroll.
+    Cause racine des remontées en haut de page : render() remplace tout le innerHTML
+    de #app, ce qui remet à zéro le scroll de #center et des panneaux, à chaque clic
+    (254 appels directs à render()) et à chaque fin de file (tickV145).
+    Règle : même vue = on restaure le scroll ; changement de vue = repart en haut. */
+ const __viewChanged1610 = window.__lastRenderView1610 !== state.view;
+ const __scrollPos1610 = (!__viewChanged1610 && typeof captureScrollState==="function") ? captureScrollState() : null;
  try{stellarionRepairOwnedPlanetCoordinates(true);}catch(e){}
 
  if(typeof migrateResourcesToPerPlanet==="function")migrateResourcesToPerPlanet();
@@ -7317,6 +7331,20 @@ function render(){
  syncRightColumnToView1542h();
  setTimeout(syncRightColumnToView1542h,0);
  refreshQueueDomNoRender1542g();
+ /* 1.6.10 — restauration du scroll (voir en-tête de render) */
+ window.__lastRenderView1610 = state.view;
+ if(__scrollPos1610 && typeof restoreScrollState==="function"){
+  restoreScrollState(__scrollPos1610);
+  // Re-applique après les setTimeout(0) internes (gwmInitInteractions, syncRightColumnToView1542h)
+  setTimeout(function(){ try{ restoreScrollState(__scrollPos1610); }catch(e){} }, 40);
+ } else if(__viewChanged1610){
+  try{
+   window.scrollTo(0,0);
+   if(document.scrollingElement) document.scrollingElement.scrollTop = 0;
+   const c1610=document.getElementById("center");
+   if(c1610) c1610.scrollTop = 0;
+  }catch(e){}
+ }
 }
 
 function toggleSidebarQueue(kind){
@@ -26822,3 +26850,23 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     };
   };
 })();
+
+/* STELLARION 1.6.10 — Audit préservation du scroll */
+window.stellarionScrollAudit1610 = function(){
+ const out = {
+  patch: "scroll-preserve-1.6.10",
+  lastRenderView: window.__lastRenderView1610 || null,
+  currentView: (window.state && state.view) || null,
+  windowScrollY: window.scrollY || 0,
+  scrolledContainers: []
+ };
+ try{
+  document.querySelectorAll("#center, #center div, .side, .side.right, .layout").forEach(function(el){
+   if(el.scrollTop > 0) out.scrolledContainers.push({
+    tag: el.tagName, id: el.id || null, cls: (el.className||"").toString().slice(0,60), scrollTop: el.scrollTop
+   });
+  });
+ }catch(e){ out.error = String(e); }
+ console.table(out.scrolledContainers);
+ return out;
+};
