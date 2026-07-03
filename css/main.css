@@ -13459,3 +13459,17 @@ body.view-chests .chests-grid1525{
   position:relative!important;
   z-index:1!important;
 }
+
+/* === STELLARION 1.6.20 — Unification du topbar (fix décalage vue Bâtiments) ===
+   La vue Bâtiments imposait un topbar de 68px (règles Alpha 1.3.20/1.3.21) alors
+   que toutes les autres vues utilisent le standard 78px (--sg-topbar, stable-ui1542b).
+   Résultat : toute la page (carrousel compris) se décalait de ~10px en entrant ou
+   en sortant de la vue Bâtiments. Cette règle finale, plus spécifique et en dernière
+   position, aligne Bâtiments sur le standard. */
+body.view-buildings .topbar,
+body.stable-ui1542b.view-buildings .topbar{
+  height:var(--sg-topbar,78px)!important;
+  min-height:var(--sg-topbar,78px)!important;
+  max-height:var(--sg-topbar,78px)!important;
+  padding:0 18px!important;
+}
