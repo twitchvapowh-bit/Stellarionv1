@@ -7343,24 +7343,25 @@ function render(){
   try{
    const cp=document.querySelector(".carousel-pages");
    if(!cp) return;
-   /* 1.6.12 — le CSS impose scroll-behavior:smooth!important sur .carousel-pages :
-      sans ceci, la restauration anime visiblement 0 → position (glissade).
-      On force le mode instantané en inline important (prioritaire sur le CSS).
-      Les flèches ‹ › restent fluides : elles passent behavior:'smooth' explicitement. */
+   /* 1.6.12/1.6.13 — neutralise smooth + snap du CSS (sinon re-snap animé après rebuild). */
    cp.style.setProperty("scroll-behavior","auto","important");
-   /* 1.6.13 — le CSS impose aussi scroll-snap-type:x mandatory!important :
-      après chaque reconstruction, le navigateur relance un re-snap ANIMÉ du scroll
-      (le mouvement de retour visible). On désactive le snap sur l'élément.
-      Les flèches ‹ › avancent déjà d'un pas de bouton via getCarouselStep(),
-      le snap CSS était redondant. */
    cp.style.setProperty("scroll-snap-type","none","important");
-   cp.scrollLeft = __carouselLeft1611;
+   /* 1.6.14 — positionnement DÉTERMINISTE : on calcule la position du bouton actif
+      dans le contenu (indépendante du scroll courant, les rects s'annulent),
+      puis on ne corrige la cible que si le bouton sort du cadre, avec alignement
+      exact sur son bord. Idempotent : ré-appliqué N fois = même résultat,
+      donc plus aucune dérive d'un cran par clic. */
+   let target = Math.max(0, __carouselLeft1611);
    const act=cp.querySelector(".carousel-page.active");
    if(act){
     const cr=cp.getBoundingClientRect(), ar=act.getBoundingClientRect();
-    if(ar.right > cr.right) cp.scrollLeft += Math.ceil(ar.right - cr.right) + 12;
-    else if(ar.left < cr.left) cp.scrollLeft -= Math.ceil(cr.left - ar.left) + 12;
+    const rel = (ar.left - cr.left) + cp.scrollLeft;      // bord gauche du bouton dans le contenu
+    const relRight = rel + ar.width;                       // bord droit
+    if (relRight > target + cp.clientWidth) target = relRight - cp.clientWidth;
+    if (rel < target) target = rel;
    }
+   target = Math.max(0, Math.min(target, Math.max(0, cp.scrollWidth - cp.clientWidth)));
+   if (cp.scrollLeft !== target) cp.scrollLeft = target;
   }catch(e){}
  };
  __fixCarousel1611();
