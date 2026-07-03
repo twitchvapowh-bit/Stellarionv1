@@ -1862,9 +1862,18 @@ function showVisualNotification(id,live=false){
  while(stack.children.length>4)stack.lastElementChild.remove();
 }
 function openNotificationMessage(id){
+ /* 1.6.19 — clic sur une notification (popup ou tiroir) :
+    1) le popup cliqué disparaît immédiatement (avant même le render),
+    2) le tiroir de notifications se ferme (il restait ouvert par-dessus la messagerie),
+    3) la messagerie s'ouvre sur CE message, marqué lu. */
+ try{
+  const stack=document.getElementById("stellarion-notif-stack");
+  if(stack){ const card=stack.querySelector(`[data-msg-id="${id}"]`); if(card)card.remove(); }
+ }catch(e){}
  const m=(state.messages||[]).find(x=>x.id===id);
  if(m)markMessageRead(m,true);
  state.selectedMessageId=id;
+ state.notificationTrayOpen=false;
  state.view="messages";
  save();
  render();
