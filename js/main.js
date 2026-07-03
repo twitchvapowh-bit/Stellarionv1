@@ -7280,14 +7280,14 @@ function render(){
 }
 
 function toggleSidebarQueue(kind){
- state.sidebarQueueOpen = state.sidebarQueueOpen===kind ? "" : kind;
+ state.sidebarQueueOpen = state.sidebarQueueOpen===kind ? "none" : kind;
  rerenderPreserveScroll();
 }
 function queueTargetLevel(q){
  return q && (q.toLevel ?? q.to ?? q.levelTo ?? q.nextLevel ?? "?");
 }
 function sidebarBuildQueueHtml(){
- const open=state.sidebarQueueOpen==="build";
+ const open=state.sidebarQueueOpen==="build" || (!state.sidebarQueueOpen && state.buildQueue.length>0);
  return `<div class="sidebar-queue-card" onclick="toggleSidebarQueue('build')">
   <div class="sidebar-queue-head"><strong>🏗️ Bâtiments</strong><span class="muted">${state.buildQueue.length}</span></div>
   <div class="small muted">${queueSummaryText('build')}</div><div class="queue-boost-note">Clique pour voir / accélérer.</div>
@@ -7301,7 +7301,7 @@ function sidebarBuildQueueHtml(){
  </div>`;
 }
 function sidebarShipQueueHtml(){
- const open=state.sidebarQueueOpen==="ships";
+ const open=state.sidebarQueueOpen==="ships" || (!state.sidebarQueueOpen && !state.buildQueue.length && state.shipQueue.length>0);
  return `<div class="sidebar-queue-card" onclick="toggleSidebarQueue('ships')">
   <div class="sidebar-queue-head"><strong>🚀 Vaisseaux</strong><span class="muted">${state.shipQueue.length}</span></div>
   <div class="small muted">${queueSummaryText('ships')}</div><div class="queue-boost-note">Clique pour voir / accélérer.</div>
