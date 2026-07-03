@@ -13511,3 +13511,26 @@ body.stable-ui1542b.view-buildings .topbar{
   min-width:0!important;
  }
 }
+
+/* === STELLARION 1.6.22 — Galaxie : verrouillage fort de la colonne gauche ===
+   Reprend EXACTEMENT le mécanisme des vues standard (règle l.5719) avec la même
+   spécificité maximale, appliqué à la Galaxie, en dernière position du fichier. */
+@media(min-width:1251px){
+ body.stable-ui1542b.view-galaxy .layout{
+  grid-template-columns:var(--sg-left,330px) minmax(0,1fr) var(--sg-right,300px)!important;
+  gap:var(--sg-gap,12px)!important;
+ }
+ body.stable-ui1542b.view-galaxy .layout>.side:first-child{
+  display:block!important;
+  width:var(--sg-left,330px)!important;
+  min-width:var(--sg-left,330px)!important;
+  max-width:var(--sg-left,330px)!important;
+  padding:10px!important;
+ }
+ body.stable-ui1542b.view-galaxy .layout>.side.right{
+  width:var(--sg-right,300px)!important;
+  min-width:var(--sg-right,300px)!important;
+  max-width:var(--sg-right,300px)!important;
+  padding:10px!important;
+ }
+}
