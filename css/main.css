@@ -13534,3 +13534,54 @@ body.stable-ui1542b.view-buildings .topbar{
   padding:10px!important;
  }
 }
+
+/* === STELLARION 1.6.24 — Harmonisation des points de bascule responsive ===
+   Chaque vue passait en 1 colonne a une largeur differente (Batiments 1200,
+   Galaxie 1250, Coffres 1050, standard 1180...) : en fenetre reduite (ex. devtools
+   ancres), les pages avaient des mises en page incoherentes entre elles.
+   Point de bascule UNIQUE : 1250px. Au-dessus -> 3 colonnes standard partout ;
+   en-dessous -> 1 colonne partout (vues a colonnes laterales). */
+@media(max-width:1250px){
+ body.view-galaxy .layout,
+ body.view-planet .layout,
+ body.view-buildings .layout,
+ body.view-buildings .layout.has-bottom-queue,
+ body.view-defenses .layout,
+ body.view-chests .layout,
+ body.view-collection .layout,
+ body.view-market .layout,
+ body.view-leaderboards .layout,
+ body.stable-ui1542b.view-galaxy .layout,
+ body.stable-ui1542b.view-planet .layout,
+ body.stable-ui1542b.view-buildings .layout,
+ body.stable-ui1542b.view-defenses .layout,
+ body.stable-ui1542b.view-chests .layout,
+ body.stable-ui1542b.view-collection .layout{
+  grid-template-columns:1fr!important;
+ }
+ body.view-galaxy .side,
+ body.view-planet .side,
+ body.view-buildings .side,
+ body.view-defenses .side,
+ body.view-chests .side,
+ body.view-collection .side,
+ body.view-market .side,
+ body.view-leaderboards .side{
+  display:none!important;
+ }
+}
+@media(min-width:1251px){
+ body.view-planet .layout,
+ body.view-defenses .layout,
+ body.view-chests .layout,
+ body.view-collection .layout,
+ body.view-market .layout,
+ body.view-leaderboards .layout,
+ body.stable-ui1542b.view-planet .layout,
+ body.stable-ui1542b.view-defenses .layout,
+ body.stable-ui1542b.view-chests .layout,
+ body.stable-ui1542b.view-collection .layout{
+  grid-template-columns:var(--sg-left,330px) minmax(0,1fr) var(--sg-right,300px)!important;
+  gap:var(--sg-gap,12px)!important;
+ }
+}
