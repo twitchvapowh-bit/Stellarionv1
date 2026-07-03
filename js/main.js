@@ -5332,7 +5332,13 @@ function scheduleRealtimeQueueTick(){
  if(window._stellarionQueueTick)clearTimeout(window._stellarionQueueTick);
  const active=(state.buildQueue&&state.buildQueue.length)||(state.shipQueue&&state.shipQueue.length);
  if(active){
-  window._stellarionQueueTick=setTimeout(()=>{try{render()}catch(e){console.error(e)}},1000);
+  window._stellarionQueueTick=setTimeout(()=>{
+   try{
+    if(typeof renderLiveTimers==="function")renderLiveTimers();
+    else if(typeof updateQueueTimers1583==="function")updateQueueTimers1583();
+    scheduleRealtimeQueueTick();
+   }catch(e){console.error(e)}
+  },1000);
  }
 }
 
@@ -7225,6 +7231,27 @@ function stableResourceBar1542b(){
  </div>`;
 }
 
+function refreshQueueDomNoRender1542g(){
+ try{
+  const now=Date.now();
+  document.querySelectorAll("[data-finish-at]:not([data-progress])").forEach(el=>{
+   const finish=Number(el.getAttribute("data-finish-at"))||0;
+   if(!finish)return;
+   el.textContent=fmtTime(Math.max(0,(finish-now)/1000));
+  });
+  document.querySelectorAll("[data-progress]").forEach(el=>{
+   const start=Number(el.getAttribute("data-start-at"))||0;
+   const finish=Number(el.getAttribute("data-finish-at"))||0;
+   if(!finish)return;
+   const total=Math.max(1,finish-start);
+   const pct=Math.max(0,Math.min(100,Math.round((1-((finish-now)/total))*100)));
+   el.style.width=pct+"%";
+   if(el.textContent)el.textContent="";
+  });
+  if(typeof updateLiveBoostCosts==="function")updateLiveBoostCosts();
+ }catch(e){}
+}
+
 function render(){
  try{stellarionRepairOwnedPlanetCoordinates(true);}catch(e){}
 
@@ -7277,6 +7304,7 @@ function render(){
  else if(state.view==="territories"){center.innerHTML=territoriesMapHtml();}
  setTimeout(()=>{try{atlasInitCanvases(document)}catch(e){}},0);
  if(typeof updateCarouselUI==='function')updateCarouselUI();
+ refreshQueueDomNoRender1542g();
 }
 
 function toggleSidebarQueue(kind){
