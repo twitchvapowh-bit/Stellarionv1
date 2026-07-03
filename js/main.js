@@ -7382,11 +7382,18 @@ function render(){
    let target = relA - (Number(a.offset)||0);
    const act=cp.querySelector(".carousel-page.active");
    if(act){
+    /* 1.6.18 — recadrage UNIQUEMENT si le bouton actif est totalement invisible.
+       Un bouton cliqué dans le carrousel est forcément au moins partiellement
+       visible → un clic carrousel ne déplace plus jamais la barre, même d'un pixel.
+       Le recadrage ne sert plus qu'aux activations venues d'ailleurs (liens, raccourcis). */
     const ar=act.getBoundingClientRect();
     const rel=(ar.left - cr.left) + cp.scrollLeft;
     const relRight=rel + ar.width;
-    if (relRight > target + cp.clientWidth) target = relRight - cp.clientWidth;
-    if (rel < target) target = rel;
+    const visPx = Math.min(relRight, target + cp.clientWidth) - Math.max(rel, target);
+    if (visPx <= 0){
+     if (relRight > target + cp.clientWidth) target = relRight - cp.clientWidth;
+     if (rel < target) target = rel;
+    }
    }
    target = Math.max(0, Math.min(target, Math.max(0, cp.scrollWidth - cp.clientWidth)));
    if (cp.scrollLeft !== target) cp.scrollLeft = target;
