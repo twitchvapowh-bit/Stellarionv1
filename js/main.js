@@ -804,19 +804,20 @@ try {
       var auth=document.getElementById('auth-screen');
       var authVisible = auth && getComputedStyle(auth).display!=='none';
       var appRendered = app && app.children && app.children.length>0;
+      if(appRendered && window.__stellarionBootHold) return false;
       return authVisible || appRendered;
     }catch(e){ return true; }
   }
   function tick(){
     if(done) return;
-    if(ready()){ setTimeout(hide, 520); }            // laisser les passes post-rendu se stabiliser
-    else if(Date.now()-t0 < 3000){ requestAnimationFrame(tick); }
-    else hide();                                     // filet de sécurité
+    if(ready()){ setTimeout(hide, 900); }            // laisser les passes post-rendu se stabiliser
+    else if(Date.now()-t0 < 6500 || window.__stellarionBootHold){ requestAnimationFrame(tick); }
+    else hide();                                     // filet de sécurité hors bootstrap serveur
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', tick);
   else tick();
-  window.addEventListener('load', function(){ setTimeout(function(){ if(ready()) hide(); }, 400); });
-  setTimeout(hide, 3500);                            // filet de sécurité absolu
+  window.addEventListener('load', function(){ setTimeout(function(){ if(ready()) hide(); }, 900); });
+  setTimeout(function(){ if(!window.__stellarionBootHold) hide(); }, 6500); // filet de sécurité absolu
 })();
 ;
 
@@ -19567,6 +19568,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   try{ canQueue = maxBuildQueues1550; }catch(e){}
 
   function premiumQueueCard1550(){
+    if(window.__stellarionBootHold || (typeof currentUser !== 'undefined' && currentUser && !window.__stellarionServerStateLoaded1570)) return '';
     var st = ensureUpgradeState1550();
     var active = activeBuildQueueCount1550();
     var max = maxBuildQueues1550();
@@ -19897,6 +19899,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   }
 
   function cardHtml1551(){
+    if(window.__stellarionBootHold || (typeof currentUser !== 'undefined' && currentUser && !window.__stellarionServerStateLoaded1570)) return '';
     var st = ensureState1551();
     // Achat déjà effectué : le bandeau d'achat/confirmation doit disparaître.
     // Le compteur reste géré par la file normale de construction.
@@ -23390,6 +23393,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     installBootMask();
     try{
       if(document.body) document.body.classList.toggle('stellarion-server-booting', !!on);
+      G.__stellarionBootHold = !!on;
     }catch(e){}
   }
 
@@ -23508,7 +23512,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     try{ if(typeof syncActiveResources === 'function') syncActiveResources(); }catch(e){}
     setStateRef(s);
     try{ G.__stellarionServerStateLoaded1570 = true; }catch(e){}
-    setBootMask(false);
+    setTimeout(function(){ setBootMask(false); }, shouldRender ? 650 : 0);
     if(shouldRender) renderSafe();
     return true;
   }
