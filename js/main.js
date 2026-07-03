@@ -70,8 +70,9 @@ function carouselGoToPage(pageId) {
 }
 
 function carouselIsActivePage(pageId,currentView){
+  /* 1.6.17 — la règle (planet actif quand view=buildings) datait d'avant le bouton
+     Bâtiments dédié : elle surlignait Planète ET Bâtiments en même temps. Supprimée. */
   return currentView === pageId ||
-    (pageId === 'planet' && currentView === 'buildings') ||
     (pageId === 'defenses' && currentView === 'defenses') ||
     (pageId === 'fleet' && currentView === 'ships') ||
     (pageId === 'collection' && currentView === 'collection') ||
