@@ -7277,11 +7277,15 @@ function render(){
     Règle : même vue = on restaure le scroll ; changement de vue = repart en haut. */
  const __viewChanged1610 = window.__lastRenderView1610 !== state.view;
  const __scrollPos1610 = (!__viewChanged1610 && typeof captureScrollState==="function") ? captureScrollState() : null;
- /* 1.6.11 — le carrousel du topbar est reconstruit à chaque render : on préserve
-    son défilement horizontal TOUJOURS (même en changement de vue), puis on garde
-    la page active visible. */
- let __carouselLeft1611 = 0;
- try{ const __cp=document.querySelector(".carousel-pages"); if(__cp) __carouselLeft1611=__cp.scrollLeft||0; }catch(e){}
+ /* 1.6.15 — la position voulue du carrousel vit dans window.__carouselTarget1615
+    (persistante entre renders, mise à jour uniquement par un scroll utilisateur).
+    Plus de capture fragile ici : on initialise juste depuis le DOM la 1re fois. */
+ try{
+  if(typeof window.__carouselTarget1615!=="number"){
+   const __cp=document.querySelector(".carousel-pages");
+   window.__carouselTarget1615 = __cp ? (__cp.scrollLeft||0) : 0;
+  }
+ }catch(e){}
  try{stellarionRepairOwnedPlanetCoordinates(true);}catch(e){}
 
  if(typeof migrateResourcesToPerPlanet==="function")migrateResourcesToPerPlanet();
@@ -7336,37 +7340,70 @@ function render(){
  syncRightColumnToView1542h();
  setTimeout(syncRightColumnToView1542h,0);
  refreshQueueDomNoRender1542g();
- /* 1.6.11 — restauration du carrousel (toujours, même en changement de vue).
-    On ajuste uniquement scrollLeft du conteneur : jamais de scrollIntoView,
-    pour ne pas faire bouger la page verticalement. */
- const __fixCarousel1611 = function(){
+ /* 1.6.15 — verrouillage du carrousel.
+    1) Position cible persistante (window.__carouselTarget1615), ajustée
+       déterministiquement pour garder le bouton actif visible, puis clampée.
+    2) GARDE CONTINUE : pendant 400 ms après le render, chaque frame ré-impose
+       la cible. Toute animation parasite (re-snap, smooth résiduel, rebuild
+       tardif du topbar) est écrasée avant d'être peinte → zéro mouvement visible.
+    3) Un scroll pendant la garde = parasite (écrasé). Un scroll hors garde =
+       l'utilisateur (flèches ‹ ›, molette, drag) → devient la nouvelle cible. */
+ const __fixCarousel1615 = function(){
   try{
    const cp=document.querySelector(".carousel-pages");
-   if(!cp) return;
-   /* 1.6.12/1.6.13 — neutralise smooth + snap du CSS (sinon re-snap animé après rebuild). */
+   if(!cp) return null;
    cp.style.setProperty("scroll-behavior","auto","important");
    cp.style.setProperty("scroll-snap-type","none","important");
-   /* 1.6.14 — positionnement DÉTERMINISTE : on calcule la position du bouton actif
-      dans le contenu (indépendante du scroll courant, les rects s'annulent),
-      puis on ne corrige la cible que si le bouton sort du cadre, avec alignement
-      exact sur son bord. Idempotent : ré-appliqué N fois = même résultat,
-      donc plus aucune dérive d'un cran par clic. */
-   let target = Math.max(0, __carouselLeft1611);
+   let target = Math.max(0, Number(window.__carouselTarget1615)||0);
    const act=cp.querySelector(".carousel-page.active");
    if(act){
     const cr=cp.getBoundingClientRect(), ar=act.getBoundingClientRect();
-    const rel = (ar.left - cr.left) + cp.scrollLeft;      // bord gauche du bouton dans le contenu
-    const relRight = rel + ar.width;                       // bord droit
+    const rel = (ar.left - cr.left) + cp.scrollLeft;
+    const relRight = rel + ar.width;
     if (relRight > target + cp.clientWidth) target = relRight - cp.clientWidth;
     if (rel < target) target = rel;
    }
    target = Math.max(0, Math.min(target, Math.max(0, cp.scrollWidth - cp.clientWidth)));
+   window.__carouselTarget1615 = target;
    if (cp.scrollLeft !== target) cp.scrollLeft = target;
-  }catch(e){}
+   if (!cp.__stellarionScrollHook1615){
+    cp.__stellarionScrollHook1615 = true;
+    cp.addEventListener("scroll", function(){
+     if (window.__carouselGuard1615){
+      const t=Number(window.__carouselTarget1615)||0;
+      if (cp.scrollLeft !== t) cp.scrollLeft = t;         // parasite : on écrase
+     } else {
+      window.__carouselTarget1615 = cp.scrollLeft;        // utilisateur : on adopte
+     }
+    }, {passive:true});
+   }
+   return cp;
+  }catch(e){ return null; }
  };
- __fixCarousel1611();
- requestAnimationFrame(__fixCarousel1611);
- setTimeout(__fixCarousel1611, 60);
+ __fixCarousel1615();
+ window.__carouselGuard1615 = true;
+ window.__carouselGuardUntil1615 = (window.performance&&performance.now?performance.now():Date.now()) + 400;
+ if (!window.__carouselGuardLoop1615){
+  window.__carouselGuardLoop1615 = true;
+  (function __guardLoop(){
+   try{
+    const now=(window.performance&&performance.now?performance.now():Date.now());
+    if (now < (window.__carouselGuardUntil1615||0)){
+     const cp=document.querySelector(".carousel-pages");
+     if (cp){
+      cp.style.setProperty("scroll-behavior","auto","important");
+      cp.style.setProperty("scroll-snap-type","none","important");
+      const t=Math.max(0,Math.min(Number(window.__carouselTarget1615)||0, Math.max(0, cp.scrollWidth - cp.clientWidth)));
+      if (cp.scrollLeft !== t) cp.scrollLeft = t;
+     }
+     requestAnimationFrame(__guardLoop);
+    } else {
+     window.__carouselGuard1615 = false;
+     window.__carouselGuardLoop1615 = false;
+    }
+   }catch(e){ window.__carouselGuard1615=false; window.__carouselGuardLoop1615=false; }
+  })();
+ }
  /* 1.6.10 — restauration du scroll (voir en-tête de render) */
  window.__lastRenderView1610 = state.view;
  if(__scrollPos1610 && typeof restoreScrollState==="function"){
