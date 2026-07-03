@@ -7277,13 +7277,21 @@ function render(){
     Règle : même vue = on restaure le scroll ; changement de vue = repart en haut. */
  const __viewChanged1610 = window.__lastRenderView1610 !== state.view;
  const __scrollPos1610 = (!__viewChanged1610 && typeof captureScrollState==="function") ? captureScrollState() : null;
- /* 1.6.15 — la position voulue du carrousel vit dans window.__carouselTarget1615
-    (persistante entre renders, mise à jour uniquement par un scroll utilisateur).
-    Plus de capture fragile ici : on initialise juste depuis le DOM la 1re fois. */
+ /* 1.6.16 — l'ancrage du carrousel est SÉMANTIQUE : {index du bouton, décalage px
+    à gauche du cadre}. Insensible aux changements de largeur du topbar entre vues
+    (focus-view etc.), contrairement à une cible en pixels qui se fait rogner. */
  try{
-  if(typeof window.__carouselTarget1615!=="number"){
+  if(!window.__carouselAnchor1616){
    const __cp=document.querySelector(".carousel-pages");
-   window.__carouselTarget1615 = __cp ? (__cp.scrollLeft||0) : 0;
+   window.__carouselAnchor1616 = {index:0, offset:0};
+   if(__cp){
+    const __btns=__cp.querySelectorAll(".carousel-page");
+    const __cr=__cp.getBoundingClientRect();
+    for(let __i=0;__i<__btns.length;__i++){
+     const __ar=__btns[__i].getBoundingClientRect();
+     if(__ar.right - __cr.left > 1){ window.__carouselAnchor1616={index:__i, offset:__ar.left-__cr.left}; break; }
+    }
+   }
   }
  }catch(e){}
  try{stellarionRepairOwnedPlanetCoordinates(true);}catch(e){}
@@ -7340,47 +7348,63 @@ function render(){
  syncRightColumnToView1542h();
  setTimeout(syncRightColumnToView1542h,0);
  refreshQueueDomNoRender1542g();
- /* 1.6.15 — verrouillage du carrousel.
-    1) Position cible persistante (window.__carouselTarget1615), ajustée
-       déterministiquement pour garder le bouton actif visible, puis clampée.
-    2) GARDE CONTINUE : pendant 400 ms après le render, chaque frame ré-impose
-       la cible. Toute animation parasite (re-snap, smooth résiduel, rebuild
-       tardif du topbar) est écrasée avant d'être peinte → zéro mouvement visible.
-    3) Un scroll pendant la garde = parasite (écrasé). Un scroll hors garde =
-       l'utilisateur (flèches ‹ ›, molette, drag) → devient la nouvelle cible. */
- const __fixCarousel1615 = function(){
+ /* 1.6.16 — verrouillage du carrousel par ANCRAGE SÉMANTIQUE.
+    L'ancre = {index de bouton, décalage px} est convertie en scrollLeft à chaque
+    application, selon la géométrie DU MOMENT. Résultat : la barre montre les mêmes
+    boutons quelle que soit la largeur du topbar de la vue courante.
+    Garde continue 400 ms : chaque frame ré-impose la position → aucun mouvement
+    parasite ne peut être peint. Scroll hors garde = utilisateur → nouvelle ancre. */
+ const __carouselReadAnchor1616 = function(cp){
+  try{
+   const btns=cp.querySelectorAll(".carousel-page");
+   const cr=cp.getBoundingClientRect();
+   for(let i=0;i<btns.length;i++){
+    const ar=btns[i].getBoundingClientRect();
+    if(ar.right - cr.left > 1) return {index:i, offset:(ar.left - cr.left)};
+   }
+  }catch(e){}
+  return {index:0, offset:0};
+ };
+ const __carouselApply1616 = function(){
   try{
    const cp=document.querySelector(".carousel-pages");
-   if(!cp) return null;
+   if(!cp) return;
    cp.style.setProperty("scroll-behavior","auto","important");
    cp.style.setProperty("scroll-snap-type","none","important");
-   let target = Math.max(0, Number(window.__carouselTarget1615)||0);
+   const btns=cp.querySelectorAll(".carousel-page");
+   if(!btns.length) return;
+   const a=window.__carouselAnchor1616||{index:0,offset:0};
+   const i=Math.max(0,Math.min(Number(a.index)||0, btns.length-1));
+   const cr=cp.getBoundingClientRect();
+   const arA=btns[i].getBoundingClientRect();
+   const relA=(arA.left - cr.left) + cp.scrollLeft;        // position du bouton-ancre dans le contenu
+   let target = relA - (Number(a.offset)||0);
    const act=cp.querySelector(".carousel-page.active");
    if(act){
-    const cr=cp.getBoundingClientRect(), ar=act.getBoundingClientRect();
-    const rel = (ar.left - cr.left) + cp.scrollLeft;
-    const relRight = rel + ar.width;
+    const ar=act.getBoundingClientRect();
+    const rel=(ar.left - cr.left) + cp.scrollLeft;
+    const relRight=rel + ar.width;
     if (relRight > target + cp.clientWidth) target = relRight - cp.clientWidth;
     if (rel < target) target = rel;
    }
    target = Math.max(0, Math.min(target, Math.max(0, cp.scrollWidth - cp.clientWidth)));
-   window.__carouselTarget1615 = target;
    if (cp.scrollLeft !== target) cp.scrollLeft = target;
-   if (!cp.__stellarionScrollHook1615){
-    cp.__stellarionScrollHook1615 = true;
+   if (!cp.__stellarionScrollHook1616){
+    cp.__stellarionScrollHook1616 = true;
     cp.addEventListener("scroll", function(){
      if (window.__carouselGuard1615){
-      const t=Number(window.__carouselTarget1615)||0;
-      if (cp.scrollLeft !== t) cp.scrollLeft = t;         // parasite : on écrase
+      __carouselApply1616();                               // parasite : on ré-impose l'ancre
      } else {
-      window.__carouselTarget1615 = cp.scrollLeft;        // utilisateur : on adopte
+      window.__carouselAnchor1616 = __carouselReadAnchor1616(cp); // utilisateur : nouvelle ancre
      }
     }, {passive:true});
    }
-   return cp;
-  }catch(e){ return null; }
+  }catch(e){}
  };
- __fixCarousel1615();
+ __carouselApply1616();
+ /* L'ajustement de visibilité du bouton actif a pu déplacer la barre :
+    on fige ce nouvel état comme ancre officielle. */
+ try{ const __cp2=document.querySelector(".carousel-pages"); if(__cp2) window.__carouselAnchor1616=__carouselReadAnchor1616(__cp2); }catch(e){}
  window.__carouselGuard1615 = true;
  window.__carouselGuardUntil1615 = (window.performance&&performance.now?performance.now():Date.now()) + 400;
  if (!window.__carouselGuardLoop1615){
@@ -7389,13 +7413,7 @@ function render(){
    try{
     const now=(window.performance&&performance.now?performance.now():Date.now());
     if (now < (window.__carouselGuardUntil1615||0)){
-     const cp=document.querySelector(".carousel-pages");
-     if (cp){
-      cp.style.setProperty("scroll-behavior","auto","important");
-      cp.style.setProperty("scroll-snap-type","none","important");
-      const t=Math.max(0,Math.min(Number(window.__carouselTarget1615)||0, Math.max(0, cp.scrollWidth - cp.clientWidth)));
-      if (cp.scrollLeft !== t) cp.scrollLeft = t;
-     }
+     __carouselApply1616();
      requestAnimationFrame(__guardLoop);
     } else {
      window.__carouselGuard1615 = false;
