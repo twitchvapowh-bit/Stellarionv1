@@ -791,6 +791,8 @@ try {
 /* ---- bloc script (source: ligne ~6427) ---- */
 (function(){
   var t0=Date.now(), gate=null, done=false;
+  window.__stellarionBootHold = true;
+  try{ document.body.classList.add('stellarion-boot-hold'); }catch(e){}
   function hide(){
     if(done) return; done=true;
     gate=gate||document.getElementById('stellarion-bootgate');
@@ -8460,6 +8462,8 @@ function authMessage(text, ok){
 }
 
 function showAuthScreen(){
+ try{ window.__stellarionBootHold = false; }catch(e){}
+ try{ document.body.classList.remove('stellarion-boot-hold'); }catch(e){}
  const s = document.getElementById("auth-screen");
  if(s) s.style.display = "flex";
 }
@@ -9195,7 +9199,7 @@ if(supa){
 upgradeAuthScreenV16();
 
 // Tout est défini : on peut vérifier la session et démarrer (ou afficher la connexion).
-initAuth();
+setTimeout(initAuth, 0);
 ;
 
 /* ---- bloc script (source: ligne ~15692) ---- */
@@ -23394,6 +23398,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     try{
       if(document.body) document.body.classList.toggle('stellarion-server-booting', !!on);
       G.__stellarionBootHold = !!on;
+      if(document.body) document.body.classList.toggle('stellarion-boot-hold', !!on);
     }catch(e){}
   }
 

@@ -12,6 +12,7 @@ button{font:inherit}
 .topbar{height:78px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid rgba(79,195,247,.14);background:rgba(2,5,16,.84);backdrop-filter:blur(18px);position:relative;z-index:5}
 .brand{color:#4FC3F7;font-weight:950;letter-spacing:4px;text-shadow:0 0 25px rgba(79,195,247,.75)}
 #stellarion-bootgate.sbg-hide{opacity:0!important;visibility:hidden!important;pointer-events:none!important;display:none!important}
+body.stellarion-boot-hold #app{visibility:hidden!important}
 .layout{height:calc(100% - 78px);display:grid;grid-template-columns:330px 1fr 360px;min-height:0}
 .side{border-right:1px solid rgba(79,195,247,.12);background:rgba(2,5,16,.60);backdrop-filter:blur(20px);padding:16px;overflow:auto}
 .right{border-right:0;border-left:1px solid rgba(79,195,247,.12)}
