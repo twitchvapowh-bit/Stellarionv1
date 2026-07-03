@@ -7252,6 +7252,16 @@ function refreshQueueDomNoRender1542g(){
  }catch(e){}
 }
 
+function syncRightColumnToView1542h(){
+ try{
+  if(!state || state.view==="galaxy" || state.view==="buildings" || state.view==="defenses" || state.view==="chests") return;
+  const right=document.querySelector(".side.right");
+  if(!right || typeof rightPanels!=="function") return;
+  const html=rightPanels();
+  if(typeof html==="string" && right.innerHTML!==html) right.innerHTML=html;
+ }catch(e){}
+}
+
 function render(){
  try{stellarionRepairOwnedPlanetCoordinates(true);}catch(e){}
 
@@ -7304,6 +7314,8 @@ function render(){
  else if(state.view==="territories"){center.innerHTML=territoriesMapHtml();}
  setTimeout(()=>{try{atlasInitCanvases(document)}catch(e){}},0);
  if(typeof updateCarouselUI==='function')updateCarouselUI();
+ syncRightColumnToView1542h();
+ setTimeout(syncRightColumnToView1542h,0);
  refreshQueueDomNoRender1542g();
 }
 
@@ -7394,15 +7406,89 @@ function updateLiveResourceText(){
  }catch(e){}
 }
 function rightPanelsOriginal(){
- if(state.view==="galaxy")return gwmSelectionPanelHtml();
-return `${state.view==='galaxy'?gwmTargetRightPanelHtml():''}${state.view==='galaxy'?gwmSelectedPanelHtml():''}<div class="card panel"><span class="pill">MESSAGERIE</span><div class="resource"><span>Messages non lus</span><strong>${unreadCount()}</strong></div><button class="btn btn-ghost" style="width:100%;margin-top:8px;position:relative" onclick="setView('messages')">Ouvrir messagerie ${unreadBadgeFloating()}</button></div><div class="card panel"><span class="pill">FLOTTES EN VOL</span>${state.fleets.length?state.fleets.map(fleetHtml).join(""):`<p class="muted small">Aucune flotte.</p>`}</div><div class="card panel"><span class="pill">VAISSEAUX — ${activePlanet().name}</span>${SHIPS.map(s=>`<div class="resource"><span>${shipArt(s.id,"ship-art-mini")} ${s.name}</span><strong>${activePlanetShips()[s.id]||0}</strong></div>`).join("")}</div><div class="card panel"><span class="pill">DÉFENSES PLANÈTE MÈRE</span>${DEFENSES.map(d=>`<div class="resource"><span>${d.icon} ${d.name}</span><strong>${state.defenses[d.id]||0}</strong></div>`).join("")}</div>`}
+  if(state.view==="galaxy")return gwmSelectionPanelHtml();
+ return `${state.view==='galaxy'?gwmTargetRightPanelHtml():''}${state.view==='galaxy'?gwmSelectedPanelHtml():''}<div class="card panel"><span class="pill">MESSAGERIE</span><div class="resource"><span>Messages non lus</span><strong>${unreadCount()}</strong></div><button class="btn btn-ghost" style="width:100%;margin-top:8px;position:relative" onclick="setView('messages')">Ouvrir messagerie ${unreadBadgeFloating()}</button></div><div class="card panel"><span class="pill">FLOTTES EN VOL</span>${state.fleets.length?state.fleets.map(fleetHtml).join(""):`<p class="muted small">Aucune flotte.</p>`}</div><div class="card panel"><span class="pill">VAISSEAUX — ${activePlanet().name}</span>${SHIPS.map(s=>`<div class="resource"><span>${shipArt(s.id,"ship-art-mini")} ${s.name}</span><strong>${activePlanetShips()[s.id]||0}</strong></div>`).join("")}</div><div class="card panel"><span class="pill">DÉFENSES PLANÈTE MÈRE</span>${DEFENSES.map(d=>`<div class="resource"><span>${d.icon} ${d.name}</span><strong>${state.defenses[d.id]||0}</strong></div>`).join("")}</div>`}
+function rightQuickNavHtml1542h(items){
+ return `<div class="card panel"><span class="pill">ACCÈS RAPIDE</span>${items.map(([label,view,ghost])=>`<button class="btn ${ghost?"btn-ghost":""}" style="width:100%;margin-top:8px" onclick="setView('${view}')">${label}</button>`).join("")}</div>`;
+}
+function pageMessagePanelHtml1542h(){
+ const unread=typeof unreadCount==="function"?unreadCount():0;
+ const total=(state.messages||[]).length;
+ const combat=(state.messages||[]).filter(m=>m&&m.type==="combat").length;
+ return `<div class="card panel"><span class="pill">MESSAGERIE</span><div class="resource"><span>Non lus</span><strong>${unread}</strong></div><div class="resource"><span>Total</span><strong>${total}</strong></div><div class="resource"><span>Rapports combat</span><strong>${combat}</strong></div><button class="btn btn-ghost" style="width:100%;margin-top:8px;position:relative" onclick="setView('messages')">Ouvrir messagerie ${unreadBadgeFloating()}</button></div>`;
+}
+function pageFleetsPanelHtml1542h(){
+ const fleets=Array.isArray(state.fleets)?state.fleets:[];
+ return `<div class="card panel"><span class="pill">FLOTTES EN VOL</span>${fleets.length?fleets.slice(0,4).map(fleetHtml).join(""):`<p class="muted small">Aucune flotte en vol.</p>`}${fleets.length>4?`<p class="tiny muted">${fleets.length-4} autre(s) flotte(s) masquée(s).</p>`:""}</div>`;
+}
+function pageShipQueuePanelHtml1542h(){
+ const q=Array.isArray(state.shipQueue)?state.shipQueue:[];
+ return `<div class="card panel"><span class="pill">FILE VAISSEAUX</span><div class="resource"><span>Formations</span><strong>${q.length}</strong></div>${q.length?q.slice(0,3).map(shipQueueCompactHtml).join(""):`<p class="muted small">Aucune formation active.</p>`}</div>`;
+}
+function pageBuildQueuePanelHtml1542h(){
+ const q=Array.isArray(state.buildQueue)?state.buildQueue:[];
+ return `<div class="card panel"><span class="pill">CONSTRUCTIONS</span><div class="resource"><span>Bâtiments en file</span><strong>${q.length}/${typeof canQueue==="function"?canQueue():"?"}</strong></div>${q.length?q.slice(0,2).map(queueCompactHtml).join(""):`<p class="muted small">Aucune construction active.</p>`}</div>`;
+}
+function planetOpsPanelHtml1542h(){
+ const p=activePlanet();
+ const prod=typeof calcProdForPlanet==="function"?calcProdForPlanet(p.id):calcProd();
+ const energy=typeof calcEnergyForPlanet==="function"?calcEnergyForPlanet(p.id):calcEnergy();
+ return `<div class="card panel"><span class="pill">PLANÈTE ACTIVE</span><h2>${p.name}</h2><div class="resource"><span>Puissance totale</span><strong>${fmt(planetTotalPower(p.id))}</strong></div><div class="resource"><span>Production titane</span><strong>+${fmt(prod.titanium||0)}/h</strong></div><div class="resource"><span>Production xénite</span><strong>+${fmt(prod.xenite||0)}/h</strong></div><div class="resource"><span>Énergie</span><strong>${fmt((energy&&energy.balance)||0)} MW</strong></div><button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="setView('buildings')">Gérer bâtiments</button></div>`;
+}
+function shipsRightPanelsHtml1542h(){
+ const p=activePlanet();
+ return `<div class="card panel"><span class="pill">CHANTIER</span><h2>${p.name}</h2><div class="resource"><span>Vaisseaux stationnés</span><strong>${fmt(planetFleetCount(p.id))}</strong></div><div class="resource"><span>Puissance flotte</span><strong>${fmt(planetFleetPower(p.id))}</strong></div><div class="resource"><span>File vaisseaux</span><strong>${(state.shipQueue||[]).length}</strong></div></div>${pageShipQueuePanelHtml1542h()}${pageFleetsPanelHtml1542h()}${rightQuickNavHtml1542h([["Préparer mission","galaxy",false],["Armement planète","armament",true],["Base orbitale","buildings",true]])}`;
+}
+function armamentRightPanelsHtml1542h(){
+ const p=activePlanet();
+ const defensePower=planetCommandementPower(p.id);
+ return `<div class="card panel"><span class="pill">PRÉPARATION MILITAIRE</span><h2>${p.name}</h2><div class="resource"><span>Puissance flotte</span><strong>${fmt(planetFleetPower(p.id))}</strong></div><div class="resource"><span>Commandement</span><strong>${fmt(defensePower)}</strong></div><div class="resource"><span>Vaisseaux</span><strong>${fmt(planetFleetCount(p.id))}</strong></div></div>${pageFleetsPanelHtml1542h()}${rightQuickNavHtml1542h([["Construire vaisseaux","ships",false],["Commandements","defenses",true],["Galaxie","galaxy",true]])}`;
+}
+function communicationRightPanelsHtml1542h(){
+ return `${pageMessagePanelHtml1542h()}${rightQuickNavHtml1542h([["Chat global","global-chat",false],["Alliance","alliance",true],["Classement","leaderboards",true]])}`;
+}
+function allianceRightPanelsHtml1542h(){
+ const a=state.alliance;
+ const members=(a&&Array.isArray(a.members))?a.members:[];
+ const pending=(state.allianceApplications||[]).filter(x=>x&&x.status==="pending").length;
+ const power=typeof alliancePower==="function"?alliancePower(a||{}):members.reduce((t,m)=>t+(Number(m.power)||0),0);
+ return `<div class="card panel"><span class="pill">ALLIANCE</span>${a?`<h2>[${a.tag||"-"}] ${a.name||"Alliance"}</h2><div class="resource"><span>Membres</span><strong>${members.length}</strong></div><div class="resource"><span>Puissance</span><strong>${fmt(power)}</strong></div><div class="resource"><span>Candidatures</span><strong>${pending}</strong></div>`:`<p class="muted small">Aucune alliance active.</p>`}</div>${pageMessagePanelHtml1542h()}${rightQuickNavHtml1542h([["Classement alliances","leaderboards",false],["Messages","messages",true]])}`;
+}
+function marketRightPanelsHtml1542h(){
+ try{ if(typeof ensureMarketState==="function")ensureMarketState(); }catch(e){}
+ const listings=(state.marketListings||[]).map(typeof normalizeMarketListing==="function"?normalizeMarketListing:x=>x).filter(Boolean);
+ const mine=listings.filter(l=>typeof marketIsMine==="function"&&marketIsMine(l)&&l.status==="open").length;
+ const open=listings.filter(l=>l&&l.status==="open"&&!(typeof marketIsMine==="function"&&marketIsMine(l))).length;
+ return `<div class="card panel"><span class="pill">ACTIVITÉ MARCHÉ</span><div class="resource"><span>Mes annonces</span><strong>${mine}</strong></div><div class="resource"><span>Offres ouvertes</span><strong>${open}</strong></div><div class="resource"><span>Taxe vendeur</span><strong>5%</strong></div></div><div class="card panel"><span class="pill">REPÈRES</span><p class="small muted">Les ressources proposées sont bloquées à la création. Une offre acceptée règle automatiquement les deux joueurs.</p><button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="setView('leaderboards')">Voir classement</button></div>`;
+}
+function collectionRightPanelsHtml1542h(){
+ try{ if(typeof collectionEnsureState==="function")collectionEnsureState(); }catch(e){}
+ const c=typeof collectionTotals==="function"?collectionTotals():{owned:0,total:(typeof APPARAT_CATALOG!=="undefined"?APPARAT_CATALOG.length:0),equipped:0};
+ const totalCount=typeof APPARAT_CATALOG!=="undefined"&&Array.isArray(APPARAT_CATALOG)?APPARAT_CATALOG.length:(Number(c.total)||0);
+ const equippedCount=typeof activePlanetApparats==="function"?activePlanetApparats().length:Number(c.equipped||0);
+ const selected=(typeof APPARAT_CATALOG!=="undefined"&&Array.isArray(APPARAT_CATALOG))?APPARAT_CATALOG.find(a=>a.id===state.collectionSelectedId):null;
+ return `<div class="card panel"><span class="pill">COLLECTION</span><div class="resource"><span>Possédés</span><strong>${fmt(c.owned||0)} / ${fmt(totalCount)}</strong></div><div class="resource"><span>Équipés</span><strong>${fmt(equippedCount)} / 3</strong></div>${selected?`<p class="small muted">Sélection : <strong>${selected.name}</strong></p>`:""}</div>${rightQuickNavHtml1542h([["Coffres","chests",false],["Planète","planet",true]])}`;
+}
+function leaderboardRightPanelsHtml1542h(){
+ const power=((state.leaderboards||{}).power)||[];
+ const myRank=power.find(p=>p.player_id===state.userId)?.rank||"Non classé";
+ return `<div class="card panel"><span class="pill">POSITION</span><div class="resource"><span>Votre rang</span><strong>#${myRank}</strong></div><div class="resource"><span>Puissance flotte</span><strong>${fmt(typeof empireFleetPower==="function"?empireFleetPower():0)}</strong></div><div class="resource"><span>Alliance</span><strong>${state.alliance?("["+state.alliance.tag+"]"):"-"}</strong></div></div>${rightQuickNavHtml1542h([["Alliance","alliance",false],["Galaxie","galaxy",true]])}`;
+}
 function rightPanels(){
- if(state.view==="galaxy"){
-  return ``;
- }
- if(state.view==="buildings"){
-  return constructionDetailPanelHtml()+rightActivePlanetGalaxyPanelHtml1399();
- }
+  if(state.view==="galaxy"){
+   return ``;
+  }
+  if(state.view==="planet")return planetOpsPanelHtml1542h()+pageBuildQueuePanelHtml1542h();
+  if(state.view==="ships")return shipsRightPanelsHtml1542h();
+  if(state.view==="armament")return armamentRightPanelsHtml1542h();
+  if(state.view==="messages"||state.view==="global-chat")return communicationRightPanelsHtml1542h();
+  if(state.view==="alliance")return allianceRightPanelsHtml1542h();
+  if(state.view==="market")return marketRightPanelsHtml1542h();
+  if(state.view==="collection")return collectionRightPanelsHtml1542h();
+  if(state.view==="leaderboards")return leaderboardRightPanelsHtml1542h();
+  if(state.view==="buildings"){
+   return constructionDetailPanelHtml()+rightActivePlanetGalaxyPanelHtml1399();
+  }
  if(state.view==="defenses"){
   return rightActivePlanetGalaxyPanelHtml1399();
  }
@@ -7889,7 +7975,7 @@ function uiRightPanelsHtml146(){
 }
 
 function systemPanelHtml(s){
- if(state && (state.view==="buildings" || state.view==="defenses" || state.view==="chests")) return "";
+ if(state && state.view!=="galaxy") return "";
 
  try{
   if(s && s.owned){ return ownedPlanetPanelHtml(s); }
