@@ -26607,6 +26607,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     };
 
     wrapped.__creditGuarded1605 = true;
+    if (original.__serverAuthGuarded1606) wrapped.__serverAuthGuarded1606 = true;
     window.processFleets = wrapped;
   }
 
@@ -26671,6 +26672,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     };
 
     wrapped.__serverAuthGuarded1606 = true;
+    if (original.__creditGuarded1605) wrapped.__creditGuarded1605 = true;
     window.processFleets = wrapped;
   }
 
