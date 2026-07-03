@@ -13473,3 +13473,41 @@ body.stable-ui1542b.view-buildings .topbar{
   max-height:var(--sg-topbar,78px)!important;
   padding:0 18px!important;
 }
+
+/* === STELLARION 1.6.21 — Homogénéisation des colonnes latérales ===
+   À >1500px, trois largeurs de colonne gauche cohabitaient :
+   330px standard (--sg-left), 340px sur Bâtiments (STABLE GOLD 1542e, l.11655),
+   280px sur Galaxie (Alpha 1.5.30, l.9599). Ces règles finales alignent
+   Bâtiments et Galaxie sur les variables standard --sg-left/--sg-right/--sg-gap
+   (qui deviennent 315/285 sous 1500px, donc homogènes là aussi).
+   Les collapses responsive existants sont préservés : Bâtiments 1 colonne
+   sous 1200px, Galaxie sous 1250px — d'où les gardes min-width. */
+@media(min-width:1201px){
+ body.view-buildings .layout,
+ body.view-buildings .layout.has-bottom-queue,
+ body.stable-ui1542b.view-buildings .layout{
+  grid-template-columns:var(--sg-left,330px) minmax(0,1fr) var(--sg-right,300px)!important;
+  gap:var(--sg-gap,12px)!important;
+  height:calc(100vh - var(--sg-topbar,78px) - var(--sg-resourcebar,114px))!important;
+  max-height:calc(100vh - var(--sg-topbar,78px) - var(--sg-resourcebar,114px))!important;
+  padding:0 10px 10px!important;
+ }
+ body.view-buildings .side,
+ body.stable-ui1542b.view-buildings .side.left,
+ body.stable-ui1542b.view-buildings .side.right{
+  padding:10px!important;
+ }
+}
+@media(min-width:1251px){
+ body.view-galaxy .layout,
+ body.stable-ui1542b.view-galaxy .layout{
+  grid-template-columns:var(--sg-left,330px) minmax(0,1fr) var(--sg-right,300px)!important;
+  gap:var(--sg-gap,12px)!important;
+ }
+ body.view-galaxy .side,
+ body.view-galaxy .side:first-child,
+ body.view-galaxy .side.right{
+  padding:10px!important;
+  min-width:0!important;
+ }
+}
