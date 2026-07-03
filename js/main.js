@@ -7348,6 +7348,12 @@ function render(){
       On force le mode instantané en inline important (prioritaire sur le CSS).
       Les flèches ‹ › restent fluides : elles passent behavior:'smooth' explicitement. */
    cp.style.setProperty("scroll-behavior","auto","important");
+   /* 1.6.13 — le CSS impose aussi scroll-snap-type:x mandatory!important :
+      après chaque reconstruction, le navigateur relance un re-snap ANIMÉ du scroll
+      (le mouvement de retour visible). On désactive le snap sur l'élément.
+      Les flèches ‹ › avancent déjà d'un pas de bouton via getCarouselStep(),
+      le snap CSS était redondant. */
+   cp.style.setProperty("scroll-snap-type","none","important");
    cp.scrollLeft = __carouselLeft1611;
    const act=cp.querySelector(".carousel-page.active");
    if(act){
