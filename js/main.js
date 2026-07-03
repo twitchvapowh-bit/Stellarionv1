@@ -7277,6 +7277,11 @@ function render(){
     Règle : même vue = on restaure le scroll ; changement de vue = repart en haut. */
  const __viewChanged1610 = window.__lastRenderView1610 !== state.view;
  const __scrollPos1610 = (!__viewChanged1610 && typeof captureScrollState==="function") ? captureScrollState() : null;
+ /* 1.6.11 — le carrousel du topbar est reconstruit à chaque render : on préserve
+    son défilement horizontal TOUJOURS (même en changement de vue), puis on garde
+    la page active visible. */
+ let __carouselLeft1611 = 0;
+ try{ const __cp=document.querySelector(".carousel-pages"); if(__cp) __carouselLeft1611=__cp.scrollLeft||0; }catch(e){}
  try{stellarionRepairOwnedPlanetCoordinates(true);}catch(e){}
 
  if(typeof migrateResourcesToPerPlanet==="function")migrateResourcesToPerPlanet();
@@ -7331,6 +7336,25 @@ function render(){
  syncRightColumnToView1542h();
  setTimeout(syncRightColumnToView1542h,0);
  refreshQueueDomNoRender1542g();
+ /* 1.6.11 — restauration du carrousel (toujours, même en changement de vue).
+    On ajuste uniquement scrollLeft du conteneur : jamais de scrollIntoView,
+    pour ne pas faire bouger la page verticalement. */
+ const __fixCarousel1611 = function(){
+  try{
+   const cp=document.querySelector(".carousel-pages");
+   if(!cp) return;
+   cp.scrollLeft = __carouselLeft1611;
+   const act=cp.querySelector(".carousel-page.active");
+   if(act){
+    const cr=cp.getBoundingClientRect(), ar=act.getBoundingClientRect();
+    if(ar.right > cr.right) cp.scrollLeft += Math.ceil(ar.right - cr.right) + 12;
+    else if(ar.left < cr.left) cp.scrollLeft -= Math.ceil(cr.left - ar.left) + 12;
+   }
+  }catch(e){}
+ };
+ __fixCarousel1611();
+ requestAnimationFrame(__fixCarousel1611);
+ setTimeout(__fixCarousel1611, 60);
  /* 1.6.10 — restauration du scroll (voir en-tête de render) */
  window.__lastRenderView1610 = state.view;
  if(__scrollPos1610 && typeof restoreScrollState==="function"){
