@@ -24906,27 +24906,33 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   function emitServerCombatReports(){
     var s=S();
     if(!s || !Array.isArray(s.fleets)) return false;
+    if(s.__emittingServerCombatReportsV7) return false;
+    s.__emittingServerCombatReportsV7 = true;
     s.__serverCombatReportsV7 = s.__serverCombatReportsV7 || {};
     var emitted=false;
-    s.fleets.forEach(function(f){
-      if(!f || !f.serverAuthority || !f.returning || !f.serverCombat || s.__serverCombatReportsV7[f.id]) return;
-      var result=f.serverCombat || {};
-      var target=f.to || result.target || {};
-      var name=target.name||target.username||target.homePlanetName||result.targetName||'cible';
-      try{
-        var title=(target.playerId?'Rapport de combat joueur : ':'Rapport de combat : ')+name;
-        var body=(typeof window.safeCombatReportBody==='function')
-          ? window.safeCombatReportBody(target,result)
-          : 'Combat résolu côté serveur. Butin : '+lootText(result.loot||{});
-        body += '\n\nStatut serveur : le butin affiché dans ce rapport a déjà été ajouté au stock cloud.';
-        if(typeof window.addMessage==='function') window.addMessage('combat', title, body, {systemId:target.id||target.playerId||f.id,result:result,to:name,context:target.playerId?'pvp_combat_server':'combat_server'});
-      }catch(e){}
-      try{ if(typeof window.addLog==='function') window.addLog((result.victory?'Victoire':'Combat terminé')+' sur '+name+' : butin ajouté au stock cloud ('+lootText(result.loot||{})+').'); }catch(e){}
-      s.__serverCombatReportsV7[f.id]=Date.now();
-      emitted=true;
-    });
-    if(emitted){ try{ if(typeof save==='function') save(); }catch(e){} }
-    return emitted;
+    try{
+      s.fleets.forEach(function(f){
+        if(!f || !f.serverAuthority || !f.returning || !f.serverCombat || s.__serverCombatReportsV7[f.id]) return;
+        var result=f.serverCombat || {};
+        var target=f.to || result.target || {};
+        var name=target.name||target.username||target.homePlanetName||result.targetName||'cible';
+        s.__serverCombatReportsV7[f.id]=Date.now();
+        emitted=true;
+        try{
+          var title=(target.playerId?'Rapport de combat joueur : ':'Rapport de combat : ')+name;
+          var body=(typeof window.safeCombatReportBody==='function')
+            ? window.safeCombatReportBody(target,result)
+            : 'Combat résolu côté serveur. Butin : '+lootText(result.loot||{});
+          body += '\n\nStatut serveur : le butin affiché dans ce rapport a déjà été ajouté au stock cloud.';
+          if(typeof window.addMessage==='function') window.addMessage('combat', title, body, {systemId:target.id||target.playerId||f.id,result:result,to:name,context:target.playerId?'pvp_combat_server':'combat_server'});
+        }catch(e){}
+        try{ if(typeof window.addLog==='function') window.addLog((result.victory?'Victoire':'Combat terminé')+' sur '+name+' : butin ajouté au stock cloud ('+lootText(result.loot||{})+').'); }catch(e){}
+      });
+      if(emitted){ try{ if(typeof save==='function') save(); }catch(e){} }
+      return emitted;
+    }finally{
+      s.__emittingServerCombatReportsV7 = false;
+    }
   }
 
   var lastServerProcessAt=0;
