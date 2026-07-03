@@ -940,12 +940,18 @@ body.armament-clean #center{
  white-space:nowrap!important;
 }
 .queue-time-live>strong[data-finish-at]{
- justify-self:end!important;
- min-width:58px!important;
- text-align:right!important;
- font-variant-numeric:tabular-nums!important;
- white-space:nowrap!important;
- display:inline-block!important;
+  justify-self:end!important;
+  min-width:58px!important;
+  text-align:right!important;
+  font-variant-numeric:tabular-nums!important;
+  white-space:nowrap!important;
+  display:inline-block!important;
+}
+[data-progress]{
+  font-size:0!important;
+  line-height:0!important;
+  color:transparent!important;
+  overflow:hidden!important;
 }
 body.view-alliance input,
 body.view-alliance textarea,

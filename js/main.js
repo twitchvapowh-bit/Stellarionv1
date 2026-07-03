@@ -7491,7 +7491,7 @@ function updateLiveBoostCosts(){
   if(!txt.includes("accélérer")&&!txt.includes("accelerer")&&!txt.includes("finir"))return;
   const box=btn.closest(".queue-compact,.sidebar-queue-item,.queue-item-compact,.row,.card,div");
   if(!box)return;
-  const timer=box.querySelector("[data-finish-at]");
+  const timer=box.querySelector("[data-finish-at]:not([data-progress])");
   if(!timer)return;
   const finish=Number(timer.getAttribute("data-finish-at"))||0;
   const remain=Math.max(0,(finish-Date.now())/1000);
@@ -7516,7 +7516,7 @@ function renderLiveTimers(){
   if(typeof processShipQueue==="function")processShipQueue(false);
   save();render();return;
  }
- document.querySelectorAll("[data-finish-at]").forEach(el=>{
+ document.querySelectorAll("[data-finish-at]:not([data-progress])").forEach(el=>{
   const finish=Number(el.getAttribute("data-finish-at"))||0;
   el.textContent=fmtTime(Math.max(0,(finish-Date.now())/1000));
  });
@@ -7537,6 +7537,7 @@ function renderLiveTimers(){
   const total=Math.max(1,finish-start);
   const pct=Math.max(0,Math.min(100,Math.round((1-((finish-Date.now())/total))*100)));
   el.style.width=pct+"%";
+  if(el.textContent) el.textContent="";
  });
  if(typeof updateLiveBoostCosts==="function")updateLiveBoostCosts();
 }
@@ -18207,7 +18208,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
         if(!txt.includes('accélérer') && !txt.includes('accelerer') && !txt.includes('finir')) return;
         const box=btn.closest('.queue-compact,.sidebar-queue-item,.queue-item-compact,.row,.card,div');
         if(!box) return;
-        const timer=box.querySelector('[data-finish-at]');
+        const timer=box.querySelector('[data-finish-at]:not([data-progress])');
         if(!timer) return;
         const finish=Number(timer.getAttribute('data-finish-at'))||0;
         const remain=Math.max(0,(finish-Date.now())/1000);
@@ -19143,6 +19144,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
       var finish=Number(el.getAttribute('data-finish-at'))||0;
       var remain=Math.max(0,(finish-now)/1000);
       if(el.matches('[data-progress]')){
+        if(el.textContent) el.textContent='';
         var start=Number(el.getAttribute('data-start-at'))||now;
         var total=Math.max(1,finish-start);
         var pct=Math.max(0,Math.min(100,100-Math.round(((finish-now)/total)*100)));
@@ -24376,6 +24378,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
       var finish = Number(el.getAttribute('data-finish-at')) || 0;
       if(!finish) return;
       if(el.hasAttribute('data-progress')){
+        if(el.textContent) el.textContent = '';
         var start = Number(el.getAttribute('data-start-at')) || now;
         var total = Math.max(1, finish - start);
         el.style.width = Math.max(0, Math.min(100, ((now - start) / total) * 100)).toFixed(2) + '%';
