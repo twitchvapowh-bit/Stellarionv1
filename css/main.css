@@ -11,8 +11,16 @@ button{font:inherit}
 #app{height:100%;background:radial-gradient(circle at 20% 20%,rgba(79,195,247,.16),transparent 28%),radial-gradient(circle at 80% 15%,rgba(206,147,216,.14),transparent 25%),#020510}
 .topbar{height:78px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid rgba(79,195,247,.14);background:rgba(2,5,16,.84);backdrop-filter:blur(18px);position:relative;z-index:5}
 .brand{color:#4FC3F7;font-weight:950;letter-spacing:4px;text-shadow:0 0 25px rgba(79,195,247,.75)}
+#stellarion-bootgate{position:fixed!important;inset:0!important;z-index:2147483000!important;display:grid!important;place-items:center!important;background:radial-gradient(circle at 50% 30%,rgba(79,195,247,.14),transparent 35%),radial-gradient(circle at 20% 80%,rgba(206,147,216,.10),transparent 28%),#020510!important;color:#e2e8f0!important;font-family:Inter,Segoe UI,Arial,sans-serif!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;transition:opacity .22s ease,visibility .22s ease!important}
+#stellarion-bootgate .sbg-inner{display:grid!important;place-items:center!important;gap:18px!important;text-align:center!important;transform:translateY(-4vh)}
+#stellarion-bootgate .sbg-logo .brand{display:block!important;color:#4FC3F7!important;font-size:clamp(28px,4vw,58px)!important;font-weight:950!important;letter-spacing:.28em!important;text-shadow:0 0 28px rgba(79,195,247,.75)!important}
+#stellarion-bootgate .sbg-logo:after{content:"Synchronisation cloud";display:block;margin-top:10px;color:#8bb7d9;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+#stellarion-bootgate .sbg-spinner{width:44px;height:44px;border-radius:999px;border:3px solid rgba(79,195,247,.18);border-top-color:#4FC3F7;box-shadow:0 0 28px rgba(79,195,247,.22);animation:stellarionBootSpin .82s linear infinite}
+@keyframes stellarionBootSpin{to{transform:rotate(360deg)}}
+#stellarion-bootgate:not(.sbg-hide)~*{visibility:hidden!important}
 #stellarion-bootgate.sbg-hide{opacity:0!important;visibility:hidden!important;pointer-events:none!important;display:none!important}
 body.stellarion-boot-hold #app{visibility:hidden!important}
+body.stellarion-boot-hold .planet-hover-realfix-pill{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
 .layout{height:calc(100% - 78px);display:grid;grid-template-columns:330px 1fr 360px;min-height:0}
 .side{border-right:1px solid rgba(79,195,247,.12);background:rgba(2,5,16,.60);backdrop-filter:blur(20px);padding:16px;overflow:auto}
 .right{border-right:0;border-left:1px solid rgba(79,195,247,.12)}
