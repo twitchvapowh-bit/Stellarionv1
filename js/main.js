@@ -7343,6 +7343,11 @@ function render(){
   try{
    const cp=document.querySelector(".carousel-pages");
    if(!cp) return;
+   /* 1.6.12 — le CSS impose scroll-behavior:smooth!important sur .carousel-pages :
+      sans ceci, la restauration anime visiblement 0 → position (glissade).
+      On force le mode instantané en inline important (prioritaire sur le CSS).
+      Les flèches ‹ › restent fluides : elles passent behavior:'smooth' explicitement. */
+   cp.style.setProperty("scroll-behavior","auto","important");
    cp.scrollLeft = __carouselLeft1611;
    const act=cp.querySelector(".carousel-page.active");
    if(act){
