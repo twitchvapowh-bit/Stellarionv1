@@ -98,8 +98,9 @@ Deno.serve(async (req) => {
     // avant TOUTE action ; si une attaque posait problème, open_chest échouait
     // aussi, ce qui donnait l'impression que plus aucun coffre ne s'ouvrait.
     const isolateChestAction = action === "open_chest";
+    const isolateBootAction = action === "bootstrap" || action === "state";
     let queueWarning: string | null = null;
-    if (!isolateChestAction) {
+    if (!isolateChestAction && !isolateBootAction) {
       await processQueues(admin, supaUser, user.id);
     } else {
       try { await processQueuesSafeNoCombat(admin, user.id); }
@@ -141,7 +142,7 @@ Deno.serve(async (req) => {
     }
 
     await accrueResources(admin, user.id);
-    if (!isolateChestAction) {
+    if (!isolateChestAction && !isolateBootAction) {
       await processQueues(admin, supaUser, user.id);
     } else {
       try { await processQueuesSafeNoCombat(admin, user.id); }
@@ -743,7 +744,7 @@ async function finishBuilding(admin: any, playerId: string, body: any) {
 async function buyShip(admin: any, playerId: string, body: any) {
   const shipId = String(body.ship_id || body.shipId || "");
   const planetId = safePlanet(body.planet_id || body.planetId || "home");
-  const qty = n(body.qty || 1, 1, 100000);
+  const qty = n(body.qty || 1, 1, 1000);
   const def = SHIPS[shipId];
   if (!def) throw new Error("vaisseau_inconnu");
   const shipyard = await buildingLevel(admin, playerId, planetId, "shipyard");
