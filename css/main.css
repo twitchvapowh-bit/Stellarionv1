@@ -13717,6 +13717,11 @@ body.stable-ui1542b.view-planet .planet-showcase-board{
 }
 
 @media(max-width:900px),(pointer:coarse){
+  body.view-collection #center{
+    height:auto!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
   body.view-collection .collection-premium,
   body.view-collection .collection-showcase1327{
     grid-template-columns:1fr!important;
@@ -13742,8 +13747,23 @@ body.stable-ui1542b.view-planet .planet-showcase-board{
     overflow:visible!important;
   }
   body.view-collection .cs-left{
+    display:block!important;
+    width:100%!important;
     max-height:none!important;
+    height:auto!important;
     overflow:visible!important;
+    padding:12px!important;
+  }
+  body.view-collection .cs-planet-preview,
+  body.view-collection .cs-preview-planet,
+  body.view-collection .cs-preview-orb{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+  body.view-collection .cs-cat{
+    min-height:58px!important;
+    margin-bottom:9px!important;
   }
   body.view-collection .cs-rarity-strip{
     grid-template-columns:1fr 1fr!important;
