@@ -206,22 +206,37 @@
   else document.addEventListener("DOMContentLoaded", boot);
 })();
 
-/* STELLARION 1.6.28 — Rail de scroll tactile à droite de chaque page.
-   iOS/Android masquent les barres natives : on injecte un rail fixe avec
-   un curseur glissable au doigt. Suit le scroll de la page, se masque
-   automatiquement quand la page tient dans l'écran. */
+/* STELLARION 1.6.29 — Rail de scroll tactile (v2 : drag gelé, mapping 1:1).
+   Corrige le curseur qui changeait de taille pendant le drag :
+   - la barre d'adresse mobile modifie innerHeight en plein scroll ;
+     => toutes les dimensions sont GELÉES au pointerdown, aucun recalcul
+        de taille tant que le doigt est posé.
+   - le déplacement doigt->scroll est mappé sur la course réelle du rail
+     (railH - thumbH), donc le curseur reste exactement sous le doigt. */
 (function () {
   "use strict";
   if (window.__stellarionScrollRail1628) return;
   window.__stellarionScrollRail1628 = true;
 
-  var rail = null, thumb = null, dragging = false, dragStartY = 0, dragStartScroll = 0;
+  var rail = null, thumb = null;
+  var dragging = false;
+  var frozen = null;        // {railTop, railH, thumbH, travel, maxScroll, grabOffset}
+  var lastThumbH = 0;
 
   function docH() {
     var d = document.documentElement, b = document.body;
     return Math.max(d ? d.scrollHeight : 0, b ? b.scrollHeight : 0);
   }
-  function maxScroll() { return Math.max(0, docH() - window.innerHeight); }
+  function viewH() {
+    var d = document.documentElement;
+    return (d && d.clientHeight) || window.innerHeight;
+  }
+  function maxScroll() { return Math.max(0, docH() - viewH()); }
+
+  function setThumb(topPx, heightPx) {
+    if (heightPx != null) thumb.style.height = heightPx + "px";
+    thumb.style.transform = "translateY(" + topPx + "px)";
+  }
 
   function ensureRail() {
     if (rail || !document.body) return;
@@ -229,41 +244,63 @@
     rail.id = "stellarion-scrollrail1628";
     thumb = document.createElement("div");
     thumb.className = "thumb";
+    thumb.style.top = "0px"; // position via transform uniquement
     rail.appendChild(thumb);
     document.body.appendChild(rail);
 
-    // Glisser le curseur (ou taper le rail) => scroll proportionnel
     rail.addEventListener("pointerdown", function (e) {
+      var r = rail.getBoundingClientRect();
+      var ms = maxScroll();
+      if (ms <= 0) return;
+      var thumbH = Math.max(44, r.height * (viewH() / Math.max(1, docH())));
+      var travel = Math.max(1, r.height - thumbH);
+      var currentTop = travel * (window.scrollY / ms);
+
+      // Tap hors curseur : on centre le curseur sous le doigt
+      var pointerY = e.clientY - r.top;
+      var onThumb = pointerY >= currentTop && pointerY <= currentTop + thumbH;
+      var grabOffset = onThumb ? (pointerY - currentTop) : thumbH / 2;
+
+      // GEL de toutes les dimensions pour toute la durée du drag
+      frozen = { railTop: r.top, railH: r.height, thumbH: thumbH, travel: travel, maxScroll: ms, grabOffset: grabOffset };
       dragging = true;
       rail.classList.add("dragging");
       rail.setPointerCapture && rail.setPointerCapture(e.pointerId);
-      dragStartY = e.clientY;
-      dragStartScroll = window.scrollY;
-      // Tap direct sur le rail (hors curseur) : saute à la position
-      if (e.target === rail) {
-        var r = rail.getBoundingClientRect();
-        var ratio = (e.clientY - r.top) / Math.max(1, r.height);
-        window.scrollTo(0, ratio * maxScroll());
-        dragStartScroll = window.scrollY;
-      }
+
+      moveTo(e.clientY);
       e.preventDefault();
       e.stopPropagation();
     });
+
     rail.addEventListener("pointermove", function (e) {
-      if (!dragging) return;
-      var r = rail.getBoundingClientRect();
-      var deltaRatio = (e.clientY - dragStartY) / Math.max(1, r.height);
-      window.scrollTo(0, dragStartScroll + deltaRatio * docH());
+      if (!dragging || !frozen) return;
+      moveTo(e.clientY);
       e.preventDefault();
       e.stopPropagation();
     });
-    function endDrag() { dragging = false; if (rail) rail.classList.remove("dragging"); }
+
+    function endDrag() {
+      dragging = false;
+      frozen = null;
+      if (rail) rail.classList.remove("dragging");
+      update(); // resynchronisation propre une fois le doigt levé
+    }
     rail.addEventListener("pointerup", endDrag);
     rail.addEventListener("pointercancel", endDrag);
   }
 
+  // Position du doigt -> position du curseur (1:1) -> scroll proportionnel.
+  // N'utilise QUE les valeurs gelées : zéro recalcul pendant le drag.
+  function moveTo(clientY) {
+    var f = frozen;
+    var top = clientY - f.railTop - f.grabOffset;
+    top = Math.min(f.travel, Math.max(0, top));
+    setThumb(top, f.thumbH);
+    window.scrollTo(0, (top / f.travel) * f.maxScroll);
+  }
+
   function update() {
-    if (!rail) return;
+    if (!rail || dragging) return; // jamais de recalcul pendant le drag
     var ms = maxScroll();
     if (ms < 40) {
       rail.classList.remove("visible");
@@ -274,11 +311,15 @@
     document.body.classList.add("stellarion-has-rail1628");
 
     var railH = rail.getBoundingClientRect().height || 1;
-    var thumbH = Math.max(44, railH * (window.innerHeight / Math.max(1, docH())));
-    var topMax = railH - thumbH;
-    var top = topMax * (window.scrollY / ms);
-    thumb.style.height = thumbH + "px";
-    thumb.style.top = Math.min(topMax, Math.max(0, top)) + "px";
+    var thumbH = Math.max(44, railH * (viewH() / Math.max(1, docH())));
+    // Anti-pulsation : on ne redimensionne que si le changement est notable
+    // (la barre d'adresse mobile fait varier la hauteur de quelques px en scroll)
+    if (Math.abs(thumbH - lastThumbH) < 8 && lastThumbH > 0) thumbH = lastThumbH;
+    lastThumbH = thumbH;
+
+    var travel = Math.max(1, railH - thumbH);
+    var top = travel * (window.scrollY / ms);
+    setThumb(Math.min(travel, Math.max(0, top)), thumbH);
   }
 
   function boot() {
@@ -286,8 +327,7 @@
     update();
     window.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update, { passive: true });
-    // Le contenu change à chaque render() : on resynchronise régulièrement
-    setInterval(update, 700);
+    setInterval(update, 900);
   }
 
   if (document.body) boot();

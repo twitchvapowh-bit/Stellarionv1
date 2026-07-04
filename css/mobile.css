@@ -369,6 +369,7 @@ body.stellarion-rotate-dismissed1626 #stellarion-rotate1626 { display: none !imp
 }
 #stellarion-scrollrail1628 .thumb {
   position: absolute;
+  top: 0;
   left: 2px;
   right: 2px;
   min-height: 44px;
@@ -376,6 +377,12 @@ body.stellarion-rotate-dismissed1626 #stellarion-rotate1626 { display: none !imp
   background: linear-gradient(180deg, rgba(79, 195, 247, .75), rgba(58, 143, 212, .75));
   border: 1px solid rgba(79, 195, 247, .5);
   box-shadow: 0 0 10px rgba(79, 195, 247, .35);
+  /* Déplacement par transform : GPU, aucune transition, aucun à-coup */
+  transition: none !important;
+  will-change: transform;
+}
+#stellarion-scrollrail1628.dragging .thumb {
+  box-shadow: 0 0 16px rgba(79, 195, 247, .6);
 }
 #stellarion-scrollrail1628.dragging .thumb {
   background: linear-gradient(180deg, #4FC3F7, #3a8fd4);
