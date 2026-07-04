@@ -1,0 +1,226 @@
+/* ============================================================
+   STELLARION 1.6.25 — COUCHE MOBILE
+   Fichier chargé APRÈS main.css : n'affecte JAMAIS le desktop.
+   Deux paliers : ≤820px (tablette portrait) et ≤520px (téléphone).
+   ============================================================ */
+
+/* ---------- Base commune tactile (tous écrans tactiles) ---------- */
+@media (hover: none) and (pointer: coarse) {
+  /* Neutralise les effets hover-only qui restent "collés" au doigt */
+  .carousel-page:hover { transform: none !important; }
+  .btn:hover { transform: none !important; }
+  /* Pas de sélection de texte accidentelle pendant un drag de carte */
+  .gwm-stage, .gwm-stage * { -webkit-user-select: none; user-select: none; }
+}
+
+/* ============================================================
+   PALIER TABLETTE / GRAND MOBILE  (≤ 820px)
+   ============================================================ */
+@media (max-width: 820px) {
+
+  html { -webkit-text-size-adjust: 100%; }
+  html, body { overflow-x: hidden !important; }
+
+  /* --- Anti-zoom iOS : tout champ de saisie à 16px minimum --- */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* --- Cibles tactiles : boutons confortables --- */
+  .btn, button.btn, .carousel-nav-btn {
+    min-height: 42px !important;
+  }
+  .carousel-page {
+    height: 42px !important;
+    min-width: 96px !important;
+    max-width: 130px !important;
+    font-size: 12px !important;
+  }
+
+  /* --- TOPBAR : compacte, carrousel pleine largeur scrollable --- */
+  .topbar {
+    height: auto !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 10px !important;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important;
+  }
+  .topbar-brand1512 { flex: 0 1 auto !important; }
+  .topbar-brand1512 .brand { font-size: 16px !important; letter-spacing: 2px !important; }
+  .topbar-brand1512 .small { display: none !important; }
+  .carousel-container {
+    order: 10 !important;
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .carousel-pages {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* --- BARRE DE RESSOURCES : bandeau horizontal scrollable
+         (au lieu d'une pile verticale qui mange l'écran) --- */
+  .stable-resourcebar1542b {
+    height: auto !important;
+    margin: 6px 6px 8px !important;
+    padding: 22px 10px 10px !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .stable-resourcebar1542b:before { font-size: 9px !important; }
+  .stable-resource-list1542b {
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(96px, 1fr) !important;
+    grid-template-columns: none !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 8px !important;
+    padding-bottom: 4px !important;
+  }
+  .stable-res1542b { border-right: 0 !important; }
+  .stable-clock1542b {
+    min-width: 0 !important;
+    grid-template-columns: 1fr 1fr !important;
+    font-size: 11px !important;
+  }
+
+  /* --- LAYOUT : marges réduites, plus de hauteur figée --- */
+  .layout {
+    padding: 0 6px 6px !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* --- CARTE GALAXIE : hauteur dynamique (clavier/barres navigateur) --- */
+  body.view-galaxy .galaxy-wrap,
+  .galaxy-wrap {
+    height: calc(100dvh - 210px) !important;
+    min-height: 380px !important;
+    max-height: none !important;
+  }
+
+  /* --- MODALES : plein écran confortable --- */
+  .profile-card-v12,
+  .fragment-shop-modal1546,
+  .alliance-safe-modal > div,
+  .alliance-v5-modal > div,
+  .alliance-v4-modal > div,
+  .alliance-cx-modal > div {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    border-radius: 14px !important;
+  }
+  .building-modal-backdrop > div {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+  }
+
+  /* --- Boutique fragments : 2 colonnes puis 1 --- */
+  .fragment-shop-grid1546 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+  /* --- Orbites cosmétiques géantes : masquées (source de scroll horizontal) --- */
+  .cosmetic-orbit.clean-o1,
+  .cosmetic-orbit.clean-o2,
+  .cosmetic-orbit.clean-o3 { display: none !important; }
+
+  /* --- File de construction en bas : au-dessus de la barre système --- */
+  .bottom-queue { padding-bottom: env(safe-area-inset-bottom, 0px) !important; }
+}
+
+/* ============================================================
+   PALIER TÉLÉPHONE  (≤ 520px)
+   ============================================================ */
+@media (max-width: 520px) {
+
+  /* --- Topbar ultra-compacte --- */
+  .topbar { padding: 6px 8px !important; gap: 6px !important; }
+  .topbar-brand1512 .brand { font-size: 14px !important; letter-spacing: 1px !important; }
+  .carousel-nav-btn { display: none !important; } /* le swipe suffit */
+  .carousel-page { min-width: 86px !important; font-size: 11px !important; }
+
+  /* --- Ressources : chips plus denses --- */
+  .stable-resource-list1542b { grid-auto-columns: minmax(84px, 1fr) !important; }
+  .stable-res1542b { font-size: 11px !important; }
+
+  /* --- Classements : 3 colonnes essentielles --- */
+  .ranking-v12 { padding: 8px !important; }
+  .ranking-row-v12 {
+    grid-template-columns: 40px minmax(0, 1.6fr) 76px !important;
+    padding: 8px 8px !important;
+    font-size: 12px !important;
+  }
+  .ranking-row-v12 > *:nth-child(n+4) { display: none !important; }
+  .ranking-row-v12.header { top: 0 !important; }
+
+  /* --- Tableaux arsenal / flotte : colonnes réduites --- */
+  .arsenal-row { grid-template-columns: 1.6fr .6fr .8fr !important; }
+  .arsenal-row .hide-mid, .arsenal-row .hide-small { display: none !important; }
+  .global-fleet-row { grid-template-columns: 1.6fr .7fr .7fr !important; }
+  .fleet-unit-line { grid-template-columns: 1.6fr .6fr !important; }
+  .fleet-unit-line .hide-small { display: none !important; }
+
+  /* --- Profil joueur : entête empilée --- */
+  .profile-head-v12 { grid-template-columns: 64px 1fr !important; }
+  .profile-avatar-v12 { width: 64px !important; height: 64px !important; }
+  .profile-grid-v12 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+  /* --- Boutique fragments : 1 colonne --- */
+  .fragment-shop-grid1546 { grid-template-columns: 1fr !important; }
+  .fragment-shop-head1546 h2 { font-size: 18px !important; }
+
+  /* --- Carte galaxie : maximise l'espace vertical --- */
+  body.view-galaxy .galaxy-wrap,
+  .galaxy-wrap {
+    height: calc(100dvh - 185px) !important;
+    min-height: 340px !important;
+  }
+  .gwm-footer { font-size: 10px !important; }
+  .gwm-footer span:last-child { display: none !important; }
+
+  /* --- Cartes / lignes génériques : padding réduit --- */
+  .card, .row { padding: 10px !important; }
+
+  /* --- Iframes alliance isolées (patch 1601) : hauteur clavier-friendly --- */
+  iframe[data-stellarion-isolated] { max-height: 120px !important; }
+}
+
+/* ============================================================
+   BOUTONS DE ZOOM GALAXIE (injectés par patch_1625_mobile.js)
+   Visibles uniquement sur écrans tactiles.
+   ============================================================ */
+.stellarion-mzoom1625 {
+  position: absolute;
+  right: 10px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 6000;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+@media (hover: none) and (pointer: coarse) {
+  .stellarion-mzoom1625 { display: flex; }
+}
+.stellarion-mzoom1625 button {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  border: 1px solid rgba(79, 195, 247, .45);
+  background: rgba(5, 12, 26, .88);
+  color: #4FC3F7;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .45);
+}
+.stellarion-mzoom1625 button:active {
+  background: rgba(79, 195, 247, .25);
+}
