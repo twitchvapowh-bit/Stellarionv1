@@ -23753,6 +23753,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     var data = null;
     try{ data = await res.json(); }catch(e){ data = { ok:false, error:'reponse_non_json' }; }
     if(!res.ok || !data || !data.ok){
+      try{ if(data && data.state) applyServerState(data.state, true); }catch(syncErr){}
       var err = (data && (data.error || data.message)) || ('HTTP ' + res.status);
       lastError = { at:Date.now(), action:action, error:String(err), raw:data };
       var sErr = st();

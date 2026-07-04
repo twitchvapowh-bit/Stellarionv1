@@ -908,15 +908,18 @@ async function launchFleet(admin: any, playerId: string, body: any) {
   const cargo = mission === "transfer" ? rawCargo : { titanium:0, xenite:0, antimatter:0 };
   const duration = n(body.durationSeconds || body.duration || 60, 10, 3600);
   const target = body.target || {};
+  const launchShips: Record<string, number> = {};
   let shipCount = 0;
   let cargoCap = 0;
   for (const [shipId, qtyRaw] of Object.entries(ships)) {
     const def = SHIPS[shipId];
-    const qty = n(qtyRaw,0,1000000);
-    if (!def || qty <= 0) continue;
+    const requested = n(qtyRaw,0,1000000);
+    if (!def || requested <= 0) continue;
     const old = await admin.from("game_ships").select("qty").eq("player_id", playerId).eq("planet_id", planetId).eq("ship_id", shipId).maybeSingle();
     if (old.error) throw old.error;
-    if (n(old.data?.qty) < qty) throw new Error("vaisseaux_insuffisants");
+    const qty = Math.min(n(old.data?.qty), requested);
+    if (qty <= 0) continue;
+    launchShips[String(shipId)] = qty;
     shipCount += qty;
     cargoCap += def.cargo * qty;
   }
@@ -925,12 +928,12 @@ async function launchFleet(admin: any, playerId: string, body: any) {
   if (cargoTotal > cargoCap) throw new Error("capacite_cargo_insuffisante");
   const r = await currentResources(admin, playerId);
   if (!hasEnough(r, cargo)) throw new Error("ressources_cargo_insuffisantes");
-  const launchKey = fleetLaunchClaimKey(playerId, planetId, mission, target.id || body.target_id || "", ships, cargo, body.launch_id || body.launchId);
+  const launchKey = fleetLaunchClaimKey(playerId, planetId, mission, target.id || body.target_id || "", launchShips, cargo, body.launch_id || body.launchId);
   if (!(await claimGameActionOnce(admin, playerId, "fleet_launch", launchKey))) {
     throw new Error("lancement_flotte_deja_en_cours");
   }
 
-  for (const [shipId, qtyRaw] of Object.entries(ships)) {
+  for (const [shipId, qtyRaw] of Object.entries(launchShips)) {
     const qty = n(qtyRaw,0,1000000);
     if (!SHIPS[shipId] || qty <= 0) continue;
     const old = await admin.from("game_ships").select("qty").eq("player_id", playerId).eq("planet_id", planetId).eq("ship_id", shipId).maybeSingle();
@@ -946,7 +949,7 @@ async function launchFleet(admin: any, playerId: string, body: any) {
     target_id:String(target.id || body.target_id || "").slice(0,64),
     target_name:String(target.name || body.target_name || "Système").slice(0,80),
     mission,
-    ships,
+    ships: launchShips,
     cargo:{ titanium:n(cargo.titanium), xenite:n(cargo.xenite), antimatter:n(cargo.antimatter) },
     returning:false,
     start_at:new Date().toISOString(),
