@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<!-- STELLARION_CLEANED_STRUCTURE_V2_KEEP_COMMAND_CENTER: cleaned without removing working command-center-v2. Backup preserved. -->
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Stellarion V1 CLOUD ONLY — Alliances corrigées</title>
+<link rel="stylesheet" href="css/main.css?v=1654">
+<link rel="stylesheet" href="css/mobile.css?v=1654">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
+
+<meta name="theme-color" content="#020510">
+<meta property="og:title" content="Stellarion">
+<meta property="og:description" content="Age des Conquérants Stellaires">
+
+<script src="js/supabase.min.js?v=1654"></script>
+
+<!-- STELLARION CORE PACK v0.2 — début -->
+
+<!-- STELLARION CORE PACK v0.2 — fin -->
+
+<!-- STELLARION 0.5.2 REAL FIX
+Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/h.
+-->
+
+</head>
+<body>
+<!-- Écran de démarrage : masque les passes de rendu successives (anti-scintillement) -->
+<div id="stellarion-bootgate"><div class="sbg-inner"><div class="sbg-logo"><span class="brand">STELLARION</span></div><div class="sbg-spinner"></div></div></div>
+<!-- CSS déplacé vers css/main.css -->
+
+<div id="auth-screen" style="display:none;position:fixed;inset:0;z-index:99999;background:radial-gradient(ellipse at 50% 30%,#0a1832,#020510 70%);color:#e6eefc;font-family:system-ui,Arial,sans-serif;align-items:center;justify-content:center">
+  <div style="width:100%;max-width:420px;padding:24px">
+    <div style="text-align:center;margin-bottom:28px">
+      <div class="brand" style="text-align:center;font-size:30px;letter-spacing:5px">STELLARION</div>
+      <div style="color:#8aa6c8;font-size:13px;margin-top:6px">Stratégie spatiale multijoueur</div>
+    </div>
+    <div style="background:rgba(8,18,36,.85);border:1px solid rgba(79,195,247,.22);border-radius:18px;padding:26px;box-shadow:0 0 40px rgba(79,195,247,.12)">
+      <div id="auth-tabs" style="display:flex;gap:8px;margin-bottom:20px">
+        <button id="tab-login" onclick="authSetMode('login')" style="flex:1;padding:11px;border-radius:10px;border:0;background:#4FC3F7;color:#04162e;font-weight:700;cursor:pointer">Connexion</button>
+        <button id="tab-signup" onclick="authSetMode('signup')" style="flex:1;padding:11px;border-radius:10px;border:1px solid rgba(79,195,247,.3);background:transparent;color:#cfe3fb;font-weight:600;cursor:pointer">Inscription</button>
+      </div>
+      <label style="display:block;font-size:12px;color:#8aa6c8;margin-bottom:6px">Email</label>
+      <input id="auth-email" type="email" autocomplete="email" placeholder="commandant@galaxie.fr" style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:14px;border-radius:10px;background:#06101f;color:#fff;border:1px solid rgba(79,195,247,.25);font-size:16px">
+      <label style="display:block;font-size:12px;color:#8aa6c8;margin-bottom:6px">Mot de passe</label>
+      <input id="auth-password" type="password" autocomplete="current-password" placeholder="••••••••" style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:6px;border-radius:10px;background:#06101f;color:#fff;border:1px solid rgba(79,195,247,.25);font-size:16px" onkeydown="if(event.key==='Enter')authSubmit()">
+      <div id="auth-pseudo-wrap" style="display:none">
+        <label style="display:block;font-size:12px;color:#8aa6c8;margin:8px 0 6px">Nom de commandant</label>
+        <input id="auth-pseudo" type="text" maxlength="20" placeholder="Ton nom de commandant" style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:6px;border-radius:10px;background:#06101f;color:#fff;border:1px solid rgba(79,195,247,.25);font-size:16px">
+      </div>
+      <div id="auth-message" style="min-height:20px;font-size:13px;margin:10px 0;color:#ff9a8a"></div>
+      <button id="auth-submit" onclick="authSubmit()" style="width:100%;padding:13px;border-radius:11px;border:0;background:linear-gradient(135deg,#4FC3F7,#3a8fd4);color:#04162e;font-weight:800;font-size:15px;cursor:pointer">Se connecter</button>
+    </div>
+    <div style="text-align:center;color:#5f7da0;font-size:11px;margin-top:18px">Tes données sont stockées de façon sécurisée.</div>
+  </div>
+</div>
+<div id="app"></div>
+
+<!-- STELLARION 1.5.78 — Alliance native field fix
+     Objectif : réparer le focus Alliance sans casser la messagerie, sans bloquer les onglets, sans ralentir les changements de page. -->
+<script src="js/main.js?v=1654"></script>
+<script src="js/fragment-shop-stripe-patch.js?v=1654"></script>
+<!-- STELLARION 1.6.25 — Couche mobile : pinch-zoom galaxie + boutons zoom tactiles -->
+<script src="js/patch_1625_mobile.js?v=1654"></script>
+<!-- STELLARION 1.6.31 — Suppression des rapports de combat texte (format archive) -->
+<script src="js/patch_1631_reports.js?v=1654"></script>
+<!-- STELLARION 1.6.32 — Construction : détail bâtiment en pop-up, colonnes supprimées -->
+<script src="js/patch_1632_building_popup.js?v=1654"></script>
+<!-- STELLARION 1.6.35 — Anti-duplication de flotte (ledger) + réparation serveur -->
+<script src="js/patch_1634_fleet_ledger.js?v=1654"></script>
+<!-- STELLARION 1.6.45 — Scène universelle mobile : TOUJOURS EN DERNIER -->
+<script src="js/patch_1645_stage_universel.js?v=1654"></script>
+</body>
+</html>
