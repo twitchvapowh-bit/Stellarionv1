@@ -23921,7 +23921,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     if(!target || target.type === 'home' || target.owned){ log('Sélectionne une cible ennemie ou neutre.'); renderSafe(); return; }
     var ships = {};
     try{ ships = (typeof selectedShips === 'function') ? selectedShips() : cleanObj((s.missionDraft||{}).ships); }catch(e){ ships = cleanObj((s.missionDraft||{}).ships); }
-    var cargo = (s.missionDraft && s.missionDraft.cargo) ? cleanObj(s.missionDraft.cargo) : {titanium:0,xenite:0,antimatter:0};
+    var cargo = mission === 'transfer' && s.missionDraft && s.missionDraft.cargo ? cleanObj(s.missionDraft.cargo) : {titanium:0,xenite:0,antimatter:0};
     var from = null;
     try{ from = (typeof activePlanetSystem === 'function') ? activePlanetSystem() : null; }catch(e){}
     var duration = 60;

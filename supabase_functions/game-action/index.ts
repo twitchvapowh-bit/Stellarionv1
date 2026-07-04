@@ -904,7 +904,8 @@ async function launchFleet(admin: any, playerId: string, body: any) {
   const planetId = safePlanet(body.planet_id || body.planetId || "home");
   const mission = String(body.mission || "explore").replace(/[^a-z_]/g, "").slice(0, 24) || "explore";
   const ships = body.ships || {};
-  const cargo = body.cargo || {};
+  const rawCargo = body.cargo || {};
+  const cargo = mission === "transfer" ? rawCargo : { titanium:0, xenite:0, antimatter:0 };
   const duration = n(body.durationSeconds || body.duration || 60, 10, 3600);
   const target = body.target || {};
   let shipCount = 0;
