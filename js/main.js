@@ -18391,6 +18391,32 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     const grid=document.querySelector('.chests-grid1525');
     const dup=document.querySelector('.duplicate-stock1526');
     const hist=document.querySelector('.chest-history1525');
+    const mobile=window.matchMedia&&window.matchMedia('(max-width: 900px)').matches;
+    if(mobile){
+      if(page){
+        page.style.alignContent='start';
+        page.style.overflowY='visible';
+        page.style.height='auto';
+        page.style.maxHeight='none';
+      }
+      if(grid){
+        grid.style.height='auto';
+        grid.style.minHeight='0';
+        grid.style.maxHeight='none';
+        grid.style.overflow='visible';
+      }
+      [dup,hist].forEach(el=>{
+        if(el){
+          el.style.position='static';
+          el.style.zIndex='auto';
+          el.style.marginTop='0';
+          el.style.height='auto';
+          el.style.maxHeight='none';
+          el.style.overflow='visible';
+        }
+      });
+      return;
+    }
     if(page){ page.style.alignContent='start'; page.style.overflowY='auto'; }
     if(grid){ grid.style.height='455px'; grid.style.minHeight='455px'; grid.style.maxHeight='455px'; }
     [dup,hist].forEach(el=>{ if(el){ el.style.position='relative'; el.style.zIndex='1'; el.style.marginTop='8px'; }});
