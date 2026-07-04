@@ -5,15 +5,15 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>Stellarion V1 CLOUD ONLY — Alliances corrigées</title>
-<link rel="stylesheet" href="css/main.css?v=1662">
-<link rel="stylesheet" href="css/mobile.css?v=1662">
+<link rel="stylesheet" href="css/main.css?v=1665">
+<link rel="stylesheet" href="css/mobile.css?v=1665">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
 
 <meta name="theme-color" content="#020510">
 <meta property="og:title" content="Stellarion">
 <meta property="og:description" content="Age des Conquérants Stellaires">
 
-<script src="js/supabase.min.js?v=1662"></script>
+<script src="js/supabase.min.js?v=1665"></script>
 <script>if(!window.supabase){document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');}</script>
 
 <!-- STELLARION CORE PACK v0.2 — début -->
@@ -56,8 +56,8 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
   </div>
 </div>
 <div id="app"></div>
-<!-- STELLARION MOBILE R2.4 — moteur mobile INLINE. Pop-up détail/missions (tap planète),
-     onglets scrollables, pages une colonne, topbar ☰ / ressources 💎 à la demande. -->
+<!-- STELLARION MOBILE R2.7 — moteur mobile INLINE. Spécificité triplée : les règles mobiles battent
+     TOUTES les règles desktop. Page Flotte une colonne. Pop-ups vaisseau/missions. -->
 <script>
 (function () {
   "use strict";
@@ -112,87 +112,115 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     var s = document.createElement("style");
     s.id = "st-r2-css";
     s.textContent = "\n" +
-"body.stR2{position:fixed!important;inset:0!important;margin:0!important;padding:0!important;width:100%!important;min-width:0!important;max-width:100%!important;height:100dvh!important;overflow:hidden!important;background:#020510!important}\n" +
-"body.stR2 input,body.stR2 textarea,body.stR2 select,body.stR2 button{font-size:16px!important}\n" +
+"body.stR2.stR2.stR2{position:fixed!important;inset:0!important;margin:0!important;padding:0!important;width:100%!important;min-width:0!important;max-width:100%!important;height:100dvh!important;overflow:hidden!important;background:#020510!important}\n" +
+"body.stR2.stR2.stR2 input,body.stR2.stR2.stR2 textarea,body.stR2.stR2.stR2 select,body.stR2.stR2.stR2 button{font-size:16px!important}\n" +
 "/* --- Connexion : jeu totalement masque derriere --- */\n" +
-"body.stR2.stR2auth #app,body.stR2.stR2auth .topbar,body.stR2.stR2auth .carousel-container,body.stR2.stR2auth .stable-resourcebar1542b,body.stR2.stR2auth .layout,body.stR2.stR2auth #st-r2-nav,body.stR2.stR2auth #st-r2-badge,body.stR2.stR2auth .bottom-queue{display:none!important}\n" +
-"body.stR2 #auth-screen{position:fixed!important;inset:0!important;width:100%!important;height:100dvh!important;min-height:100dvh!important;max-width:100%!important;overflow:auto!important;padding:14px!important;box-sizing:border-box!important;align-items:center!important;justify-content:center!important}\n" +
-"body.stR2 #auth-screen>div{width:min(420px,92%)!important;max-width:92%!important;margin:auto!important;padding:0!important}\n" +
+"body.stR2.stR2.stR2.stR2auth #app,body.stR2.stR2.stR2.stR2auth .topbar,body.stR2.stR2.stR2.stR2auth .carousel-container,body.stR2.stR2.stR2.stR2auth .stable-resourcebar1542b,body.stR2.stR2.stR2.stR2auth .layout,body.stR2.stR2.stR2.stR2auth #st-r2-nav,body.stR2.stR2.stR2.stR2auth #st-r2-badge,body.stR2.stR2.stR2.stR2auth .bottom-queue{display:none!important}\n" +
+"body.stR2.stR2.stR2 #auth-screen{position:fixed!important;inset:0!important;width:100%!important;height:100dvh!important;min-height:100dvh!important;max-width:100%!important;overflow:auto!important;padding:14px!important;box-sizing:border-box!important;align-items:center!important;justify-content:center!important}\n" +
+"body.stR2.stR2.stR2 #auth-screen>div{width:min(420px,92%)!important;max-width:92%!important;margin:auto!important;padding:0!important}\n" +
 "/* --- R2.2 : topbar CACHEE par defaut, overlay sur demande (bouton menu) --- */\n" +
-"body.stR2 .topbar{display:none!important}\n" +
-"body.stR2.stR2top .topbar{display:flex!important;position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:591!important;box-shadow:0 14px 34px rgba(0,0,0,.55)!important;background:rgba(4,11,24,.97)!important}\n" +
-"body.stR2 #st-r2-top{position:fixed!important;top:7px!important;left:8px!important;z-index:602!important;width:38px!important;height:34px!important;border-radius:10px!important;border:1px solid rgba(79,195,247,.4)!important;background:rgba(10,24,46,.94)!important;color:#4FC3F7!important;font:800 15px system-ui,Arial!important;cursor:pointer!important}\n" +
-"body.stR2.stR2top #st-r2-top{background:#4FC3F7!important;color:#04162e!important}\n" +
-"body.stR2.stR2auth #st-r2-top{display:none!important}\n" +
-"body.stR2.stR2top .topbar{flex-direction:row!important;align-items:center!important;gap:6px!important;width:100%!important;max-width:100%!important;height:48px!important;min-height:48px!important;max-height:48px!important;padding:3px 8px!important;overflow-x:auto!important;overflow-y:hidden!important;box-sizing:border-box!important;scrollbar-width:none!important}\n" +
-"body.stR2.stR2top .topbar::-webkit-scrollbar{display:none!important}\n" +
-"body.stR2.stR2top .topbar>*{flex:0 0 auto!important;min-height:0!important;max-height:44px!important;overflow:hidden!important}\n" +
-"body.stR2.stR2top .topbar .small,body.stR2.stR2top .topbar .muted{display:none!important}\n" +
-"body.stR2 .brand{font-size:16px!important;letter-spacing:3px!important;white-space:nowrap!important}\n" +
+"body.stR2.stR2.stR2 .topbar{display:none!important}\n" +
+"body.stR2.stR2.stR2.stR2top .topbar{display:flex!important;position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:591!important;box-shadow:0 14px 34px rgba(0,0,0,.55)!important;background:rgba(4,11,24,.97)!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-top{position:fixed!important;top:7px!important;left:8px!important;z-index:602!important;width:38px!important;height:34px!important;border-radius:10px!important;border:1px solid rgba(79,195,247,.4)!important;background:rgba(10,24,46,.94)!important;color:#4FC3F7!important;font:800 15px system-ui,Arial!important;cursor:pointer!important}\n" +
+"body.stR2.stR2.stR2.stR2top #st-r2-top{background:#4FC3F7!important;color:#04162e!important}\n" +
+"body.stR2.stR2.stR2.stR2auth #st-r2-top{display:none!important}\n" +
+"body.stR2.stR2.stR2.stR2top .topbar{flex-direction:row!important;align-items:center!important;gap:6px!important;width:100%!important;max-width:100%!important;height:48px!important;min-height:48px!important;max-height:48px!important;padding:3px 8px!important;overflow-x:auto!important;overflow-y:hidden!important;box-sizing:border-box!important;scrollbar-width:none!important}\n" +
+"body.stR2.stR2.stR2.stR2top .topbar::-webkit-scrollbar{display:none!important}\n" +
+"body.stR2.stR2.stR2.stR2top .topbar>*{flex:0 0 auto!important;min-height:0!important;max-height:44px!important;overflow:hidden!important}\n" +
+"body.stR2.stR2.stR2.stR2top .topbar .small,body.stR2.stR2.stR2.stR2top .topbar .muted{display:none!important}\n" +
+"body.stR2.stR2.stR2 .brand{font-size:16px!important;letter-spacing:3px!important;white-space:nowrap!important}\n" +
 "/* --- Barre ressources : une ligne scrollable --- */\n" +
-"body.stR2 .stable-resourcebar1542b{width:100%!important;max-width:100%!important;margin:0!important;padding:3px 8px!important;border-radius:0!important;border-left:0!important;border-right:0!important;overflow:hidden!important;box-sizing:border-box!important}\n" +
-"body.stR2 .stable-resource-list1542b{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
-"body.stR2 .stable-resource-list1542b::-webkit-scrollbar{display:none!important}\n" +
-"body.stR2 .stable-res1542b{flex:0 0 106px!important;min-width:106px!important;max-width:106px!important;min-height:40px!important;padding:4px 6px!important;display:grid!important;grid-template-columns:22px minmax(0,1fr)!important;gap:5px!important;align-items:center!important;box-sizing:border-box!important}\n" +
-"body.stR2 .stable-res-ico1542b{font-size:17px!important}\n" +
-"body.stR2 .stable-res1542b small{font-size:9px!important;line-height:1!important;white-space:nowrap!important}\n" +
-"body.stR2 .stable-res1542b strong{font-size:13px!important;line-height:1!important;white-space:nowrap!important}\n" +
-"body.stR2 .stable-clock1542b{display:none!important}\n" +
-"body.stR2 .fragment-shop-entry1546{max-width:120px!important;height:22px!important;min-height:22px!important;line-height:22px!important;font-size:10px!important;padding:0 8px!important;margin:0!important}\n" +
+"body.stR2.stR2.stR2 .stable-resourcebar1542b{width:100%!important;max-width:100%!important;margin:0!important;padding:3px 8px!important;border-radius:0!important;border-left:0!important;border-right:0!important;overflow:hidden!important;box-sizing:border-box!important}\n" +
+"body.stR2.stR2.stR2 .stable-resource-list1542b{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
+"body.stR2.stR2.stR2 .stable-resource-list1542b::-webkit-scrollbar{display:none!important}\n" +
+"body.stR2.stR2.stR2 .stable-res1542b{flex:0 0 106px!important;min-width:106px!important;max-width:106px!important;min-height:40px!important;padding:4px 6px!important;display:grid!important;grid-template-columns:22px minmax(0,1fr)!important;gap:5px!important;align-items:center!important;box-sizing:border-box!important}\n" +
+"body.stR2.stR2.stR2 .stable-res-ico1542b{font-size:17px!important}\n" +
+"body.stR2.stR2.stR2 .stable-res1542b small{font-size:9px!important;line-height:1!important;white-space:nowrap!important}\n" +
+"body.stR2.stR2.stR2 .stable-res1542b strong{font-size:13px!important;line-height:1!important;white-space:nowrap!important}\n" +
+"body.stR2.stR2.stR2 .stable-clock1542b{display:none!important}\n" +
+"body.stR2.stR2.stR2 .fragment-shop-entry1546{max-width:120px!important;height:22px!important;min-height:22px!important;line-height:22px!important;font-size:10px!important;padding:0 8px!important;margin:0!important}\n" +
 "/* --- R2.1 : ressources A LA DEMANDE. Masquees par defaut, overlay via bouton. --- */\n" +
-"body.stR2 .stable-resourcebar1542b{display:none!important}\n" +
-"body.stR2.stR2res .stable-resourcebar1542b{display:block!important;position:fixed!important;top:46px!important;left:0!important;right:0!important;z-index:590!important;margin:0!important;padding:6px 8px!important;border-bottom:1px solid rgba(79,195,247,.35)!important;box-shadow:0 14px 34px rgba(0,0,0,.55)!important;background:rgba(4,11,24,.97)!important}\n" +
-"body.stR2 #st-r2-res{position:fixed!important;top:7px!important;right:8px!important;z-index:602!important;height:34px!important;padding:0 11px!important;border-radius:10px!important;border:1px solid rgba(79,195,247,.4)!important;background:rgba(10,24,46,.94)!important;color:#4FC3F7!important;font:800 12px system-ui,Arial!important;cursor:pointer!important}\n" +
-"body.stR2.stR2res #st-r2-res{background:#4FC3F7!important;color:#04162e!important}\n" +
-"body.stR2.stR2auth #st-r2-res{display:none!important}\n" +
-"body.stR2.stR2top .topbar{padding-left:52px!important;padding-right:120px!important}\n" +
+"body.stR2.stR2.stR2 .stable-resourcebar1542b{display:none!important}\n" +
+"body.stR2.stR2.stR2.stR2res .stable-resourcebar1542b{display:block!important;position:fixed!important;top:46px!important;left:0!important;right:0!important;z-index:590!important;margin:0!important;padding:6px 8px!important;border-bottom:1px solid rgba(79,195,247,.35)!important;box-shadow:0 14px 34px rgba(0,0,0,.55)!important;background:rgba(4,11,24,.97)!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-res{position:fixed!important;top:7px!important;right:8px!important;z-index:602!important;height:34px!important;padding:0 11px!important;border-radius:10px!important;border:1px solid rgba(79,195,247,.4)!important;background:rgba(10,24,46,.94)!important;color:#4FC3F7!important;font:800 12px system-ui,Arial!important;cursor:pointer!important}\n" +
+"body.stR2.stR2.stR2.stR2res #st-r2-res{background:#4FC3F7!important;color:#04162e!important}\n" +
+"body.stR2.stR2.stR2.stR2auth #st-r2-res{display:none!important}\n" +
+"body.stR2.stR2.stR2.stR2top .topbar{padding-left:52px!important;padding-right:120px!important}\n" +
 "/* --- Layout : UNE colonne, RIEN n'est supprime. Le centre d'abord, puis les\n       panneaux lateraux empiles en dessous, pleine largeur. Le layout scrolle. --- */\n" +
-"body.stR2 .layout,body.stR2 .layout.has-bottom-queue{display:flex!important;flex-direction:column!important;grid-template-columns:none!important;width:100%!important;max-width:100%!important;height:calc(100dvh - var(--r2top,96px) - 50px)!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;margin:0!important;padding:0 0 12px!important;box-sizing:border-box!important}\n" +
-"body.stR2 .layout>*{flex:0 0 auto!important;width:100%!important;max-width:100%!important}\n" +
-"body.stR2 .layout>.side,body.stR2 .layout>.side.left,body.stR2 .layout>.side.right{display:block!important;width:100%!important;max-width:100%!important;border:0!important;padding:10px!important;box-sizing:border-box!important;overflow:visible!important}\n" +
+"body.stR2.stR2.stR2 .layout,body.stR2.stR2.stR2 .layout.has-bottom-queue{display:flex!important;flex-direction:column!important;grid-template-columns:none!important;width:100%!important;max-width:100%!important;height:calc(100dvh - var(--r2top,96px) - 50px)!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;margin:0!important;padding:0 0 12px!important;box-sizing:border-box!important}\n" +
+"body.stR2.stR2.stR2 .layout>*{flex:0 0 auto!important;width:100%!important;max-width:100%!important}\n" +
+"body.stR2.stR2.stR2 .layout>.side,body.stR2.stR2.stR2 .layout>.side.left,body.stR2.stR2.stR2 .layout>.side.right{display:block!important;width:100%!important;max-width:100%!important;border:0!important;padding:10px!important;box-sizing:border-box!important;overflow:visible!important}\n" +
 "/* ORDRE : contenu central EN PREMIER, colonnes ensuite */\n" +
-"body.stR2 .layout>#center,body.stR2 #center{order:1!important}\n" +
-"body.stR2 .layout>.side.right{order:2!important}\n" +
-"body.stR2 .layout>.side.left,body.stR2 .layout>.side{order:3!important}\n" +
-"body.stR2 #center{display:block!important;width:100%!important;max-width:100%!important;height:calc(100dvh - 50px)!important;min-height:0!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important;box-sizing:border-box!important}\n" +
+"body.stR2.stR2.stR2 .layout>#center,body.stR2.stR2.stR2 #center{order:1!important}\n" +
+"body.stR2.stR2.stR2 .layout>.side.right{order:2!important}\n" +
+"body.stR2.stR2.stR2 .layout>.side.left,body.stR2.stR2.stR2 .layout>.side{order:3!important}\n" +
+"body.stR2.stR2.stR2 #center{display:block!important;width:100%!important;max-width:100%!important;height:calc(100dvh - 50px)!important;min-height:0!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important;box-sizing:border-box!important}\n" +
 "/* Carte galaxie : hauteur pleine zone, dimensions vraies (pas de transform) */\n" +
-"body.stR2 .galaxy-wrap,body.stR2 .gwm-stage{width:100%!important;max-width:100%!important;height:calc(100dvh - var(--r2top,96px) - 62px)!important;min-height:300px!important;overflow:hidden!important}\n" +
+"body.stR2.stR2.stR2 .galaxy-wrap,body.stR2.stR2.stR2 .gwm-stage{width:100%!important;max-width:100%!important;height:calc(100dvh - var(--r2top,96px) - 62px)!important;min-height:300px!important;overflow:hidden!important}\n" +
 "/* --- R2.3 : EPURATION DES PAGES. Une seule colonne partout, hauteurs pleines. --- */\n" +
-"body.stR2 .messages-view,body.stR2 .message-layout{display:grid!important;grid-template-columns:1fr!important;grid-template-rows:minmax(0,38%) minmax(0,1fr)!important;height:100%!important;gap:10px!important;overflow:hidden!important}\n" +
-"body.stR2 .messages-list,body.stR2 .message-detail{min-height:0!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important}\n" +
-"body.stR2 .messages-wrap,body.stR2 .collection-wrap,body.stR2 .chests-wrap,body.stR2 .planet-showcase,body.stR2 .planet-ui,body.stR2 .alliance-wrap{height:100%!important;min-height:0!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important;padding:10px!important}\n" +
-"body.stR2 .alliance-wrap,body.stR2 .global-fleet-grid,body.stR2 .fleet-overview,body.stR2 .fleet-drawers,body.stR2 .construction-clean1542f{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}\n" +
-"body.stR2 .global-fleet-row{grid-template-columns:1.4fr repeat(4,.65fr)!important;font-size:11px!important}\n" +
-"body.stR2 .fleet-transfer-box,body.stR2 .fleet-table{max-width:100%!important;overflow-x:auto!important}\n" +
-"body.stR2 .card,body.stR2 .panel{max-width:100%!important;box-sizing:border-box!important}\n" +
+"body.stR2.stR2.stR2 .messages-view,body.stR2.stR2.stR2 .message-layout{display:grid!important;grid-template-columns:1fr!important;grid-template-rows:minmax(0,38%) minmax(0,1fr)!important;height:100%!important;gap:10px!important;overflow:hidden!important}\n" +
+"body.stR2.stR2.stR2 .messages-list,body.stR2.stR2.stR2 .message-detail{min-height:0!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important}\n" +
+"body.stR2.stR2.stR2 .messages-wrap,body.stR2.stR2.stR2 .collection-wrap,body.stR2.stR2.stR2 .chests-wrap,body.stR2.stR2.stR2 .planet-showcase,body.stR2.stR2.stR2 .planet-ui,body.stR2.stR2.stR2 .alliance-wrap{height:100%!important;min-height:0!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important;padding:10px!important}\n" +
+"body.stR2.stR2.stR2 .alliance-wrap,body.stR2.stR2.stR2 .global-fleet-grid,body.stR2.stR2.stR2 .fleet-overview,body.stR2.stR2.stR2 .fleet-drawers,body.stR2.stR2.stR2 .construction-clean1542f{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}\n" +
+"body.stR2.stR2.stR2 .global-fleet-row{grid-template-columns:1.4fr repeat(4,.65fr)!important;font-size:11px!important}\n" +
+"body.stR2.stR2.stR2 .fleet-transfer-box,body.stR2.stR2.stR2 .fleet-table{max-width:100%!important;overflow-x:auto!important}\n" +
+"body.stR2.stR2.stR2 .card,body.stR2.stR2.stR2 .panel{max-width:100%!important;box-sizing:border-box!important}\n" +
 "/* --- R2.4 : POP-UP DETAIL. La colonne droite du jeu vit dans un pop-up mobile. --- */\n" +
-"body.stR2 #st-r2-pop-back{display:none;position:fixed;inset:0;z-index:640;background:rgba(0,4,12,.7);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}\n" +
-"body.stR2.stR2pop #st-r2-pop-back{display:block!important}\n" +
-"body.stR2 #st-r2-pop{display:none;position:fixed;right:8px;top:8px;bottom:58px;width:min(430px,92vw);z-index:641;overflow:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,rgba(8,22,42,.98),rgba(3,9,22,.99));border:1px solid rgba(79,195,247,.4);border-radius:16px;padding:12px;box-sizing:border-box;box-shadow:0 24px 80px rgba(0,0,0,.6)}\n" +
-"body.stR2.stR2pop #st-r2-pop{display:block!important}\n" +
-"body.stR2 #st-r2-pop .side,body.stR2 #st-r2-pop .side.right{display:block!important;width:100%!important;max-width:100%!important;border:0!important;padding:0!important;background:transparent!important;overflow:visible!important}\n" +
-"body.stR2 #st-r2-pop:empty:before{content:\"Chargement du d\\u00e9tail...\";color:#7fa5c7;font:600 13px system-ui,Arial}\n" +
+"body.stR2.stR2.stR2 #st-r2-pop-back{display:none;position:fixed;inset:0;z-index:640;background:rgba(0,4,12,.7);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}\n" +
+"body.stR2.stR2.stR2.stR2pop #st-r2-pop-back{display:block!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-pop{display:none;position:fixed;right:8px;top:8px;bottom:58px;width:min(430px,92vw);z-index:641;overflow:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,rgba(8,22,42,.98),rgba(3,9,22,.99));border:1px solid rgba(79,195,247,.4);border-radius:16px;padding:12px;box-sizing:border-box;box-shadow:0 24px 80px rgba(0,0,0,.6)}\n" +
+"body.stR2.stR2.stR2.stR2pop #st-r2-pop{display:block!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-pop .side,body.stR2.stR2.stR2 #st-r2-pop .side.right{display:block!important;width:100%!important;max-width:100%!important;border:0!important;padding:0!important;background:transparent!important;overflow:visible!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-pop:empty:before{content:\"Chargement du d\\u00e9tail...\";color:#7fa5c7;font:600 13px system-ui,Arial}\n" +
 "/* La colonne droite n apparait plus dans le flux : elle est dans le pop-up */\n" +
-"body.stR2 .layout>.side.right{display:none!important}\n" +
+"body.stR2.stR2.stR2 .layout>.side.right{display:none!important}\n" +
 "/* Onglets internes des pages (Flotte etc.) : bandeau horizontal scrollable */\n" +
-"body.stR2 #center .tabs,body.stR2 #center [class*=\"tabs\"],body.stR2 #center [class*=\"tabbar\"],body.stR2 #center [class*=\"switch\"]{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;max-width:100%!important;gap:6px!important;scrollbar-width:none!important}\n" +
+"body.stR2.stR2.stR2 #center .tabs,body.stR2.stR2.stR2 #center [class*=\"tabs\"],body.stR2.stR2.stR2 #center [class*=\"tabbar\"],body.stR2.stR2.stR2 #center [class*=\"switch\"]{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;max-width:100%!important;gap:6px!important;scrollbar-width:none!important}\n" +
 "/* Construction : blocs remis en flux, fin des chevauchements */\n" +
-"body.stR2 .construction-clean1542f,body.stR2 .construction-clean1542f>*,body.stR2 .cmain1542f,body.stR2 .ccats1542f{position:static!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important}\n" +
+"body.stR2.stR2.stR2 .construction-clean1542f,body.stR2.stR2.stR2 .construction-clean1542f>*,body.stR2.stR2.stR2 .cmain1542f,body.stR2.stR2.stR2 .ccats1542f{position:static!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important}\n" +
+"/* --- R2.6 : CHANTIER (arsenal). Lignes epurees, construction en pop-up. --- */\n" +
+"body.stR2.stR2.stR2 .arsenal-layout{display:grid!important;grid-template-columns:1fr!important;height:100%!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important;padding:10px!important;gap:10px!important}\n" +
+"body.stR2.stR2.stR2 .arsenal-main{overflow:visible!important}\n" +
+"body.stR2.stR2.stR2 .arsenal-layout>.arsenal-detail{display:none!important}\n" +
+"body.stR2.stR2.stR2 .arsenal-row{grid-template-columns:1.7fr .7fr .9fr!important;min-height:48px!important}\n" +
+"body.stR2.stR2.stR2 .arsenal-row>*:nth-child(n+4){display:none!important}\n" +
+"body.stR2.stR2.stR2 .arsenal-tabs{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:6px!important;scrollbar-width:none!important}\n" +
+"body.stR2.stR2.stR2 .arsenal-tabs::-webkit-scrollbar{display:none!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-pop .arsenal-detail{display:block!important;width:100%!important;overflow:visible!important}\n" +
+"body.stR2.stR2.stR2 .arsenal-actions{grid-template-columns:1fr!important}\n" +
+"/* --- R2.7 : PAGE FLOTTE (armament). Une colonne, tiroirs pleine largeur. --- */\n" +
+"body.stR2.stR2.stR2 .armament-grid{display:grid!important;grid-template-columns:1fr!important;height:100%!important;min-height:0!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important;padding:10px!important;gap:10px!important}\n" +
+"body.stR2.stR2.stR2 .armament-list,body.stR2.stR2.stR2 .armament-detail{min-height:0!important;overflow:visible!important;max-width:100%!important}\n" +
+"body.stR2.stR2.stR2 .global-fleet-grid{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}\n" +
+"body.stR2.stR2.stR2 .global-fleet-table.drawers{max-height:none!important;min-height:0!important;overflow:visible!important}\n" +
+"body.stR2.stR2.stR2 .fleet-unit-line{grid-template-columns:1.5fr .5fr .6fr!important}\n" +
+"body.stR2.stR2.stR2 .fleet-unit-line .hide-small{display:none!important}\n" +
+"body.stR2.stR2.stR2 .cc-form-grid{grid-template-columns:1fr!important}\n" +
+"body.stR2.stR2.stR2 .cc-planet-grid{grid-template-columns:1fr 1fr!important}\n" +
 "/* --- Dock bas : le VRAI carrousel amarre --- */\n" +
-"body.stR2 #st-r2-nav{position:fixed!important;left:0!important;right:0!important;bottom:0!important;height:50px!important;display:flex!important;align-items:center!important;padding:6px 8px!important;box-sizing:border-box!important;background:linear-gradient(180deg,rgba(5,13,26,.92),#020510)!important;border-top:1px solid rgba(79,195,247,.28)!important;z-index:600!important}\n" +
-"body.stR2 #st-r2-nav .carousel-container{display:flex!important;width:100%!important;max-width:100%!important;height:38px!important;min-height:38px!important;padding:0!important;margin:0!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
-"body.stR2 #st-r2-nav .carousel-container::-webkit-scrollbar{display:none!important}\n" +
-"body.stR2 #st-r2-nav .carousel-pages{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
-"body.stR2 #st-r2-nav .carousel-pages::-webkit-scrollbar{display:none!important}\n" +
-"body.stR2 #st-r2-nav .carousel-page,body.stR2 #st-r2-nav .carousel-nav-btn{flex:0 0 auto!important;height:34px!important;min-height:34px!important;padding:0 12px!important;font-size:12px!important;white-space:nowrap!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-nav{position:fixed!important;left:0!important;right:0!important;bottom:0!important;height:50px!important;display:flex!important;align-items:center!important;padding:6px 8px!important;box-sizing:border-box!important;background:linear-gradient(180deg,rgba(5,13,26,.92),#020510)!important;border-top:1px solid rgba(79,195,247,.28)!important;z-index:600!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-nav .carousel-container{display:flex!important;width:100%!important;max-width:100%!important;height:38px!important;min-height:38px!important;padding:0!important;margin:0!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-nav .carousel-container::-webkit-scrollbar{display:none!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-nav .carousel-pages{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-nav .carousel-pages::-webkit-scrollbar{display:none!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-nav .carousel-page,body.stR2.stR2.stR2 #st-r2-nav .carousel-nav-btn{flex:0 0 auto!important;height:34px!important;min-height:34px!important;padding:0 12px!important;font-size:12px!important;white-space:nowrap!important}\n" +
+"/* --- R2.5 : JEU EN PAYSAGE UNIQUEMENT. Portrait => invite a tourner. --- */\n" +
+"body.stR2.stR2.stR2 #st-r2-rotate{display:none}\n" +
+"body.stR2.stR2.stR2.stR2portrait #app,body.stR2.stR2.stR2.stR2portrait .topbar,body.stR2.stR2.stR2.stR2portrait .stable-resourcebar1542b,body.stR2.stR2.stR2.stR2portrait .layout,body.stR2.stR2.stR2.stR2portrait #st-r2-nav,body.stR2.stR2.stR2.stR2portrait #st-r2-badge,body.stR2.stR2.stR2.stR2portrait #st-r2-top,body.stR2.stR2.stR2.stR2portrait #st-r2-res,body.stR2.stR2.stR2.stR2portrait #st-r2-pop,body.stR2.stR2.stR2.stR2portrait #st-r2-pop-back{display:none!important}\n" +
+"body.stR2.stR2.stR2.stR2portrait #st-r2-rotate{display:grid!important;position:fixed;inset:0;z-index:2147483000;place-items:center;padding:24px;text-align:center;background:radial-gradient(circle at 50% 20%,#102248,#020510 72%);color:#eaf6ff}\n" +
+"body.stR2.stR2.stR2 #st-r2-rotate .r2rot-card{width:min(420px,92vw);border:1px solid rgba(79,195,247,.28);border-radius:24px;background:rgba(6,16,31,.86);box-shadow:0 0 60px rgba(79,195,247,.12);padding:26px 20px}\n" +
+"body.stR2.stR2.stR2 #st-r2-rotate .r2rot-title{color:#4FC3F7;font:900 24px system-ui,Arial;letter-spacing:5px;margin-bottom:12px}\n" +
+"body.stR2.stR2.stR2 #st-r2-rotate .r2rot-ico{font-size:50px;margin:6px 0 10px}\n" +
+"body.stR2.stR2.stR2 #st-r2-rotate h2{margin:6px 0;font:800 21px system-ui,Arial}\n" +
+"body.stR2.stR2.stR2 #st-r2-rotate p{color:#bfd7ef;margin:8px 0;line-height:1.35;font:500 14px system-ui,Arial}\n" +
 "/* --- Temoin --- */\n" +
-"body.stR2 #st-r2-badge{position:fixed!important;right:8px!important;bottom:58px!important;z-index:601!important;background:#ffb300!important;color:#1a1200!important;border:2px solid #fff!important;border-radius:999px!important;padding:6px 9px!important;font:900 10px/1 system-ui,Arial!important;pointer-events:none!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-badge{position:fixed!important;right:8px!important;bottom:58px!important;z-index:601!important;background:#ffb300!important;color:#1a1200!important;border:2px solid #fff!important;border-radius:999px!important;padding:6px 9px!important;font:900 10px/1 system-ui,Arial!important;pointer-events:none!important}\n" +
 "/* --- Nettoyage mobile : pastilles carte, dock desktop, vieux overlays --- */\n" +
-"body.stR2 .gwm-footer{display:none!important}\n" +
-"body.stR2 .bottom-queue{display:none!important}\n" +
-"body.stR2 .has-bottom-queue{padding-bottom:0!important}\n" +
-"body.stR2 #stellarion-rotate1626,body.stR2 #stellarion-scrollrail1628,body.stR2 #stellarion-rotate-overlay-1641{display:none!important}\n" +
-"body.stR2 .bpop1632{width:min(460px,calc(100% - 20px))!important;max-height:calc(100dvh - 70px)!important}\n";
+"body.stR2.stR2.stR2 .gwm-footer{display:none!important}\n" +
+"body.stR2.stR2.stR2 .bottom-queue{display:none!important}\n" +
+"body.stR2.stR2.stR2 .has-bottom-queue{padding-bottom:0!important}\n" +
+"body.stR2.stR2.stR2 #stellarion-rotate1626,body.stR2.stR2.stR2 #stellarion-scrollrail1628,body.stR2.stR2.stR2 #stellarion-rotate-overlay-1641{display:none!important}\n" +
+"body.stR2.stR2.stR2 .bpop1632{width:min(460px,calc(100% - 20px))!important;max-height:calc(100dvh - 70px)!important}\n";
     document.head.appendChild(s);
   }
 
@@ -265,16 +293,19 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
   function closePop() { if (document.body) document.body.classList.remove("stR2pop"); }
   window.stellarionClosePopR2 = closePop;
 
-  /* La colonne droite du jeu (detail planete, missions, detail vaisseau...)
-     est ADOPTEE dans le pop-up. Le jeu continue de la re-rendre a chaque
-     render : on re-adopte la version fraiche, comme pour le carrousel. */
+  /* Le pop-up adopte un panneau du jeu selon le contexte :
+     - carte galaxie -> colonne droite (.side.right) : detail planete + missions
+     - chantier      -> .arsenal-detail : panneau de construction du vaisseau
+     Le jeu re-rend ces panneaux a chaque render : on re-adopte la version
+     fraiche en continu, comme pour le carrousel. */
+  var popSource = ".layout>.side.right, .side.right";
   function adoptRightSide() {
     var pop = ensurePop();
     if (!pop) return;
-    var sides = document.querySelectorAll(".layout>.side.right, .side.right");
+    var els = document.querySelectorAll(popSource);
     var fresh = null;
-    for (var i = 0; i < sides.length; i++) {
-      if (!pop.contains(sides[i])) fresh = sides[i];
+    for (var i = 0; i < els.length; i++) {
+      if (!pop.contains(els[i])) fresh = els[i];
     }
     if (fresh) { pop.innerHTML = ""; pop.appendChild(fresh); }
   }
@@ -286,8 +317,17 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     if (!t || !t.closest) return;
     if (t.closest("#st-r2-pop")) return;                      // clic dans le pop-up
     if (t.closest("#st-r2-nav")) { closePop(); return; }      // changement de page
-    var hit = t.closest(".gwm-object,.gwm-cell,.gwm-badge,.gwm-ai-threat,.gwm-ai-boss,.gwm-name,.gwm-chip");
-    if (hit) { setTimeout(function () { adoptRightSide(); openPop(); }, 140); }
+    var hitMap = t.closest(".gwm-object,.gwm-cell,.gwm-badge,.gwm-ai-threat,.gwm-ai-boss,.gwm-name,.gwm-chip");
+    if (hitMap) {
+      popSource = ".layout>.side.right, .side.right";
+      setTimeout(function () { adoptRightSide(); openPop(); }, 140);
+      return;
+    }
+    var hitShip = t.closest(".arsenal-row:not(.header)");
+    if (hitShip) {
+      popSource = ".arsenal-detail";
+      setTimeout(function () { adoptRightSide(); openPop(); }, 140);
+    }
   }, true);
   document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") closePop(); });
 
@@ -307,11 +347,25 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     if (fresh) { nav.innerHTML = ""; nav.appendChild(fresh); }
   }
 
+  function rotateOverlay() {
+    if (!document.body || document.getElementById("st-r2-rotate")) return;
+    var ov = document.createElement("div");
+    ov.id = "st-r2-rotate";
+    ov.innerHTML =
+      '<div class="r2rot-card">' +
+      '<div class="r2rot-title">STELLARION</div>' +
+      '<div class="r2rot-ico">\uD83D\uDCF1\u2194\uFE0F</div>' +
+      '<h2>Tourne ton t\u00e9l\u00e9phone</h2>' +
+      '<p>Le jeu se joue en mode paysage sur mobile pour garder une interface lisible.</p>' +
+      '</div>';
+    document.body.appendChild(ov);
+  }
+
   function badge() {
     if (!document.body || document.getElementById("st-r2-badge")) return;
     var b = document.createElement("div");
     b.id = "st-r2-badge";
-    b.textContent = "MOBILE R2.4 OK";
+    b.textContent = "MOBILE R2.7 OK";
     document.body.appendChild(b);
   }
 
@@ -324,7 +378,10 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     injectCss();
     if (!document.body) return;
     document.body.classList.add("stR2");
-    document.body.classList.toggle("stR2auth", authVisible());
+    var auth = authVisible();
+    document.body.classList.toggle("stR2auth", auth);
+    document.body.classList.toggle("stR2portrait", false); // portrait autorise (decision Vapowh)
+    rotateOverlay();
     measureTop();
     topButton();
     resButton();
@@ -344,7 +401,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
   window.stellarionMobileR2Audit = function () {
     return {
-      patch: "mobile-R2.4-inline",
+      patch: "mobile-R2.7-inline",
       actif: !!(document.body && document.body.classList.contains("stR2")),
       phone: phone(),
       portrait: isPortrait(),
@@ -365,15 +422,15 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
 <!-- STELLARION 1.5.78 — Alliance native field fix
      Objectif : réparer le focus Alliance sans casser la messagerie, sans bloquer les onglets, sans ralentir les changements de page. -->
-<script src="js/main.js?v=1662"></script>
-<script src="js/fragment-shop-stripe-patch.js?v=1662"></script>
+<script src="js/main.js?v=1665"></script>
+<script src="js/fragment-shop-stripe-patch.js?v=1665"></script>
 <!-- STELLARION 1.6.25 — Couche mobile : pinch-zoom galaxie + boutons zoom tactiles -->
-<script src="js/patch_1625_mobile.js?v=1662"></script>
+<script src="js/patch_1625_mobile.js?v=1665"></script>
 <!-- STELLARION 1.6.31 — Suppression des rapports de combat texte (format archive) -->
-<script src="js/patch_1631_reports.js?v=1662"></script>
+<script src="js/patch_1631_reports.js?v=1665"></script>
 <!-- STELLARION 1.6.32 — Construction : détail bâtiment en pop-up, colonnes supprimées -->
-<script src="js/patch_1632_building_popup.js?v=1662"></script>
+<script src="js/patch_1632_building_popup.js?v=1665"></script>
 <!-- STELLARION 1.6.35 — Anti-duplication de flotte (ledger) + réparation serveur -->
-<script src="js/patch_1634_fleet_ledger.js?v=1662"></script>
+<script src="js/patch_1634_fleet_ledger.js?v=1665"></script>
 </body>
 </html>
