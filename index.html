@@ -5,15 +5,15 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>Stellarion V1 CLOUD ONLY — Alliances corrigées</title>
-<link rel="stylesheet" href="css/main.css?v=1667">
-<link rel="stylesheet" href="css/mobile.css?v=1667">
+<link rel="stylesheet" href="css/main.css?v=1668">
+<link rel="stylesheet" href="css/mobile.css?v=1668">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
 
 <meta name="theme-color" content="#020510">
 <meta property="og:title" content="Stellarion">
 <meta property="og:description" content="Age des Conquérants Stellaires">
 
-<script src="js/supabase.min.js?v=1667"></script>
+<script src="js/supabase.min.js?v=1668"></script>
 <script>if(!window.supabase){document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');}</script>
 
 <!-- STELLARION CORE PACK v0.2 — début -->
@@ -56,8 +56,8 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
   </div>
 </div>
 <div id="app"></div>
-<!-- STELLARION MOBILE R2.9 — moteur mobile INLINE. Messagerie en pop-up (liste toujours accessible),
-     commandement une colonne, pop-ups vaisseau/missions, spécificité triplée. -->
+<!-- STELLARION MOBILE R2.10 — moteur mobile INLINE. Page Planète : visuel en premier et centré.
+     Messagerie pop-up, commandement une colonne, pop-ups vaisseau/missions. -->
 <script>
 (function () {
   "use strict";
@@ -210,6 +210,13 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 "body.stR2.stR2.stR2 .messages-view .message-detail,body.stR2.stR2.stR2 .message-layout .message-detail,body.stR2.stR2.stR2 .messages-wrap .message-detail,body.stR2.stR2.stR2 #center .message-detail{display:none!important}\n" +
 "body.stR2.stR2.stR2 .messages-list{max-height:none!important;height:100%!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important}\n" +
 "body.stR2.stR2.stR2 #st-r2-pop .message-detail{display:block!important;width:100%!important;max-width:100%!important;min-height:0!important;overflow:visible!important}\n" +
+"/* --- R2.10 : PAGE PLANETE. Visuel planete EN PREMIER, centre, panneaux empiles dessous. --- */\n" +
+"body.stR2.stR2.stR2 .planet-showcase{display:flex!important;flex-direction:column!important;grid-template-columns:none!important;gap:12px!important;height:100%!important;min-height:0!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important;padding:10px!important}\n" +
+"body.stR2.stR2.stR2 .planet-mid-panel{order:-1!important}\n" +
+"body.stR2.stR2.stR2 .planet-left-panel,body.stR2.stR2.stR2 .planet-mid-panel,body.stR2.stR2.stR2 .planet-right-panel{width:100%!important;max-width:100%!important;min-width:0!important;flex:0 0 auto!important;overflow:visible!important;box-sizing:border-box!important}\n" +
+"body.stR2.stR2.stR2 .planet-board{width:100%!important;min-height:340px!important;height:50dvh!important;max-height:56dvh!important;margin:0 auto!important}\n" +
+"body.stR2.stR2.stR2 .planet-visual-card,body.stR2.stR2.stR2 .planet-orbital-card{height:auto!important;min-height:0!important;max-width:100%!important}\n" +
+"body.stR2.stR2.stR2 .planet-ui{display:block!important;height:100%!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important}\n" +
 "/* --- Dock bas : le VRAI carrousel amarre --- */\n" +
 "body.stR2.stR2.stR2 #st-r2-nav{position:fixed!important;left:0!important;right:0!important;bottom:0!important;height:50px!important;display:flex!important;align-items:center!important;padding:6px 8px!important;box-sizing:border-box!important;background:linear-gradient(180deg,rgba(5,13,26,.92),#020510)!important;border-top:1px solid rgba(79,195,247,.28)!important;z-index:600!important}\n" +
 "body.stR2.stR2.stR2 #st-r2-nav .carousel-container{display:flex!important;width:100%!important;max-width:100%!important;height:38px!important;min-height:38px!important;padding:0!important;margin:0!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
@@ -389,7 +396,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     if (!document.body || document.getElementById("st-r2-badge")) return;
     var b = document.createElement("div");
     b.id = "st-r2-badge";
-    b.textContent = "MOBILE R2.9 OK";
+    b.textContent = "MOBILE R2.10 OK";
     document.body.appendChild(b);
   }
 
@@ -425,7 +432,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
   window.stellarionMobileR2Audit = function () {
     return {
-      patch: "mobile-R2.9-inline",
+      patch: "mobile-R2.10-inline",
       actif: !!(document.body && document.body.classList.contains("stR2")),
       phone: phone(),
       portrait: isPortrait(),
@@ -446,15 +453,15 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
 <!-- STELLARION 1.5.78 — Alliance native field fix
      Objectif : réparer le focus Alliance sans casser la messagerie, sans bloquer les onglets, sans ralentir les changements de page. -->
-<script src="js/main.js?v=1667"></script>
-<script src="js/fragment-shop-stripe-patch.js?v=1667"></script>
+<script src="js/main.js?v=1668"></script>
+<script src="js/fragment-shop-stripe-patch.js?v=1668"></script>
 <!-- STELLARION 1.6.25 — Couche mobile : pinch-zoom galaxie + boutons zoom tactiles -->
-<script src="js/patch_1625_mobile.js?v=1667"></script>
+<script src="js/patch_1625_mobile.js?v=1668"></script>
 <!-- STELLARION 1.6.31 — Suppression des rapports de combat texte (format archive) -->
-<script src="js/patch_1631_reports.js?v=1667"></script>
+<script src="js/patch_1631_reports.js?v=1668"></script>
 <!-- STELLARION 1.6.32 — Construction : détail bâtiment en pop-up, colonnes supprimées -->
-<script src="js/patch_1632_building_popup.js?v=1667"></script>
+<script src="js/patch_1632_building_popup.js?v=1668"></script>
 <!-- STELLARION 1.6.35 — Anti-duplication de flotte (ledger) + réparation serveur -->
-<script src="js/patch_1634_fleet_ledger.js?v=1667"></script>
+<script src="js/patch_1634_fleet_ledger.js?v=1668"></script>
 </body>
 </html>
