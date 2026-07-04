@@ -3979,7 +3979,93 @@ function collectionEnsureState(){
   state.collectionSelectedId=((APPARAT_CATALOG||[]).find(a=>owned.has(a.id))||(APPARAT_CATALOG||[])[0]||{}).id;
  }
 }
-function selectApparat(id){collectionEnsureState();state.collectionSelectedId=id;save();render();}
+function apparatText1654(v){
+ return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});
+}
+function apparatDetailMobileMode1654(){
+ try{
+  const detail=document.querySelector&&document.querySelector(".cs-right,.cp-right");
+  if(detail&&window.getComputedStyle&&getComputedStyle(detail).display==="none")return true;
+  return (window.matchMedia&&window.matchMedia("(max-width: 900px)").matches) || (window.matchMedia&&window.matchMedia("(pointer: coarse)").matches);
+ }catch(e){return Math.min(window.innerWidth||9999,window.innerHeight||9999)<=900}
+}
+function apparatBonusRows1654(a){
+ const rows=Object.entries((a&&a.bonus)||{});
+ if(!rows.length)return `<div class="apparat-detail-empty1654">Aucun bonus permanent.</div>`;
+ return rows.map(function(pair){
+  const k=pair[0], v=Number(pair[1])||0;
+  return `<div class="apparat-detail-line1654"><span>${apparatText1654(bonusLabel(k,v).replace(/[+-]?\d+%$/,"").trim())}</span><b>${v>0?"+":""}${v}%</b></div>`;
+ }).join("");
+}
+function closeApparatDetailModal1654(){
+ const el=document.getElementById("apparat-detail-modal-1654");
+ if(el)el.remove();
+}
+function openApparatDetailModal1654(id){
+ collectionEnsureState();
+ const selected=(APPARAT_CATALOG||[]).find(function(a){return a.id===id;});
+ if(!selected)return false;
+ closeApparatDetailModal1654();
+ const p=activePlanet();
+ const meta=apparatRarityMeta(selected.rarity);
+ const equipped=activePlanetApparats();
+ const isEquipped=equipped.some(function(a){return a.id===selected.id;});
+ const owned=apparatOwned(selected.id);
+ const orbitFull=equipped.length>=3&&!isEquipped;
+ const actionText=isEquipped?"Retirer de l'orbite":(orbitFull?"Orbite complete (3/3)":"Mettre en orbite");
+ const modal=document.createElement("div");
+ modal.id="apparat-detail-modal-1654";
+ modal.className="apparat-detail-modal1654";
+ modal.setAttribute("role","dialog");
+ modal.setAttribute("aria-modal","true");
+ modal.innerHTML=`<div class="apparat-detail-card1654" style="--rarity:${meta.color}">
+  <button class="apparat-detail-close1654" type="button" aria-label="Fermer" onclick="closeApparatDetailModal1654()">×</button>
+  <div class="apparat-detail-hero1654">${apparatIconSvg(selected)}</div>
+  <span class="pill">DETAIL APPARAT</span>
+  <h2>${apparatText1654(selected.name)}</h2>
+  <div class="apparat-detail-rarity1654">${apparatText1654(meta.fr)}</div>
+  <p>${apparatText1654(selected.desc)}</p>
+  <div class="apparat-detail-box1654">
+   <div class="apparat-detail-line1654"><span>Taux de drop</span><b>${Number(selected.dropRate).toFixed(selected.dropRate<1?2:0)}%</b></div>
+   <div class="apparat-detail-line1654"><span>Possede</span><b>${owned?"Oui":"Non"}</b></div>
+   <div class="apparat-detail-line1654"><span>Statut</span><b>${isEquipped?apparatText1654(p.name):"Non equipe"}</b></div>
+   <div class="apparat-detail-line1654"><span>Serie</span><b>${apparatText1654(selected.series)}</b></div>
+  </div>
+  <h3>Bonus octroyes</h3>
+  <div class="apparat-detail-box1654">${apparatBonusRows1654(selected)}</div>
+  <button class="btn ${isEquipped?"btn-danger":"btn-gold"} apparat-detail-action1654" ${owned&&!orbitFull?"":"disabled"} onclick="closeApparatDetailModal1654();equipApparatToPlanet('${String(selected.id).replace(/'/g,"\\'")}')">${actionText}</button>
+ </div>`;
+ modal.addEventListener("click",function(e){if(e.target===modal)closeApparatDetailModal1654();});
+ document.body.appendChild(modal);
+ return true;
+}
+window.closeApparatDetailModal1654=closeApparatDetailModal1654;
+window.openApparatDetailModal1654=openApparatDetailModal1654;
+if(!window.apparatMobileClickBound1654){
+ window.apparatMobileClickBound1654=true;
+ document.addEventListener("click",function(e){
+  if(!apparatDetailMobileMode1654())return;
+  const card=e.target&&e.target.closest?e.target.closest("[data-apparat-id]"):null;
+  if(!card||!document.body||!document.body.classList.contains("view-collection"))return;
+  const id=card.getAttribute("data-apparat-id");
+  if(!id)return;
+  e.preventDefault();
+  e.stopPropagation();
+  selectApparat(id);
+ },true);
+}
+function selectApparat(id){
+ collectionEnsureState();
+ state.collectionSelectedId=id;
+ save();
+ if(apparatDetailMobileMode1654()){
+  openApparatDetailModal1654(id);
+  return false;
+ }
+ render();
+ return true;
+}
+window.selectApparat=selectApparat;
 function equipApparatToPlanet(id){
  collectionEnsureState();
  id=String(id||"").trim();
@@ -4074,7 +4160,7 @@ function collectionView(){
      <input class="cp-search" placeholder="Rechercher un apparat..." value="${f.q||''}" oninput="setCollectionFilter('q',this.value)">
      <select class="cp-select" onchange="setCollectionFilter('series',this.value)"><option value="all">Toutes séries</option>${[...new Map(APPARAT_CATALOG.map(a=>[a.seriesId,a.series])).entries()].map(([id,name])=>`<option value="${id}" ${f.series===id?'selected':''}>${name}</option>`).join("")}</select>
     </div>
-    <div class="cp-grid">${list.map(a=>{const m=apparatRarityMeta(a.rarity),owned=apparatOwned(a.id);return `<div class="cp-item ${owned?'':'locked'} ${a.id===selected.id?'selected':''}" style="--rarity:${m.color}" onclick="selectApparat('${a.id}')"><span class="cp-rarity-pill">${m.fr}</span><span class="cp-lock">${owned?'◆':'🔒'}</span><div class="artifact-card-icon">${apparatIconSvg(a)}</div><h3>${a.name}</h3><div class="drop">${Number(a.dropRate).toFixed(a.dropRate<1?2:0)}%</div></div>`}).join("")}</div>
+    <div class="cp-grid">${list.map(a=>{const m=apparatRarityMeta(a.rarity),owned=apparatOwned(a.id);return `<div class="cp-item ${owned?'':'locked'} ${a.id===selected.id?'selected':''}" data-apparat-id="${a.id}" style="--rarity:${m.color}" onclick="selectApparat('${a.id}')"><span class="cp-rarity-pill">${m.fr}</span><span class="cp-lock">${owned?'◆':'🔒'}</span><div class="artifact-card-icon">${apparatIconSvg(a)}</div><h3>${a.name}</h3><div class="drop">${Number(a.dropRate).toFixed(a.dropRate<1?2:0)}%</div></div>`}).join("")}</div>
    </section>
   </main>
   <aside class="cp-panel cp-right" style="--rarity:${apparatRarityMeta(selected.rarity).color}">
@@ -10030,7 +10116,7 @@ setTimeout(initAuth, 0);
       const arr=list.filter(a=>a.rarity===r);
       if(!arr.length)return "";
       const m=apparatRarityMeta(r);
-      return `<section class="cs-row" style="--rarity:${m.color}"><div class="cs-row-head">${m.fr} · ${Number(m.drop).toFixed(m.drop<1?2:2)}% · ${arr.length} objets</div><div class="cs-grid">${arr.map(a=>{const owned=apparatOwned(a.id), selected=state.collectionSelectedId===a.id;return `<div class="cs-item ${owned?"":"locked"} ${selected?"selected":""}" style="--rarity:${m.color}" onclick="selectApparat('${a.id}')"><span class="cs-owned-mark">${owned?"◆":"🔒"}</span>${apparatIconSvg(a)}<h3>${a.name}</h3><small>${Object.entries(a.bonus||{}).map(([k,v])=>`${v>0?"+":""}${v}% ${k}`).slice(0,1).join("")}</small></div>`}).join("")}</div></section>`;
+      return `<section class="cs-row" style="--rarity:${m.color}"><div class="cs-row-head">${m.fr} · ${Number(m.drop).toFixed(m.drop<1?2:2)}% · ${arr.length} objets</div><div class="cs-grid">${arr.map(a=>{const owned=apparatOwned(a.id), selected=state.collectionSelectedId===a.id;return `<div class="cs-item ${owned?"":"locked"} ${selected?"selected":""}" data-apparat-id="${a.id}" style="--rarity:${m.color}" onclick="selectApparat('${a.id}')"><span class="cs-owned-mark">${owned?"◆":"🔒"}</span>${apparatIconSvg(a)}<h3>${a.name}</h3><small>${Object.entries(a.bonus||{}).map(([k,v])=>`${v>0?"+":""}${v}% ${k}`).slice(0,1).join("")}</small></div>`}).join("")}</div></section>`;
     }).join("");
   }
   window.collectionView=function(){
@@ -10061,6 +10147,43 @@ setTimeout(initAuth, 0);
   setTimeout(()=>{if(typeof state!=="undefined"&&state.view==="collection"&&typeof render==="function")render();},0);
 })();
 ;
+
+/* STELLARION 1.6.69b — Apparats mobile : le clic ouvre la fiche detail.
+   Patch tardif, apres le showcase actif, pour gagner sur les anciens handlers inline. */
+(function(){
+  if(window.__stellarionApparatMobileDetail1669b)return;
+  window.__stellarionApparatMobileDetail1669b=true;
+  function mobileDetailMode(){
+    try{
+      const detail=document.querySelector(".cs-right,.cp-right");
+      if(detail&&getComputedStyle(detail).display==="none")return true;
+      return (matchMedia("(max-width: 900px)").matches||matchMedia("(pointer: coarse)").matches);
+    }catch(e){return Math.min(innerWidth||9999,innerHeight||9999)<=900}
+  }
+  const oldSelect=typeof selectApparat==="function"?selectApparat:null;
+  window.selectApparat=function(id){
+    try{
+      collectionEnsureState();
+      state.collectionSelectedId=String(id||"");
+      save();
+      if(mobileDetailMode()&&typeof openApparatDetailModal1654==="function"){
+        openApparatDetailModal1654(String(id||""));
+        return false;
+      }
+    }catch(e){}
+    if(oldSelect)return oldSelect(id);
+    try{render();}catch(e){}
+    return false;
+  };
+  document.addEventListener("click",function(e){
+    if(!mobileDetailMode())return;
+    const card=e.target&&e.target.closest?e.target.closest(".cs-item[data-apparat-id],.cp-item[data-apparat-id]"):null;
+    if(!card||!document.body.classList.contains("view-collection"))return;
+    e.preventDefault();
+    e.stopPropagation();
+    window.selectApparat(card.getAttribute("data-apparat-id"));
+  },true);
+})();
 
 /* ---- bloc script (source: ligne ~16697) ---- */
 /* Alpha 1.3.45 — Menaces Galactiques Canvas Direct Patch */

@@ -13616,3 +13616,276 @@ body.view-planet .planet-showcase-board,
 body.stable-ui1542b.view-planet .planet-showcase-board{
   min-width:0!important;
 }
+
+/* === STELLARION 1.6.69 — Mobile apparats + coffres lisibles ===
+   Collection : la fiche detail n'occupe plus une colonne sur mobile.
+   Coffres : cartes empilees proprement, sans hauteur fixe ni tassement. */
+.apparat-detail-modal1654{
+  position:fixed!important;
+  inset:0!important;
+  z-index:2147483600!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:14px!important;
+  background:rgba(2,5,16,.76)!important;
+  backdrop-filter:blur(7px)!important;
+}
+.apparat-detail-card1654{
+  position:relative!important;
+  box-sizing:border-box!important;
+  width:min(440px,calc(100vw - 22px))!important;
+  max-height:calc(100dvh - 24px)!important;
+  overflow:auto!important;
+  border:1px solid color-mix(in srgb,var(--rarity,#4fc3f7) 58%,rgba(255,255,255,.08))!important;
+  border-radius:18px!important;
+  padding:16px!important;
+  color:#f7fbff!important;
+  background:
+    radial-gradient(circle at 50% 0%,color-mix(in srgb,var(--rarity,#4fc3f7) 22%,transparent),transparent 42%),
+    linear-gradient(180deg,rgba(8,19,39,.98),rgba(2,7,18,.98))!important;
+  box-shadow:0 24px 90px rgba(0,0,0,.62),0 0 34px color-mix(in srgb,var(--rarity,#4fc3f7) 24%,transparent)!important;
+}
+.apparat-detail-close1654{
+  position:absolute!important;
+  top:10px!important;
+  right:10px!important;
+  width:38px!important;
+  height:38px!important;
+  border-radius:50%!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+  color:#fff!important;
+  background:rgba(255,255,255,.08)!important;
+  font-size:26px!important;
+  line-height:1!important;
+}
+.apparat-detail-hero1654{
+  display:grid!important;
+  place-items:center!important;
+  min-height:150px!important;
+}
+.apparat-detail-hero1654 .artifact-icon{
+  width:180px!important;
+  height:140px!important;
+  margin:0!important;
+}
+.apparat-detail-card1654 h2{
+  margin:10px 0 4px!important;
+  color:#ffd54f!important;
+  font-size:24px!important;
+  line-height:1.1!important;
+}
+.apparat-detail-card1654 h3{
+  margin:14px 0 8px!important;
+  color:#7dd3fc!important;
+  font-size:12px!important;
+  text-transform:uppercase!important;
+}
+.apparat-detail-card1654 p{
+  margin:10px 0!important;
+  color:#b8c7d7!important;
+  line-height:1.45!important;
+}
+.apparat-detail-rarity1654{
+  color:var(--rarity,#4fc3f7)!important;
+  font-weight:1000!important;
+  text-transform:uppercase!important;
+}
+.apparat-detail-box1654{
+  display:grid!important;
+  gap:8px!important;
+  border:1px solid rgba(255,255,255,.10)!important;
+  border-radius:14px!important;
+  padding:10px!important;
+  background:rgba(255,255,255,.045)!important;
+}
+.apparat-detail-line1654{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:10px!important;
+  align-items:center!important;
+  min-height:32px!important;
+  color:#c7d7e6!important;
+}
+.apparat-detail-line1654 b{
+  color:#69f0ae!important;
+  white-space:nowrap!important;
+}
+.apparat-detail-action1654{
+  width:100%!important;
+  min-height:46px!important;
+  margin-top:14px!important;
+}
+
+@media(max-width:900px),(pointer:coarse){
+  body.view-collection .collection-premium,
+  body.view-collection .collection-showcase1327{
+    grid-template-columns:1fr!important;
+    grid-template-rows:auto!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    overflow:visible!important;
+    padding:10px!important;
+    gap:12px!important;
+  }
+  body.view-collection .cp-right,
+  body.view-collection .cs-right{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+  body.view-collection .cp-main,
+  body.view-collection .cs-main{
+    width:100%!important;
+    min-width:0!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  body.view-collection .cs-left{
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  body.view-collection .cs-rarity-strip{
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+    padding:10px!important;
+  }
+  body.view-collection .cs-title{
+    grid-column:1/-1!important;
+  }
+  body.view-collection .cs-title h1{
+    font-size:22px!important;
+  }
+  body.view-collection .cs-grid,
+  body.view-collection .cp-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+    max-height:none!important;
+    overflow:visible!important;
+    padding:0 2px 10px!important;
+  }
+  body.view-collection .cs-item,
+  body.view-collection .cp-item{
+    height:auto!important;
+    min-height:150px!important;
+    padding:10px 7px!important;
+  }
+  body.view-collection .cs-item .artifact-icon{
+    width:86px!important;
+    height:72px!important;
+  }
+
+  body.view-chests,
+  html:has(body.view-chests){
+    overflow:auto!important;
+  }
+  body.view-chests #app,
+  body.view-chests #center{
+    height:auto!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  body.view-chests .layout,
+  body.view-chests .layout.has-bottom-queue{
+    grid-template-columns:1fr!important;
+    height:auto!important;
+    max-height:none!important;
+    overflow:visible!important;
+    padding:0 10px 24px!important;
+  }
+  body.view-chests .side.left,
+  body.view-chests .side.right{
+    display:none!important;
+  }
+  body.view-chests #center > .chests-page1525{
+    box-sizing:border-box!important;
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    grid-template-rows:auto auto auto auto!important;
+    gap:16px!important;
+    width:100%!important;
+    height:auto!important;
+    max-height:none!important;
+    min-height:0!important;
+    overflow:visible!important;
+    padding:12px 0 26px!important;
+    align-content:start!important;
+  }
+  body.view-chests .chests-head1525{
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+    padding:14px!important;
+  }
+  body.view-chests .chest-frag-counter1525{
+    width:100%!important;
+    justify-content:space-between!important;
+  }
+  body.view-chests .chests-grid1525{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:18px!important;
+    height:auto!important;
+    max-height:none!important;
+    overflow:visible!important;
+    padding:0!important;
+  }
+  body.view-chests .chest-card1525{
+    box-sizing:border-box!important;
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    overflow:visible!important;
+    padding:16px!important;
+    margin:0!important;
+    border-radius:18px!important;
+  }
+  body.view-chests .chest-card1525 .chest-icon1525{
+    grid-row:auto!important;
+    width:74px!important;
+    height:74px!important;
+    margin:0 auto!important;
+  }
+  body.view-chests .chest-card1525 h3{
+    margin:0!important;
+    font-size:20px!important;
+    text-align:center!important;
+  }
+  body.view-chests .chest-card1525 p{
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    overflow:visible!important;
+    margin:0!important;
+    font-size:13px!important;
+    line-height:1.45!important;
+    text-align:center!important;
+  }
+  body.view-chests .chest-card1525 .chest-table1525{
+    display:grid!important;
+    gap:7px!important;
+    height:auto!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  body.view-chests .chest-card1525 .chest-table1525 div{
+    min-height:34px!important;
+    padding:7px 9px!important;
+  }
+  body.view-chests .chest-card1525 .btn,
+  body.view-chests .chest-card1525 button{
+    width:100%!important;
+    min-height:44px!important;
+    margin-top:4px!important;
+  }
+  body.view-chests .duplicate-stock1526,
+  body.view-chests .chest-history1525{
+    height:auto!important;
+    max-height:none!important;
+    overflow:visible!important;
+    padding:14px!important;
+  }
+}
