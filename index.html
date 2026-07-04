@@ -5,15 +5,15 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>Stellarion V1 CLOUD ONLY — Alliances corrigées</title>
-<link rel="stylesheet" href="css/main.css?v=1653">
-<link rel="stylesheet" href="css/mobile.css?v=1643">
+<link rel="stylesheet" href="css/main.css?v=1654">
+<link rel="stylesheet" href="css/mobile.css?v=1654">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
 
 <meta name="theme-color" content="#020510">
 <meta property="og:title" content="Stellarion">
 <meta property="og:description" content="Age des Conquérants Stellaires">
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.min.js?v=1654"></script>
 
 <!-- STELLARION CORE PACK v0.2 — début -->
 
@@ -58,17 +58,19 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
 <!-- STELLARION 1.5.78 — Alliance native field fix
      Objectif : réparer le focus Alliance sans casser la messagerie, sans bloquer les onglets, sans ralentir les changements de page. -->
-<script src="js/main.js?v=1652"></script>
-<script src="js/fragment-shop-stripe-patch.js?v=1634"></script>
+<script src="js/main.js?v=1654"></script>
+<script src="js/fragment-shop-stripe-patch.js?v=1654"></script>
 <!-- STELLARION 1.6.25 — Couche mobile : pinch-zoom galaxie + boutons zoom tactiles -->
-<script src="js/patch_1625_mobile.js?v=1652"></script>
-<!-- STELLARION 1.6.45 — Scène universelle mobile : rendu homogène tous iPhone -->
-<script src="js/patch_1645_stage_universel.js?v=1652"></script>
+<script src="js/patch_1625_mobile.js?v=1654"></script>
 <!-- STELLARION 1.6.31 — Suppression des rapports de combat texte (format archive) -->
-<script src="js/patch_1631_reports.js?v=1634"></script>
+<script src="js/patch_1631_reports.js?v=1654"></script>
 <!-- STELLARION 1.6.32 — Construction : détail bâtiment en pop-up, colonnes supprimées -->
-<script src="js/patch_1632_building_popup.js?v=1634"></script>
+<script src="js/patch_1632_building_popup.js?v=1654"></script>
 <!-- STELLARION 1.6.35 — Anti-duplication de flotte (ledger) + réparation serveur -->
-<script src="js/patch_1634_fleet_ledger.js?v=1635"></script>
+<script src="js/patch_1634_fleet_ledger.js?v=1654"></script>
+<!-- STELLARION 1.6.43 — Compaction mobile (topbar, ressources, colonnes) -->
+<script src="js/patch_1643_mobile_safe.js?v=1654"></script>
+<!-- STELLARION 1.6.45 — Scène universelle mobile : TOUJOURS EN DERNIER -->
+<script src="js/patch_1645_stage_universel.js?v=1654"></script>
 </body>
 </html>
