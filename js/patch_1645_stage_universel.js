@@ -133,11 +133,59 @@ html.st-stage1645 body #center{
   height:100%!important;
   overflow:auto!important;
   -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-y!important;
+  overscroll-behavior:contain!important;
 }
 html.st-stage1645 body .gwm-stage{
   height:100%!important;
   min-height:0!important;
   overflow:hidden!important;
+}
+
+/* Mobile : ces pages doivent garder uniquement la zone centrale, sans colonne droite. */
+html.st-stage1645 body.view-defenses .layout,
+html.st-stage1645 body.view-leaderboards .layout,
+html.st-stage1645 body.view-market .layout,
+html.st-stage1645 body.view-alliance .layout,
+html.st-stage1645 body.view-chests .layout{
+  grid-template-columns:1fr!important;
+}
+html.st-stage1645 body.view-defenses .layout>.side.right,
+html.st-stage1645 body.view-leaderboards .layout>.side.right,
+html.st-stage1645 body.view-market .layout>.side.right,
+html.st-stage1645 body.view-alliance .layout>.side.right,
+html.st-stage1645 body.view-chests .layout>.side.right,
+html.st-stage1645 body.view-defenses .layout>.right,
+html.st-stage1645 body.view-leaderboards .layout>.right,
+html.st-stage1645 body.view-market .layout>.right,
+html.st-stage1645 body.view-alliance .layout>.right,
+html.st-stage1645 body.view-chests .layout>.right{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+html.st-stage1645 body.view-defenses #center,
+html.st-stage1645 body.view-leaderboards #center,
+html.st-stage1645 body.view-market #center,
+html.st-stage1645 body.view-alliance #center,
+html.st-stage1645 body.view-chests #center{
+  grid-column:1 / -1!important;
+  width:100%!important;
+  max-width:100%!important;
+}
+html.st-stage1645 body.view-leaderboards .lbf-page,
+html.st-stage1645 body.view-market .market-p2p-clean,
+html.st-stage1645 body.view-alliance .alliance-cx-wrap,
+html.st-stage1645 body.view-alliance .alliance-cx-dashboard,
+html.st-stage1645 body.view-chests .chests-page1525{
+  grid-template-columns:1fr!important;
+}
+html.st-stage1645 body.view-leaderboards .lbf-side,
+html.st-stage1645 body.view-market .market-side,
+html.st-stage1645 body.view-market .market-side-card,
+html.st-stage1645 body.view-alliance .alliance-cx-side,
+html.st-stage1645 body.view-chests .chests-right-planet1532{
+  display:none!important;
 }
 /* Pop-up construction 1632 : bornée à la scène, plus au viewport réel */
 html.st-stage1645 body .bpop1632{
@@ -224,8 +272,89 @@ html.st-stage1645 body #stellarion-scrollrail1628{display:none!important}
     setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 20000);
   }
 
+  /* ---------- Navigation tactile gauche/droite entre pages ---------- */
+  var swipeState = null;
+  var swipeLock = false;
+  var swipePages = ["galaxy", "planet", "fleet", "buildings", "defenses", "leaderboards", "collection", "market", "alliance", "messages", "chests"];
+
+  function currentPageId() {
+    var v = "";
+    try { v = (window.state && window.state.view) || ""; } catch (e) {}
+    if (!v && document.body) {
+      var cls = String(document.body.className || "").split(/\s+/).filter(function (c) { return c.indexOf("view-") === 0; })[0] || "";
+      v = cls.replace(/^view-/, "");
+    }
+    if (v === "ships") return "fleet";
+    if (swipePages.indexOf(v) >= 0) return v;
+    return "galaxy";
+  }
+
+  function swipeTarget(ev) {
+    var t = ev && ev.target;
+    if (!t || !t.closest) return false;
+    if (t.closest("input,textarea,select,button,a,[role='button'],.btn,.carousel-container,.modal,.popup,.alliance-cx-modal,.fragment-shop-modal1546,.bpop1632-backdrop,#auth-screen")) return false;
+    return true;
+  }
+
+  function gotoSwipePage(dir) {
+    if (swipeLock) return;
+    var cur = currentPageId();
+    var i = swipePages.indexOf(cur);
+    if (i < 0) return;
+    var next = swipePages[i + dir];
+    if (!next) return;
+    swipeLock = true;
+    try {
+      var btn = document.querySelector('[data-carousel-page="' + next + '"]');
+      if (btn) btn.click();
+      else if (typeof window.carouselGoToPage === "function") window.carouselGoToPage(next);
+      else if (typeof window.setView === "function") window.setView(next === "fleet" ? "ships" : next);
+    } catch (e) {}
+    setTimeout(function () { swipeLock = false; }, 420);
+  }
+
+  function installSwipe() {
+    if (window.__stellarionStageSwipe1645) return;
+    window.__stellarionStageSwipe1645 = true;
+
+    function beginSwipe(ev, point) {
+      if (!phone() || off() || !document.documentElement.classList.contains("st-stage1645")) return;
+      if (!swipeTarget(ev)) return;
+      swipeState = { x: point.clientX, y: point.clientY, t: Date.now(), id: ev.pointerId || "mouse" };
+    }
+
+    function endSwipe(ev, point) {
+      if (!swipeState) return;
+      if (ev.pointerId && ev.pointerId !== swipeState.id) { swipeState = null; return; }
+      var dx = point.clientX - swipeState.x;
+      var dy = point.clientY - swipeState.y;
+      var dt = Date.now() - swipeState.t;
+      swipeState = null;
+      if (dt > 650 || Math.abs(dx) < 72 || Math.abs(dx) < Math.abs(dy) * 1.45) return;
+      gotoSwipePage(dx < 0 ? 1 : -1);
+    }
+
+    document.addEventListener("pointerdown", function (ev) {
+      if (ev.pointerType && ev.pointerType !== "touch" && ev.pointerType !== "mouse") return;
+      beginSwipe(ev, ev);
+    }, { passive: true, capture: true });
+    document.addEventListener("pointerup", function (ev) {
+      endSwipe(ev, ev);
+    }, { passive: true, capture: true });
+    document.addEventListener("pointercancel", function () { swipeState = null; }, { passive: true, capture: true });
+    document.addEventListener("touchstart", function (ev) {
+      if (ev.touches && ev.touches.length === 1) beginSwipe(ev, ev.touches[0]);
+    }, { passive: true, capture: true });
+    document.addEventListener("touchend", function (ev) {
+      if (ev.changedTouches && ev.changedTouches.length) endSwipe(ev, ev.changedTouches[0]);
+    }, { passive: true, capture: true });
+    document.addEventListener("mousedown", function (ev) { beginSwipe(ev, ev); }, { passive: true, capture: true });
+    document.addEventListener("mouseup", function (ev) { endSwipe(ev, ev); }, { passive: true, capture: true });
+  }
+
   /* ---------- Boot ---------- */
   fit();
+  installSwipe();
   document.addEventListener("DOMContentLoaded", function () { fit(); maybeWarnFontScale(); });
   window.addEventListener("load", function () { fit(); maybeWarnFontScale(); });
   window.addEventListener("resize", function () { setTimeout(fit, 60); }, { passive: true });
