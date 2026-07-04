@@ -135,6 +135,45 @@
     if (openId != null && window.state && window.state.view !== "buildings") close();
   }, 800);
 
+  /* ---------- 4) Garde-scroll : AMÉLIORER ne remonte plus la page ----------
+     queueBuilding() déclenche render(), qui reconstruit #app et remet le
+     scroll à zéro. Le jeu protège le clic sur les cartes
+     (__stellarionKeepConstructionScroll) mais pas les boutons AMÉLIORER.
+     Ici : au clic sur n'importe quel bouton de la page Construction (pop-up
+     inclus), on mémorise toutes les positions de scroll et on les restaure
+     après le re-rendu (plusieurs passes, car le render est asynchrone). */
+  function snapshotScroll() {
+    var snap = { win: window.scrollY || window.pageYOffset || 0, els: [] };
+    [".cmain1632", ".cmain1542f", ".layout", "#center", ".bpop1632"].forEach(function (sel) {
+      document.querySelectorAll(sel).forEach(function (el) {
+        if (el.scrollTop > 0 || el.scrollLeft > 0)
+          snap.els.push({ sel: sel, top: el.scrollTop, left: el.scrollLeft });
+      });
+    });
+    return snap;
+  }
+  function restoreScroll(snap) {
+    if (!snap) return;
+    if (snap.win > 0) window.scrollTo(0, snap.win);
+    snap.els.forEach(function (s) {
+      var el = document.querySelector(s.sel);
+      if (el) { el.scrollTop = s.top; el.scrollLeft = s.left; }
+    });
+  }
+  document.addEventListener("click", function (ev) {
+    var t = ev.target;
+    if (!t || !t.closest) return;
+    var inPopup = !!t.closest("#bpop1632-backdrop");
+    var onBuildings = window.state && window.state.view === "buildings";
+    if (!inPopup && !onBuildings) return;
+    if (!t.closest("button,.btn")) return;
+    var snap = snapshotScroll();
+    // Restauration en plusieurs passes : le render passe par des délayeurs
+    [0, 60, 160, 350, 700].forEach(function (ms) {
+      setTimeout(function () { restoreScroll(snap); }, ms);
+    });
+  }, true);
+
   window.stellarionBuildingPopupAudit1632 = function () {
     return {
       patch: "building-popup-1.6.32",
