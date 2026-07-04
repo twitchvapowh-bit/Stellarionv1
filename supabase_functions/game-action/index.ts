@@ -101,8 +101,9 @@ Deno.serve(async (req) => {
     const isolateBootAction = action === "bootstrap" || action === "state";
     const isolateProcessAction = action === "process";
     const isolateFleetLaunchAction = action === "launch_fleet";
+    const fullProcessBeforeAction = action === "resolve_player_attack";
     let queueWarning: string | null = null;
-    if (!isolateChestAction && !isolateBootAction && !isolateProcessAction && !isolateFleetLaunchAction) {
+    if (fullProcessBeforeAction) {
       await processQueues(admin, supaUser, user.id);
     } else if (isolateProcessAction || isolateFleetLaunchAction) {
       try { await processQueues(admin, supaUser, user.id); }
@@ -150,7 +151,7 @@ Deno.serve(async (req) => {
     }
 
     await accrueResources(admin, user.id);
-    if (!isolateChestAction && !isolateBootAction && !isolateProcessAction && !isolateFleetLaunchAction) {
+    if (fullProcessBeforeAction) {
       await processQueues(admin, supaUser, user.id);
     } else if (isolateProcessAction || isolateFleetLaunchAction) {
       try { await processQueues(admin, supaUser, user.id); }
@@ -751,7 +752,7 @@ async function finishBuilding(admin: any, playerId: string, body: any) {
   await setResources(admin, playerId, r);
   const up = await admin.from("game_build_queue").update({ finish_at:new Date().toISOString() }).eq("id", id).eq("player_id", playerId);
   if (up.error) throw up.error;
-  await processQueues(admin, playerId);
+  await processQueuesSafeNoCombat(admin, playerId);
   return `Construction terminee cote serveur avec ${price} fragments.`;
 }
 
@@ -787,7 +788,7 @@ async function finishShip(admin: any, playerId: string, body: any) {
   await setResources(admin, playerId, r);
   const up = await admin.from("game_ship_queue").update({ finish_at:new Date().toISOString() }).eq("id", id).eq("player_id", playerId);
   if (up.error) throw up.error;
-  await processQueues(admin, playerId);
+  await processQueuesSafeNoCombat(admin, playerId);
   return `Formation terminee cote serveur avec ${price} fragments.`;
 }
 
