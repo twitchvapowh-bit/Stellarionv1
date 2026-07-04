@@ -176,3 +176,91 @@
   if (document.body) inject();
   else document.addEventListener("DOMContentLoaded", inject);
 })();
+
+/* STELLARION 1.6.28 — Rail de scroll tactile à droite de chaque page.
+   iOS/Android masquent les barres natives : on injecte un rail fixe avec
+   un curseur glissable au doigt. Suit le scroll de la page, se masque
+   automatiquement quand la page tient dans l'écran. */
+(function () {
+  "use strict";
+  if (window.__stellarionScrollRail1628) return;
+  window.__stellarionScrollRail1628 = true;
+
+  var rail = null, thumb = null, dragging = false, dragStartY = 0, dragStartScroll = 0;
+
+  function docH() {
+    var d = document.documentElement, b = document.body;
+    return Math.max(d ? d.scrollHeight : 0, b ? b.scrollHeight : 0);
+  }
+  function maxScroll() { return Math.max(0, docH() - window.innerHeight); }
+
+  function ensureRail() {
+    if (rail || !document.body) return;
+    rail = document.createElement("div");
+    rail.id = "stellarion-scrollrail1628";
+    thumb = document.createElement("div");
+    thumb.className = "thumb";
+    rail.appendChild(thumb);
+    document.body.appendChild(rail);
+
+    // Glisser le curseur (ou taper le rail) => scroll proportionnel
+    rail.addEventListener("pointerdown", function (e) {
+      dragging = true;
+      rail.classList.add("dragging");
+      rail.setPointerCapture && rail.setPointerCapture(e.pointerId);
+      dragStartY = e.clientY;
+      dragStartScroll = window.scrollY;
+      // Tap direct sur le rail (hors curseur) : saute à la position
+      if (e.target === rail) {
+        var r = rail.getBoundingClientRect();
+        var ratio = (e.clientY - r.top) / Math.max(1, r.height);
+        window.scrollTo(0, ratio * maxScroll());
+        dragStartScroll = window.scrollY;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    rail.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      var r = rail.getBoundingClientRect();
+      var deltaRatio = (e.clientY - dragStartY) / Math.max(1, r.height);
+      window.scrollTo(0, dragStartScroll + deltaRatio * docH());
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    function endDrag() { dragging = false; if (rail) rail.classList.remove("dragging"); }
+    rail.addEventListener("pointerup", endDrag);
+    rail.addEventListener("pointercancel", endDrag);
+  }
+
+  function update() {
+    if (!rail) return;
+    var ms = maxScroll();
+    if (ms < 40) {
+      rail.classList.remove("visible");
+      document.body.classList.remove("stellarion-has-rail1628");
+      return;
+    }
+    rail.classList.add("visible");
+    document.body.classList.add("stellarion-has-rail1628");
+
+    var railH = rail.getBoundingClientRect().height || 1;
+    var thumbH = Math.max(44, railH * (window.innerHeight / Math.max(1, docH())));
+    var topMax = railH - thumbH;
+    var top = topMax * (window.scrollY / ms);
+    thumb.style.height = thumbH + "px";
+    thumb.style.top = Math.min(topMax, Math.max(0, top)) + "px";
+  }
+
+  function boot() {
+    ensureRail();
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update, { passive: true });
+    // Le contenu change à chaque render() : on resynchronise régulièrement
+    setInterval(update, 700);
+  }
+
+  if (document.body) boot();
+  else document.addEventListener("DOMContentLoaded", boot);
+})();

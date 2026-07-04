@@ -343,3 +343,43 @@ body.stellarion-rotate-dismissed1626 #stellarion-rotate1626 { display: none !imp
   }
   .gwm-footer { display: none !important; }
 }
+
+/* ============================================================
+   STELLARION 1.6.28 — BARRE DE SCROLL TACTILE (rail droit)
+   Injectée par le patch JS. Visible uniquement sur écran tactile
+   et seulement quand la page est réellement scrollable.
+   Le curseur se glisse au doigt pour naviguer dans la page.
+   ============================================================ */
+#stellarion-scrollrail1628 {
+  position: fixed;
+  top: 8px;
+  right: 3px;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  width: 14px;
+  z-index: 99998;
+  display: none;
+  border-radius: 8px;
+  background: rgba(79, 195, 247, .07);
+  touch-action: none;
+}
+@media (hover: none) and (pointer: coarse) {
+  #stellarion-scrollrail1628.visible { display: block; }
+}
+#stellarion-scrollrail1628 .thumb {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  min-height: 44px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(79, 195, 247, .75), rgba(58, 143, 212, .75));
+  border: 1px solid rgba(79, 195, 247, .5);
+  box-shadow: 0 0 10px rgba(79, 195, 247, .35);
+}
+#stellarion-scrollrail1628.dragging .thumb {
+  background: linear-gradient(180deg, #4FC3F7, #3a8fd4);
+}
+/* La page laisse un peu de place au rail pour ne rien masquer */
+@media (hover: none) and (pointer: coarse) {
+  body.stellarion-has-rail1628 #center,
+  body.stellarion-has-rail1628 .layout { padding-right: 16px !important; }
+}
