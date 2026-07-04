@@ -5,15 +5,15 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>Stellarion V1 CLOUD ONLY — Alliances corrigées</title>
-<link rel="stylesheet" href="css/main.css?v=1659">
-<link rel="stylesheet" href="css/mobile.css?v=1659">
+<link rel="stylesheet" href="css/main.css?v=1660">
+<link rel="stylesheet" href="css/mobile.css?v=1660">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
 
 <meta name="theme-color" content="#020510">
 <meta property="og:title" content="Stellarion">
 <meta property="og:description" content="Age des Conquérants Stellaires">
 
-<script src="js/supabase.min.js?v=1659"></script>
+<script src="js/supabase.min.js?v=1660"></script>
 <script>if(!window.supabase){document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');}</script>
 
 <!-- STELLARION CORE PACK v0.2 — début -->
@@ -56,8 +56,8 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
   </div>
 </div>
 <div id="app"></div>
-<!-- STELLARION MOBILE R2.1 — moteur mobile INLINE. Ressources à la demande (bouton 💎),
-     colonnes empilées, carrousel amarré en bas, galaxie pleine hauteur. -->
+<!-- STELLARION MOBILE R2.2 — moteur mobile INLINE. Topbar (☰) et ressources (💎) à la demande,
+     largeur logique 1100/480 pour vue globale, carrousel amarré en bas. -->
 <script>
 (function () {
   "use strict";
@@ -72,8 +72,8 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
   window.__stellarionMobileReal1641 = true;
   window.__stellarionMobileCanary1642 = true;
 
-  var W_LANDSCAPE = 932;  // largeur logique commune a tous les telephones
-  var W_PORTRAIT = 430;
+  var W_LANDSCAPE = 1100;  // largeur logique commune a tous les telephones
+  var W_PORTRAIT = 480;
 
   function phone() {
     return /iphone|ipad|ipod|android/i.test(navigator.userAgent || "") ||
@@ -118,11 +118,16 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 "body.stR2.stR2auth #app,body.stR2.stR2auth .topbar,body.stR2.stR2auth .carousel-container,body.stR2.stR2auth .stable-resourcebar1542b,body.stR2.stR2auth .layout,body.stR2.stR2auth #st-r2-nav,body.stR2.stR2auth #st-r2-badge,body.stR2.stR2auth .bottom-queue{display:none!important}\n" +
 "body.stR2 #auth-screen{position:fixed!important;inset:0!important;width:100%!important;height:100dvh!important;min-height:100dvh!important;max-width:100%!important;overflow:auto!important;padding:14px!important;box-sizing:border-box!important;align-items:center!important;justify-content:center!important}\n" +
 "body.stR2 #auth-screen>div{width:min(420px,92%)!important;max-width:92%!important;margin:auto!important;padding:0!important}\n" +
-"/* --- Topbar : une seule ligne compacte (annule la media query 1000px de main.css) --- */\n" +
-"body.stR2 .topbar{flex-direction:row!important;align-items:center!important;gap:6px!important;width:100%!important;max-width:100%!important;height:48px!important;min-height:48px!important;max-height:48px!important;padding:3px 8px!important;overflow-x:auto!important;overflow-y:hidden!important;box-sizing:border-box!important;scrollbar-width:none!important}\n" +
-"body.stR2 .topbar::-webkit-scrollbar{display:none!important}\n" +
-"body.stR2 .topbar>*{flex:0 0 auto!important;min-height:0!important;max-height:44px!important;overflow:hidden!important}\n" +
-"body.stR2 .topbar .small,body.stR2 .topbar .muted{display:none!important}\n" +
+"/* --- R2.2 : topbar CACHEE par defaut, overlay sur demande (bouton menu) --- */\n" +
+"body.stR2 .topbar{display:none!important}\n" +
+"body.stR2.stR2top .topbar{display:flex!important;position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:591!important;box-shadow:0 14px 34px rgba(0,0,0,.55)!important;background:rgba(4,11,24,.97)!important}\n" +
+"body.stR2 #st-r2-top{position:fixed!important;top:7px!important;left:8px!important;z-index:602!important;width:38px!important;height:34px!important;border-radius:10px!important;border:1px solid rgba(79,195,247,.4)!important;background:rgba(10,24,46,.94)!important;color:#4FC3F7!important;font:800 15px system-ui,Arial!important;cursor:pointer!important}\n" +
+"body.stR2.stR2top #st-r2-top{background:#4FC3F7!important;color:#04162e!important}\n" +
+"body.stR2.stR2auth #st-r2-top{display:none!important}\n" +
+"body.stR2.stR2top .topbar{flex-direction:row!important;align-items:center!important;gap:6px!important;width:100%!important;max-width:100%!important;height:48px!important;min-height:48px!important;max-height:48px!important;padding:3px 8px!important;overflow-x:auto!important;overflow-y:hidden!important;box-sizing:border-box!important;scrollbar-width:none!important}\n" +
+"body.stR2.stR2top .topbar::-webkit-scrollbar{display:none!important}\n" +
+"body.stR2.stR2top .topbar>*{flex:0 0 auto!important;min-height:0!important;max-height:44px!important;overflow:hidden!important}\n" +
+"body.stR2.stR2top .topbar .small,body.stR2.stR2top .topbar .muted{display:none!important}\n" +
 "body.stR2 .brand{font-size:16px!important;letter-spacing:3px!important;white-space:nowrap!important}\n" +
 "/* --- Barre ressources : une ligne scrollable --- */\n" +
 "body.stR2 .stable-resourcebar1542b{width:100%!important;max-width:100%!important;margin:0!important;padding:3px 8px!important;border-radius:0!important;border-left:0!important;border-right:0!important;overflow:hidden!important;box-sizing:border-box!important}\n" +
@@ -136,11 +141,11 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 "body.stR2 .fragment-shop-entry1546{max-width:120px!important;height:22px!important;min-height:22px!important;line-height:22px!important;font-size:10px!important;padding:0 8px!important;margin:0!important}\n" +
 "/* --- R2.1 : ressources A LA DEMANDE. Masquees par defaut, overlay via bouton. --- */\n" +
 "body.stR2 .stable-resourcebar1542b{display:none!important}\n" +
-"body.stR2.stR2res .stable-resourcebar1542b{display:block!important;position:fixed!important;top:48px!important;left:0!important;right:0!important;z-index:590!important;margin:0!important;padding:6px 8px!important;border-bottom:1px solid rgba(79,195,247,.35)!important;box-shadow:0 14px 34px rgba(0,0,0,.55)!important;background:rgba(4,11,24,.97)!important}\n" +
+"body.stR2.stR2res .stable-resourcebar1542b{display:block!important;position:fixed!important;top:46px!important;left:0!important;right:0!important;z-index:590!important;margin:0!important;padding:6px 8px!important;border-bottom:1px solid rgba(79,195,247,.35)!important;box-shadow:0 14px 34px rgba(0,0,0,.55)!important;background:rgba(4,11,24,.97)!important}\n" +
 "body.stR2 #st-r2-res{position:fixed!important;top:7px!important;right:8px!important;z-index:602!important;height:34px!important;padding:0 11px!important;border-radius:10px!important;border:1px solid rgba(79,195,247,.4)!important;background:rgba(10,24,46,.94)!important;color:#4FC3F7!important;font:800 12px system-ui,Arial!important;cursor:pointer!important}\n" +
 "body.stR2.stR2res #st-r2-res{background:#4FC3F7!important;color:#04162e!important}\n" +
 "body.stR2.stR2auth #st-r2-res{display:none!important}\n" +
-"body.stR2 .topbar{padding-right:120px!important}\n" +
+"body.stR2.stR2top .topbar{padding-left:52px!important;padding-right:120px!important}\n" +
 "/* --- Layout : UNE colonne, RIEN n'est supprime. Le centre d'abord, puis les\n       panneaux lateraux empiles en dessous, pleine largeur. Le layout scrolle. --- */\n" +
 "body.stR2 .layout,body.stR2 .layout.has-bottom-queue{display:flex!important;flex-direction:column!important;grid-template-columns:none!important;width:100%!important;max-width:100%!important;height:calc(100dvh - var(--r2top,96px) - 50px)!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;margin:0!important;padding:0 0 12px!important;box-sizing:border-box!important}\n" +
 "body.stR2 .layout>*{flex:0 0 auto!important;width:100%!important;max-width:100%!important}\n" +
@@ -172,9 +177,38 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
   }
 
   function measureTop() {
-    var tb = document.querySelector(".topbar");
-    var top = tb ? tb.offsetHeight : 48;
-    document.documentElement.style.setProperty("--r2top", top + "px");
+    // Topbar et ressources sont des overlays : elles ne consomment plus d'espace.
+    document.documentElement.style.setProperty("--r2top", "0px");
+  }
+
+  function topButton() {
+    if (!document.body || document.getElementById("st-r2-top")) return;
+    var b = document.createElement("button");
+    b.id = "st-r2-top";
+    b.type = "button";
+    b.textContent = "\u2630";
+    b.title = "Menu";
+    b.addEventListener("click", function () {
+      document.body.classList.toggle("stR2top");
+    });
+    document.body.appendChild(b);
+  }
+
+  /* Chasseur de pastilles fantomes ("Planetes figees / hover actif") :
+     suppression par TEXTE, quelle que soit la classe reelle de l'element. */
+  var GHOST_RE = /plan[eè]tes fig[eé]es|hover actif/i;
+  function killGhosts() {
+    var spans = document.querySelectorAll("span:not([data-r2ghost]),small:not([data-r2ghost])");
+    for (var i = 0; i < spans.length; i++) {
+      var el = spans[i];
+      var t = el.textContent || "";
+      if (t.length < 60 && GHOST_RE.test(t)) {
+        var box = el.closest("div") || el;
+        box.style.setProperty("display", "none", "important");
+        box.setAttribute("data-r2ghost", "1");
+      }
+      el.setAttribute("data-r2ghost", "1");
+    }
   }
 
   function resButton() {
@@ -209,7 +243,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     if (!document.body || document.getElementById("st-r2-badge")) return;
     var b = document.createElement("div");
     b.id = "st-r2-badge";
-    b.textContent = "MOBILE R2.1 OK";
+    b.textContent = "MOBILE R2.2 OK";
     document.body.appendChild(b);
   }
 
@@ -224,7 +258,9 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     document.body.classList.add("stR2");
     document.body.classList.toggle("stR2auth", authVisible());
     measureTop();
+    topButton();
     resButton();
+    killGhosts();
     dockCarousel();
     badge();
   }
@@ -239,7 +275,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
   window.stellarionMobileR2Audit = function () {
     return {
-      patch: "mobile-R2.1-inline",
+      patch: "mobile-R2.2-inline",
       actif: !!(document.body && document.body.classList.contains("stR2")),
       phone: phone(),
       portrait: isPortrait(),
@@ -249,6 +285,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
       topMesure: getComputedStyle(document.documentElement).getPropertyValue("--r2top").trim(),
       carrouselDocke: !!document.querySelector("#st-r2-nav .carousel-container"),
       ressourcesOuvertes: !!(document.body && document.body.classList.contains("stR2res")),
+      topbarOuverte: !!(document.body && document.body.classList.contains("stR2top")),
       authVisible: authVisible()
     };
   };
@@ -258,15 +295,15 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
 <!-- STELLARION 1.5.78 — Alliance native field fix
      Objectif : réparer le focus Alliance sans casser la messagerie, sans bloquer les onglets, sans ralentir les changements de page. -->
-<script src="js/main.js?v=1659"></script>
-<script src="js/fragment-shop-stripe-patch.js?v=1659"></script>
+<script src="js/main.js?v=1660"></script>
+<script src="js/fragment-shop-stripe-patch.js?v=1660"></script>
 <!-- STELLARION 1.6.25 — Couche mobile : pinch-zoom galaxie + boutons zoom tactiles -->
-<script src="js/patch_1625_mobile.js?v=1659"></script>
+<script src="js/patch_1625_mobile.js?v=1660"></script>
 <!-- STELLARION 1.6.31 — Suppression des rapports de combat texte (format archive) -->
-<script src="js/patch_1631_reports.js?v=1659"></script>
+<script src="js/patch_1631_reports.js?v=1660"></script>
 <!-- STELLARION 1.6.32 — Construction : détail bâtiment en pop-up, colonnes supprimées -->
-<script src="js/patch_1632_building_popup.js?v=1659"></script>
+<script src="js/patch_1632_building_popup.js?v=1660"></script>
 <!-- STELLARION 1.6.35 — Anti-duplication de flotte (ledger) + réparation serveur -->
-<script src="js/patch_1634_fleet_ledger.js?v=1659"></script>
+<script src="js/patch_1634_fleet_ledger.js?v=1660"></script>
 </body>
 </html>
