@@ -5,15 +5,15 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>Stellarion V1 CLOUD ONLY — Alliances corrigées</title>
-<link rel="stylesheet" href="css/main.css?v=1661">
-<link rel="stylesheet" href="css/mobile.css?v=1661">
+<link rel="stylesheet" href="css/main.css?v=1662">
+<link rel="stylesheet" href="css/mobile.css?v=1662">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
 
 <meta name="theme-color" content="#020510">
 <meta property="og:title" content="Stellarion">
 <meta property="og:description" content="Age des Conquérants Stellaires">
 
-<script src="js/supabase.min.js?v=1661"></script>
+<script src="js/supabase.min.js?v=1662"></script>
 <script>if(!window.supabase){document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');}</script>
 
 <!-- STELLARION CORE PACK v0.2 — début -->
@@ -56,8 +56,8 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
   </div>
 </div>
 <div id="app"></div>
-<!-- STELLARION MOBILE R2.3 — moteur mobile INLINE. Pages épurées : une colonne partout,
-     hauteurs pleines (fix Flotte/Messages vides), topbar ☰ et ressources 💎 à la demande. -->
+<!-- STELLARION MOBILE R2.4 — moteur mobile INLINE. Pop-up détail/missions (tap planète),
+     onglets scrollables, pages une colonne, topbar ☰ / ressources 💎 à la demande. -->
 <script>
 (function () {
   "use strict";
@@ -165,6 +165,19 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 "body.stR2 .global-fleet-row{grid-template-columns:1.4fr repeat(4,.65fr)!important;font-size:11px!important}\n" +
 "body.stR2 .fleet-transfer-box,body.stR2 .fleet-table{max-width:100%!important;overflow-x:auto!important}\n" +
 "body.stR2 .card,body.stR2 .panel{max-width:100%!important;box-sizing:border-box!important}\n" +
+"/* --- R2.4 : POP-UP DETAIL. La colonne droite du jeu vit dans un pop-up mobile. --- */\n" +
+"body.stR2 #st-r2-pop-back{display:none;position:fixed;inset:0;z-index:640;background:rgba(0,4,12,.7);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}\n" +
+"body.stR2.stR2pop #st-r2-pop-back{display:block!important}\n" +
+"body.stR2 #st-r2-pop{display:none;position:fixed;right:8px;top:8px;bottom:58px;width:min(430px,92vw);z-index:641;overflow:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,rgba(8,22,42,.98),rgba(3,9,22,.99));border:1px solid rgba(79,195,247,.4);border-radius:16px;padding:12px;box-sizing:border-box;box-shadow:0 24px 80px rgba(0,0,0,.6)}\n" +
+"body.stR2.stR2pop #st-r2-pop{display:block!important}\n" +
+"body.stR2 #st-r2-pop .side,body.stR2 #st-r2-pop .side.right{display:block!important;width:100%!important;max-width:100%!important;border:0!important;padding:0!important;background:transparent!important;overflow:visible!important}\n" +
+"body.stR2 #st-r2-pop:empty:before{content:\"Chargement du d\\u00e9tail...\";color:#7fa5c7;font:600 13px system-ui,Arial}\n" +
+"/* La colonne droite n apparait plus dans le flux : elle est dans le pop-up */\n" +
+"body.stR2 .layout>.side.right{display:none!important}\n" +
+"/* Onglets internes des pages (Flotte etc.) : bandeau horizontal scrollable */\n" +
+"body.stR2 #center .tabs,body.stR2 #center [class*=\"tabs\"],body.stR2 #center [class*=\"tabbar\"],body.stR2 #center [class*=\"switch\"]{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;max-width:100%!important;gap:6px!important;scrollbar-width:none!important}\n" +
+"/* Construction : blocs remis en flux, fin des chevauchements */\n" +
+"body.stR2 .construction-clean1542f,body.stR2 .construction-clean1542f>*,body.stR2 .cmain1542f,body.stR2 .ccats1542f{position:static!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important}\n" +
 "/* --- Dock bas : le VRAI carrousel amarre --- */\n" +
 "body.stR2 #st-r2-nav{position:fixed!important;left:0!important;right:0!important;bottom:0!important;height:50px!important;display:flex!important;align-items:center!important;padding:6px 8px!important;box-sizing:border-box!important;background:linear-gradient(180deg,rgba(5,13,26,.92),#020510)!important;border-top:1px solid rgba(79,195,247,.28)!important;z-index:600!important}\n" +
 "body.stR2 #st-r2-nav .carousel-container{display:flex!important;width:100%!important;max-width:100%!important;height:38px!important;min-height:38px!important;padding:0!important;margin:0!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
@@ -205,9 +218,10 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
      suppression par TEXTE, quelle que soit la classe reelle de l'element. */
   var GHOST_RE = /plan[eè]tes fig[eé]es|hover actif/i;
   function killGhosts() {
-    var spans = document.querySelectorAll("span:not([data-r2ghost]),small:not([data-r2ghost])");
+    var spans = document.querySelectorAll("span:not([data-r2ghost]),small:not([data-r2ghost]),div:not([data-r2ghost])");
     for (var i = 0; i < spans.length; i++) {
       var el = spans[i];
+      if (el.tagName === "DIV" && el.childElementCount > 0) { el.setAttribute("data-r2ghost", "1"); continue; }
       var t = el.textContent || "";
       if (t.length < 60 && GHOST_RE.test(t)) {
         var box = el.closest("div") || el;
@@ -230,6 +244,53 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     document.body.appendChild(b);
   }
 
+  function ensurePop() {
+    if (!document.body) return null;
+    var back = document.getElementById("st-r2-pop-back");
+    if (!back) {
+      back = document.createElement("div");
+      back.id = "st-r2-pop-back";
+      back.addEventListener("click", closePop);
+      document.body.appendChild(back);
+    }
+    var pop = document.getElementById("st-r2-pop");
+    if (!pop) {
+      pop = document.createElement("div");
+      pop.id = "st-r2-pop";
+      document.body.appendChild(pop);
+    }
+    return pop;
+  }
+  function openPop() { if (document.body) document.body.classList.add("stR2pop"); }
+  function closePop() { if (document.body) document.body.classList.remove("stR2pop"); }
+  window.stellarionClosePopR2 = closePop;
+
+  /* La colonne droite du jeu (detail planete, missions, detail vaisseau...)
+     est ADOPTEE dans le pop-up. Le jeu continue de la re-rendre a chaque
+     render : on re-adopte la version fraiche, comme pour le carrousel. */
+  function adoptRightSide() {
+    var pop = ensurePop();
+    if (!pop) return;
+    var sides = document.querySelectorAll(".layout>.side.right, .side.right");
+    var fresh = null;
+    for (var i = 0; i < sides.length; i++) {
+      if (!pop.contains(sides[i])) fresh = sides[i];
+    }
+    if (fresh) { pop.innerHTML = ""; pop.appendChild(fresh); }
+  }
+
+  /* Tap sur une planete / menace / quete de la carte -> pop-up missions. */
+  document.addEventListener("click", function (ev) {
+    if (!document.body || !document.body.classList.contains("stR2")) return;
+    var t = ev.target;
+    if (!t || !t.closest) return;
+    if (t.closest("#st-r2-pop")) return;                      // clic dans le pop-up
+    if (t.closest("#st-r2-nav")) { closePop(); return; }      // changement de page
+    var hit = t.closest(".gwm-object,.gwm-cell,.gwm-badge,.gwm-ai-threat,.gwm-ai-boss,.gwm-name,.gwm-chip");
+    if (hit) { setTimeout(function () { adoptRightSide(); openPop(); }, 140); }
+  }, true);
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") closePop(); });
+
   function dockCarousel() {
     if (!document.body) return;
     var nav = document.getElementById("st-r2-nav");
@@ -250,7 +311,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     if (!document.body || document.getElementById("st-r2-badge")) return;
     var b = document.createElement("div");
     b.id = "st-r2-badge";
-    b.textContent = "MOBILE R2.3 OK";
+    b.textContent = "MOBILE R2.4 OK";
     document.body.appendChild(b);
   }
 
@@ -269,6 +330,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     resButton();
     killGhosts();
     dockCarousel();
+    adoptRightSide();
     badge();
   }
 
@@ -282,7 +344,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
   window.stellarionMobileR2Audit = function () {
     return {
-      patch: "mobile-R2.3-inline",
+      patch: "mobile-R2.4-inline",
       actif: !!(document.body && document.body.classList.contains("stR2")),
       phone: phone(),
       portrait: isPortrait(),
@@ -293,6 +355,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
       carrouselDocke: !!document.querySelector("#st-r2-nav .carousel-container"),
       ressourcesOuvertes: !!(document.body && document.body.classList.contains("stR2res")),
       topbarOuverte: !!(document.body && document.body.classList.contains("stR2top")),
+      popupOuvert: !!(document.body && document.body.classList.contains("stR2pop")),
       authVisible: authVisible()
     };
   };
@@ -302,15 +365,15 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
 <!-- STELLARION 1.5.78 — Alliance native field fix
      Objectif : réparer le focus Alliance sans casser la messagerie, sans bloquer les onglets, sans ralentir les changements de page. -->
-<script src="js/main.js?v=1661"></script>
-<script src="js/fragment-shop-stripe-patch.js?v=1661"></script>
+<script src="js/main.js?v=1662"></script>
+<script src="js/fragment-shop-stripe-patch.js?v=1662"></script>
 <!-- STELLARION 1.6.25 — Couche mobile : pinch-zoom galaxie + boutons zoom tactiles -->
-<script src="js/patch_1625_mobile.js?v=1661"></script>
+<script src="js/patch_1625_mobile.js?v=1662"></script>
 <!-- STELLARION 1.6.31 — Suppression des rapports de combat texte (format archive) -->
-<script src="js/patch_1631_reports.js?v=1661"></script>
+<script src="js/patch_1631_reports.js?v=1662"></script>
 <!-- STELLARION 1.6.32 — Construction : détail bâtiment en pop-up, colonnes supprimées -->
-<script src="js/patch_1632_building_popup.js?v=1661"></script>
+<script src="js/patch_1632_building_popup.js?v=1662"></script>
 <!-- STELLARION 1.6.35 — Anti-duplication de flotte (ledger) + réparation serveur -->
-<script src="js/patch_1634_fleet_ledger.js?v=1661"></script>
+<script src="js/patch_1634_fleet_ledger.js?v=1662"></script>
 </body>
 </html>
