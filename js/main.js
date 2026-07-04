@@ -3323,27 +3323,92 @@ function defenseHtml(d){
  </div>`;
 }
 
-function buildShip(id){
+function buildShip(id,qty=1){
+ qty=Math.max(1,Math.floor(Number(qty)||1));
  const ship=SHIPS.find(s=>s.id===id), c=ship.cost;
  // Déblocage appliqué uniquement à la construction locale.
  // Ne pas réutiliser ce test pour les renforts alliés : voir ALLY_REINFORCEMENT_RULES.
  if(!isShipUnlocked(id,state.activePlanetId)){addLog("Vaisseau bloqué : prérequis non validés.");render();return}
- if(state.resources.titanium<c.titanium||state.resources.xenite<c.xenite||state.resources.antimatter<c.antimatter){addLog("Ressources insuffisantes pour "+ship.name+".");render();return}
+ const totalCost={titanium:(c.titanium||0)*qty,xenite:(c.xenite||0)*qty,antimatter:(c.antimatter||0)*qty};
+ if(state.resources.titanium<totalCost.titanium||state.resources.xenite<totalCost.xenite||state.resources.antimatter<totalCost.antimatter){addLog("Ressources insuffisantes pour former "+ship.name+" x"+qty+".");render();return}
  const shipyard=(state.buildings[state.activePlanetId]||[]).find(b=>b.building_id==="shipyard")?.level||0;
  if(shipyard<=0 && id!=="scout_probe"){addLog("Chantier Spatial requis pour former ce vaisseau.");render();return}
- const cap=canStoreShipsOnPlanet(state.activePlanetId,id,1);
+ const cap=canStoreShipsOnPlanet(state.activePlanetId,id,qty);
  if(!cap.ok){addLog("Base Orbitale pleine sur "+activePlanet().name+" : "+cap.used+"/"+cap.cap+" capacité utilisée. Améliore la Base Orbitale pour stationner plus de vaisseaux.");render();return}
- state.resources.titanium-=c.titanium;state.resources.xenite-=c.xenite;state.resources.antimatter-=c.antimatter;
- const now=Date.now(),starts=state.shipQueue.length?Math.max(...state.shipQueue.map(q=>q.finishAt)):now,speedBonus=Math.max(1,1+shipyard*0.04),duration=Math.max(12,Math.round(ship.time/speedBonus))*1000;
+ state.resources.titanium-=totalCost.titanium;state.resources.xenite-=totalCost.xenite;state.resources.antimatter-=totalCost.antimatter;
+ const now=Date.now(),starts=state.shipQueue.length?Math.max(...state.shipQueue.map(q=>q.finishAt)):now,speedBonus=Math.max(1,1+shipyard*0.04),duration=Math.max(12,Math.round(ship.time/speedBonus))*1000*qty;
  const existing=state.shipQueue.find(q=>q.planetId===state.activePlanetId&&q.ship_id===id);
  if(existing){
-  existing.qty=(existing.qty||1)+1;
+  existing.qty=(existing.qty||1)+qty;
   existing.duration=(existing.duration||duration)+duration;
   existing.finishAt+=duration;
  }else{
-  state.shipQueue.push({id:"sq"+now+Math.random(),planetId:state.activePlanetId,ship_id:id,qty:1,startAt:starts,finishAt:starts+duration,duration});
+  state.shipQueue.push({id:"sq"+now+Math.random(),planetId:state.activePlanetId,ship_id:id,qty:qty,startAt:starts,finishAt:starts+duration,duration});
  }
- addLog(ship.name+" ajouté/regroupé dans la file de formation sur "+activePlanet().name+".");save();render();
+ addLog(ship.name+" x"+qty+" ajouté/regroupé dans la file de formation sur "+activePlanet().name+".");save();render();
+}
+
+function shipBuildMaxQty(id){
+ const ship=SHIPS.find(s=>s.id===id);
+ if(!ship)return 0;
+ const c=ship.cost||{};
+ const limits=[];
+ if(Number(c.titanium)>0)limits.push(Math.floor((Number(state.resources&&state.resources.titanium)||0)/Number(c.titanium)));
+ if(Number(c.xenite)>0)limits.push(Math.floor((Number(state.resources&&state.resources.xenite)||0)/Number(c.xenite)));
+ if(Number(c.antimatter)>0)limits.push(Math.floor((Number(state.resources&&state.resources.antimatter)||0)/Number(c.antimatter)));
+ let max=limits.length?Math.min(...limits):1000;
+ try{
+  const unit=typeof shipUnitSize==="function"?shipUnitSize(id):0;
+  const cap=typeof canStoreShipsOnPlanet==="function"?canStoreShipsOnPlanet(state.activePlanetId,id,1):null;
+  if(cap&&!cap.unlimited&&Number.isFinite(Number(cap.cap))&&unit>0){
+   max=Math.min(max,Math.floor(Math.max(0,Number(cap.cap)-Number(cap.used||0))/unit));
+  }
+ }catch(e){}
+ return Math.max(0,Math.min(100000,Math.floor(max)));
+}
+
+function closeShipBuildPopup(){
+ const el=document.getElementById("shipBuildPopup1636");
+ if(el)el.remove();
+}
+
+function openShipBuildPopup(id){
+ const ship=SHIPS.find(s=>s.id===id);
+ if(!ship)return;
+ if(!isShipUnlocked(id,state.activePlanetId)){addLog("Vaisseau bloqué : prérequis non validés.");render();return}
+ const shipyard=(state.buildings[state.activePlanetId]||[]).find(b=>b.building_id==="shipyard")?.level||0;
+ if(shipyard<=0&&id!=="scout_probe"){addLog("Chantier Spatial requis pour former ce vaisseau.");render();return}
+ const max=shipBuildMaxQty(id);
+ if(max<1){addLog("Ressources insuffisantes pour "+ship.name+".");render();return}
+ closeShipBuildPopup();
+ const c=ship.cost||{};
+ const html=`<div id="shipBuildPopup1636" class="ship-build-overlay1636" onclick="if(event.target===this)closeShipBuildPopup()">
+  <div class="ship-build-modal1636">
+   <div class="ship-build-head1636">
+    <div><span class="pill">FORMATION</span><h2>${ship.icon} ${ship.name}</h2><p class="muted small">${activePlanet().name} · max ${fmt(max)}</p></div>
+    <button class="ship-build-close1636" onclick="closeShipBuildPopup()" title="Fermer">×</button>
+   </div>
+   <div class="ship-build-cost1636"><span>${fmt(c.titanium||0)} Ti</span><span>${fmt(c.xenite||0)} Xe</span><span>${fmt(c.antimatter||0)} AM</span></div>
+   <label class="ship-build-label1636" for="shipBuildQty1636">Nombre à former</label>
+   <input id="shipBuildQty1636" class="ship-build-input1636" type="number" inputmode="numeric" min="1" max="${max}" value="1" step="1" onkeydown="if(event.key==='Enter')confirmShipBuildPopup('${id}');if(event.key==='Escape')closeShipBuildPopup()">
+   <div class="ship-build-actions1636">
+    <button class="btn btn-ghost" onclick="document.getElementById('shipBuildQty1636').value='${max}'">Max</button>
+    <button class="btn btn-ghost" onclick="closeShipBuildPopup()">Annuler</button>
+    <button class="btn" onclick="confirmShipBuildPopup('${id}')">Former</button>
+   </div>
+  </div>
+ </div>`;
+ document.body.insertAdjacentHTML("beforeend",html);
+ setTimeout(()=>{const input=document.getElementById("shipBuildQty1636");if(input){input.focus();input.select();}},30);
+}
+
+async function confirmShipBuildPopup(id){
+ const input=document.getElementById("shipBuildQty1636");
+ const max=shipBuildMaxQty(id);
+ let qty=Math.floor(Number(input&&input.value)||1);
+ qty=Math.max(1,Math.min(max,qty));
+ closeShipBuildPopup();
+ await buildShip(id,qty);
 }
 
 function buildingNodeClass(id){
@@ -7912,7 +7977,7 @@ function arsenalRowHtml(s){
   <div class="arsenal-cell hide-mid">📦 ${fmt(s.cargo)}</div>
   <div class="arsenal-lock ${unlocked?"arsenal-ok":"arsenal-ko"}">${reqShortText(shipRequirement(s.id),state.activePlanetId)}</div>
   <div class="arsenal-cell hide-mid">${owned}</div>
-  <div><button class="btn" style="padding:7px 10px" ${!unlocked?"disabled":""} onclick="event.stopPropagation();buildShip('${s.id}')">${unlocked?"Former":"Bloqué"}</button></div>
+  <div><button class="btn" style="padding:7px 10px" ${!unlocked?"disabled":""} onclick="event.stopPropagation();openShipBuildPopup('${s.id}')">${unlocked?"Former":"Bloqué"}</button></div>
  </div>`;
 }
 function arsenalDetailHtml(s){
@@ -7937,7 +8002,7 @@ function arsenalDetailHtml(s){
   <div class="row"><strong>Coût</strong><div class="resource"><span>Titane</span><strong>${fmt(c.titanium)}</strong></div><div class="resource"><span>Xénite</span><strong>${fmt(c.xenite)}</strong></div><div class="resource"><span>Antimatière</span><strong>${fmt(c.antimatter)}</strong></div></div>
   <div class="row"><strong>${unlocked?"✅ Prérequis validés":"🔒 Prérequis manquants"}</strong>${arsenalReqListHtml(shipRequirement(s.id),state.activePlanetId)}</div>
   <div class="arsenal-actions">
-   <button class="btn" ${!ok?"disabled":""} onclick="buildShip('${s.id}')">${ok?"Former":"Impossible"}</button>
+   <button class="btn" ${!ok?"disabled":""} onclick="openShipBuildPopup('${s.id}')">${ok?"Former":"Impossible"}</button>
    <button class="btn btn-ghost" onclick="setView('buildings')">Améliorer prérequis</button>
   </div>
   ${!cap.ok?`<p class="tiny warn">Base Orbitale pleine : ${cap.used}/${cap.cap}</p>`:""}
@@ -7966,7 +8031,7 @@ function shipHtml(s){
    ${requirementsMiniHtml(shipRequirement(s.id),state.activePlanetId)}
    <details><summary>Voir les prérequis complets</summary>${requirementsHtml(shipRequirement(s.id),state.activePlanetId)}</details>
   </div>
-  <button class="btn" ${!ok?"disabled":""} onclick="buildShip('${s.id}')">${unlocked?"Former":"Bloqué"}</button>
+  <button class="btn" ${!ok?"disabled":""} onclick="openShipBuildPopup('${s.id}')">${unlocked?"Former":"Bloqué"}</button>
  </div>`
 }
 
@@ -23823,8 +23888,9 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   };
   try{ finishQueueItem = G.finishQueueItem; }catch(e){}
 
-  G.buildShip = async function(id){
-    return guarded('buy_ship', { ship_id:id, planet_id:activePid(), qty:1 });
+  G.buildShip = async function(id, qty){
+    qty = Math.max(1, Math.floor(Number(qty)||1));
+    return guarded('buy_ship', { ship_id:id, planet_id:activePid(), qty:qty });
   };
   try{ buildShip = G.buildShip; }catch(e){}
 

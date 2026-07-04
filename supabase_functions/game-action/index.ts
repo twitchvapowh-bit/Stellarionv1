@@ -743,7 +743,7 @@ async function finishBuilding(admin: any, playerId: string, body: any) {
 async function buyShip(admin: any, playerId: string, body: any) {
   const shipId = String(body.ship_id || body.shipId || "");
   const planetId = safePlanet(body.planet_id || body.planetId || "home");
-  const qty = n(body.qty || 1, 1, 1000);
+  const qty = n(body.qty || 1, 1, 100000);
   const def = SHIPS[shipId];
   if (!def) throw new Error("vaisseau_inconnu");
   const shipyard = await buildingLevel(admin, playerId, planetId, "shipyard");

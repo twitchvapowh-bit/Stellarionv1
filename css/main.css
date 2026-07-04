@@ -255,6 +255,19 @@ body.stellarion-boot-hold .planet-hover-realfix-pill{opacity:0!important;visibil
 @media(max-width:1450px){.shipyard-readable-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:1050px){.shipyard-top-clean{grid-template-columns:1fr}.shipyard-readable-grid{grid-template-columns:1fr}}
 
+.ship-build-overlay1636{position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(2,5,16,.72);backdrop-filter:blur(10px)}
+.ship-build-modal1636{width:min(420px,100%);border-radius:16px;background:#07101f;border:1px solid rgba(79,195,247,.28);box-shadow:0 22px 70px rgba(0,0,0,.55);padding:18px;color:#e6eefc}
+.ship-build-head1636{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.ship-build-head1636 h2{margin:6px 0 2px;font-size:22px}
+.ship-build-close1636{width:38px;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#e6eefc;font-size:22px;font-weight:900;cursor:pointer}
+.ship-build-cost1636{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.ship-build-cost1636 span{border-radius:10px;padding:9px 8px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);font-size:12px;font-weight:900;text-align:center;color:#b3e5fc}
+.ship-build-label1636{display:block;margin:10px 0 6px;font-size:12px;font-weight:900;color:#90a4ae;text-transform:uppercase}
+.ship-build-input1636{width:100%;box-sizing:border-box;height:54px;border-radius:12px;border:1px solid rgba(79,195,247,.32);background:#020816;color:#fff;font-size:24px;font-weight:900;padding:0 14px;outline:none}
+.ship-build-input1636:focus{border-color:#4fc3f7;box-shadow:0 0 0 3px rgba(79,195,247,.16)}
+.ship-build-actions1636{display:grid;grid-template-columns:auto auto 1fr;gap:8px;margin-top:14px}
+@media(max-width:520px){.ship-build-overlay1636{align-items:flex-end;padding:10px}.ship-build-modal1636{border-radius:16px 16px 10px 10px}.ship-build-actions1636{grid-template-columns:1fr}.ship-build-head1636 h2{font-size:19px}}
+
 
 /* Alpha 0.8.24 Arsenal Shipyard */
 .arsenal-layout{height:100%;display:grid;grid-template-columns:minmax(640px,1fr) 360px;gap:12px;padding:16px;overflow:hidden}
