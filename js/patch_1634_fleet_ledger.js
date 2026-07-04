@@ -20,8 +20,8 @@
    (perf clock > horloge courante = impossible) pour dégeler les flottes.
 
    OUTILS CONSOLE :
-   - stellarionShipAudit1634()          : état des stocks + registre
-   - stellarionReduceShips1634(0.2)     : garde 20% des vaisseaux (supprime 80%)
+   - stellarionShipAudit1634()              : état des stocks + registre
+   - await stellarionReduceShips1634(0.2)   : garde 20% des vaisseaux côté serveur
 */
 (function () {
   "use strict";
@@ -172,8 +172,7 @@
     };
   };
 
-  // Garde `factor` (ex: 0.2 = garde 20%, supprime 80%). Retourne le bilan.
-  window.stellarionReduceShips1634 = function (factor) {
+  function localReduceShips(factor) {
     factor = Number(factor);
     if (!(factor > 0 && factor < 1)) return "Usage : stellarionReduceShips1634(0.2) pour garder 20% des vaisseaux.";
     var st = S();
@@ -191,6 +190,48 @@
     });
     try { if (typeof window.save === "function") window.save(); } catch (e) {}
     try { if (typeof window.render === "function") window.render(); } catch (e) {}
-    return { avant: before, apres: after, supprimes: before - after };
+    return { mode: "local-ui-only", avant: before, apres: after, supprimes: before - after };
+  }
+
+  async function serverReduceShips(factor) {
+    factor = Number(factor);
+    if (!(factor > 0 && factor < 1)) return "Usage : await stellarionReduceShips1634(0.2) pour garder 20% des vaisseaux.";
+    if (typeof window.stellarionServerAuthorityAction1570 !== "function") {
+      return localReduceShips(factor);
+    }
+    var before = window.stellarionShipAudit1634();
+    var out = null;
+    try {
+      out = await window.stellarionServerAuthorityAction1570("repair_reduce_ships", { factor: factor });
+    } catch (e) {
+      return {
+        mode: "server-authority",
+        ok: false,
+        error: String((e && e.message) || e),
+        beforeLocalAudit: before,
+        note: "Redeploie la fonction Supabase game-action, puis relance await stellarionReduceShips1634(" + factor + ")."
+      };
+    }
+    try {
+      var st = S();
+      if (st) st.missionDraft = { ships: {}, cargo: { titanium: 0, xenite: 0, antimatter: 0 } };
+    } catch (e) {}
+    try { if (typeof window.save === "function") window.save(); } catch (e) {}
+    try { if (typeof window.render === "function") window.render(); } catch (e) {}
+    var after = window.stellarionShipAudit1634();
+    return {
+      mode: "server-authority",
+      beforeLocalAudit: before,
+      serverRepair: out && out.repair ? out.repair : null,
+      afterLocalAudit: after,
+      note: "Si serverRepair est null, redeploie d'abord la fonction Supabase game-action mise a jour."
+    };
+  }
+
+  // Garde `factor` (ex: 0.2 = garde 20%, supprime 80%). Retourne le bilan.
+  window.stellarionReduceShips1634 = function (factor) {
+    return serverReduceShips(factor);
   };
+  window.stellarionReduceShipsServer1635 = serverReduceShips;
+  window.stellarionReduceShipsLocalOnly1635 = localReduceShips;
 })();

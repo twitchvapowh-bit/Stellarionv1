@@ -131,6 +131,10 @@ Deno.serve(async (req) => {
       message = await resolvePlayerAttackNow(admin, supaUser, user.id, body);
     } else if (action === "process") {
       message = "Files et flottes traitees.";
+    } else if (action === "repair_reduce_ships") {
+      const repair = await repairReduceShips(admin, user.id, body);
+      message = "Stock de vaisseaux reduit cote serveur.";
+      extra.repair = repair;
     } else {
       await audit(admin, user.id, action, false, { error:"unknown_action" });
       return json({ ok:false, error:"action_inconnue", state: await snapshot(admin, user.id) }, 400);
@@ -794,6 +798,90 @@ async function addShips(admin: any, playerId: string, planetId: string, shipId: 
   const next = n(old.data?.qty) + n(qty,0,1000000);
   const up = await admin.from("game_ships").upsert({ player_id:playerId, planet_id:planetId, ship_id:shipId, qty:next, updated_at:new Date().toISOString() }, { onConflict:"player_id,planet_id,ship_id" });
   if (up.error) throw up.error;
+}
+
+function reduceShipMap(map: any, factor: number) {
+  const out: Record<string, number> = {};
+  let before = 0;
+  let after = 0;
+  for (const [shipId, qtyRaw] of Object.entries(map || {})) {
+    if (!SHIPS[shipId]) continue;
+    const qty = n(qtyRaw, 0, 1000000);
+    before += qty;
+    const next = Math.floor(qty * factor);
+    if (next > 0) {
+      out[String(shipId)] = next;
+      after += next;
+    }
+  }
+  return { ships: out, before, after };
+}
+
+async function repairReduceShips(admin: any, playerId: string, body: any) {
+  const factor = Number(body.factor ?? body.keepFactor ?? 0.2);
+  if (!(factor > 0 && factor < 1)) throw new Error("factor_invalide_entre_0_et_1");
+  const now = new Date().toISOString();
+  let stockBefore = 0;
+  let stockAfter = 0;
+  let stockRows = 0;
+  let deletedStockRows = 0;
+  let fleetBefore = 0;
+  let fleetAfter = 0;
+  let fleetRows = 0;
+
+  const ships = await admin.from("game_ships").select("planet_id,ship_id,qty").eq("player_id", playerId);
+  if (ships.error) throw ships.error;
+  for (const row of ships.data || []) {
+    if (!SHIPS[row.ship_id]) continue;
+    const before = n(row.qty, 0, 1000000);
+    const after = Math.floor(before * factor);
+    stockBefore += before;
+    stockAfter += after;
+    stockRows += 1;
+    if (after > 0) {
+      const up = await admin.from("game_ships")
+        .update({ qty: after, updated_at: now })
+        .eq("player_id", playerId)
+        .eq("planet_id", row.planet_id)
+        .eq("ship_id", row.ship_id);
+      if (up.error) throw up.error;
+    } else {
+      const del = await admin.from("game_ships")
+        .delete()
+        .eq("player_id", playerId)
+        .eq("planet_id", row.planet_id)
+        .eq("ship_id", row.ship_id);
+      if (del.error) throw del.error;
+      deletedStockRows += 1;
+    }
+  }
+
+  const fleets = await admin.from("game_fleets").select("id,ships").eq("player_id", playerId);
+  if (fleets.error) throw fleets.error;
+  for (const fleet of fleets.data || []) {
+    const reduced = reduceShipMap(fleet.ships || {}, factor);
+    fleetBefore += reduced.before;
+    fleetAfter += reduced.after;
+    if (reduced.before === reduced.after) continue;
+    const up = await admin.from("game_fleets")
+      .update({ ships: reduced.ships, updated_at: now })
+      .eq("player_id", playerId)
+      .eq("id", fleet.id);
+    if (up.error) throw up.error;
+    fleetRows += 1;
+  }
+
+  await audit(admin, playerId, "repair_reduce_ships_detail", true, {
+    factor,
+    stockBefore,
+    stockAfter,
+    fleetBefore,
+    fleetAfter,
+    stockRows,
+    deletedStockRows,
+    fleetRows,
+  });
+  return { factor, stockBefore, stockAfter, stockRemoved: stockBefore - stockAfter, fleetBefore, fleetAfter, fleetRemoved: fleetBefore - fleetAfter, stockRows, deletedStockRows, fleetRows };
 }
 
 async function launchFleet(admin: any, playerId: string, body: any) {
