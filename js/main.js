@@ -23929,7 +23929,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
       var dist = Math.hypot((target.x||0)-((from&&from.x)||0),(target.y||0)-((from&&from.y)||0));
       duration = (typeof orbitalBaseTravelDuration === 'function') ? orbitalBaseTravelDuration(activePid(), dist, mission) : Math.max(25, Math.min(900, Math.round(45+dist/5)));
     }catch(e){}
-    return guarded('launch_fleet', { planet_id:activePid(), mission:mission, ships:ships, cargo:cargo, target:target, from:from, durationSeconds:duration, player_name:s.playerName || s.username || 'Commandant' }, 'Mission enregistrée et verrouillée côté serveur.');
+    return guarded('launch_fleet', { planet_id:activePid(), mission:mission, ships:ships, cargo:cargo, target:target, from:from, durationSeconds:duration, player_name:s.playerName || s.username || 'Commandant', launch_id:'lf_'+Date.now()+'_'+Math.random().toString(36).slice(2) }, 'Mission enregistrée et verrouillée côté serveur.');
   };
   try{ launchMission = G.launchMission; }catch(e){}
 

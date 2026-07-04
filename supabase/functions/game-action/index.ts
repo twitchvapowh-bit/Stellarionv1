@@ -100,10 +100,11 @@ Deno.serve(async (req) => {
     const isolateChestAction = action === "open_chest";
     const isolateBootAction = action === "bootstrap" || action === "state";
     const isolateProcessAction = action === "process";
+    const isolateFleetLaunchAction = action === "launch_fleet";
     let queueWarning: string | null = null;
-    if (!isolateChestAction && !isolateBootAction && !isolateProcessAction) {
+    if (!isolateChestAction && !isolateBootAction && !isolateProcessAction && !isolateFleetLaunchAction) {
       await processQueues(admin, supaUser, user.id);
-    } else if (isolateProcessAction) {
+    } else if (isolateProcessAction || isolateFleetLaunchAction) {
       try { await processQueues(admin, supaUser, user.id); }
       catch (qe) {
         queueWarning = String((qe as Error)?.message || qe);
@@ -149,9 +150,9 @@ Deno.serve(async (req) => {
     }
 
     await accrueResources(admin, user.id);
-    if (!isolateChestAction && !isolateBootAction && !isolateProcessAction) {
+    if (!isolateChestAction && !isolateBootAction && !isolateProcessAction && !isolateFleetLaunchAction) {
       await processQueues(admin, supaUser, user.id);
-    } else if (isolateProcessAction) {
+    } else if (isolateProcessAction || isolateFleetLaunchAction) {
       try { await processQueues(admin, supaUser, user.id); }
       catch (qe) {
         extra.queueWarningAfter = String((qe as Error)?.message || qe);
@@ -905,10 +906,6 @@ async function launchFleet(admin: any, playerId: string, body: any) {
   const cargo = body.cargo || {};
   const duration = n(body.durationSeconds || body.duration || 60, 10, 3600);
   const target = body.target || {};
-  const launchKey = fleetLaunchClaimKey(playerId, planetId, mission, target.id || body.target_id || "", ships, cargo);
-  if (!(await claimGameActionOnce(admin, playerId, "fleet_launch", launchKey))) {
-    throw new Error("lancement_flotte_deja_en_cours");
-  }
   let shipCount = 0;
   let cargoCap = 0;
   for (const [shipId, qtyRaw] of Object.entries(ships)) {
@@ -926,6 +923,10 @@ async function launchFleet(admin: any, playerId: string, body: any) {
   if (cargoTotal > cargoCap) throw new Error("capacite_cargo_insuffisante");
   const r = await currentResources(admin, playerId);
   if (!hasEnough(r, cargo)) throw new Error("ressources_cargo_insuffisantes");
+  const launchKey = fleetLaunchClaimKey(playerId, planetId, mission, target.id || body.target_id || "", ships, cargo, body.launch_id || body.launchId);
+  if (!(await claimGameActionOnce(admin, playerId, "fleet_launch", launchKey))) {
+    throw new Error("lancement_flotte_deja_en_cours");
+  }
 
   for (const [shipId, qtyRaw] of Object.entries(ships)) {
     const qty = n(qtyRaw,0,1000000);
@@ -971,11 +972,11 @@ async function launchFleet(admin: any, playerId: string, body: any) {
   return `Mission serveur lancee : ${mission} avec ${shipCount} vaisseau(x).`;
 }
 
-function fleetLaunchClaimKey(playerId: string, planetId: string, mission: string, targetId: unknown, ships: any, cargo: any) {
+function fleetLaunchClaimKey(playerId: string, planetId: string, mission: string, targetId: unknown, ships: any, cargo: any, launchId?: unknown) {
   const shipSig = Object.keys(ships || {}).sort().map((k) => `${k}:${n(ships[k],0,1000000)}`).join(",");
   const cargoSig = ["titanium","xenite","antimatter","fragments"].map((k) => `${k}:${n(cargo?.[k])}`).join(",");
-  const bucket = Math.floor(Date.now() / 5000);
-  return [playerId, planetId, mission, String(targetId || ""), shipSig, cargoSig, bucket].join("|").slice(0, 500);
+  const nonce = String(launchId || Math.floor(Date.now() / 5000));
+  return [playerId, planetId, mission, String(targetId || ""), shipSig, cargoSig, nonce].join("|").slice(0, 500);
 }
 
 
