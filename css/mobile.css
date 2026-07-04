@@ -301,3 +301,45 @@ body.stellarion-rotate-dismissed1626 #stellarion-rotate1626 { display: none !imp
   min-height: 44px;
 }
 .sr1626-btn:active { background: rgba(79, 195, 247, .15); }
+
+/* ============================================================
+   STELLARION 1.6.27 — CARTE GALAXIE : TAILLE CONTENUE SUR TACTILE
+   Problème : la carte capture tous les touchers (touch-action:none),
+   si elle dépasse l'écran il devient impossible de scroller la page.
+   Solution : sur TOUT écran tactile (quelle que soit la largeur,
+   donc aussi en paysage 840-930px), la carte ne dépasse JAMAIS
+   l'écran visible. Écrase le min-height:560px desktop.
+   ============================================================ */
+@media (hover: none) and (pointer: coarse) {
+  body.view-galaxy .galaxy-wrap,
+  .galaxy-wrap {
+    height: calc(100dvh - 240px) !important;
+    min-height: 240px !important;
+    max-height: 62dvh !important;
+  }
+}
+
+/* --- Paysage téléphone (écran bas) : chrome compacté + carte plein cadre --- */
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 520px) {
+  /* Topbar sur une seule ligne fine */
+  .topbar { padding: 4px 10px !important; gap: 6px !important; }
+  .topbar-brand1512 .brand { font-size: 13px !important; letter-spacing: 1px !important; }
+  .carousel-container { order: 0 !important; flex: 1 1 auto !important; width: auto !important; }
+  .carousel-page { height: 34px !important; min-width: 80px !important; font-size: 11px !important; }
+  .carousel-nav-btn { display: none !important; }
+
+  /* Barre de ressources réduite au strict minimum vertical */
+  .stable-resourcebar1542b { margin: 4px 6px 6px !important; padding: 16px 8px 6px !important; }
+  .stable-resource-list1542b { grid-auto-columns: minmax(78px, 1fr) !important; }
+  .stable-res1542b { font-size: 10px !important; }
+  .stable-clock1542b { display: none !important; }
+
+  /* Carte : remplit ce qui reste, sans jamais déborder */
+  body.view-galaxy .galaxy-wrap,
+  .galaxy-wrap {
+    height: calc(100dvh - 155px) !important;
+    min-height: 200px !important;
+    max-height: calc(100dvh - 145px) !important;
+  }
+  .gwm-footer { display: none !important; }
+}
