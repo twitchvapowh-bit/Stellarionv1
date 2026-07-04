@@ -41,7 +41,8 @@
   function phone() {
     return /iphone|ipad|ipod|android/i.test(navigator.userAgent || "") ||
       matchMedia("(pointer:coarse)").matches ||
-      Math.min(screen.width, screen.height) <= 900;
+      Math.min(screen.width, screen.height) <= 900 ||
+      Math.min(innerWidth, innerHeight) <= 900;
   }
 
   function vw() { return (window.visualViewport && visualViewport.width) || innerWidth; }
