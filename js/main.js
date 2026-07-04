@@ -4098,19 +4098,13 @@ function planetShowcaseView(){
   const energy=(typeof calcEnergyForPlanet==="function"?calcEnergyForPlanet(state.activePlanetId):calcEnergy());
   const cosmetics=planetCosmeticsForView();
   const bonusLabel=(p.bonus&&p.bonus.label)||"Aucun";
-  const commander=(typeof currentPseudoV16==="function"?currentPseudoV16():(state.playerName||state.pseudo||"Commandant"));
-  const email=(typeof currentUser!=="undefined"&&currentUser&&currentUser.email)?currentUser.email:"mode local";
-  const country=state.playerCountry||"Non renseigné";
-  const flag=state.playerFlag||"🌌";
-  const motto=state.playerMotto||"Aucune devise renseignée";
-  const desc=state.playerDescription||"Profil joueur centralisé. La vue Planète affiche maintenant le commandant au centre, la planète active restant disponible dans les panneaux latéraux.";
-  const planetsCount=(state.planets||[]).length;
   const totalFleet=(state.planets||[]).reduce((sum,pl)=>sum+(typeof planetFleetPower==="function"?planetFleetPower(pl.id):0),0);
   const totalCommandement=(state.planets||[]).reduce((sum,pl)=>sum+(typeof planetCommandementPower==="function"?planetCommandementPower(pl.id):0),0);
-  const ownedApparats=(typeof APPARAT_CATALOG!=="undefined"?APPARAT_CATALOG.filter(a=>apparatOwned(a.id)).length:(state.cosmetics||[]).length);
+  const totalPower=(typeof planetTotalPower==="function"?planetTotalPower(p.id):(totalFleet+totalCommandement));
+  const auraType=(typeof planetVisualKind==="function"?planetVisualKind(p):"water");
   return `<div class="planet-showcase">
    <div class="planet-left-panel">
-    <div class="card panel planet-dashboard-card planet-dashboard-clean1513">      <span class="pill">PLANÈTE ACTIVE</span>      <div class="planet-current-card clean1513">        <strong>${p.name||"Planète"}</strong>        <small>${activePlanetIndex()+1} / ${state.planets.length} · ${p.isHomeworld?"Planète mère":(p.type||"Colonie")}</small>      </div>      <p class="small muted" style="margin:8px 0 0">Le centre de cette page affiche maintenant le profil joueur pour éviter le doublon visuel avec la planète de droite.</p>     </div>
+    <div class="card panel planet-dashboard-card planet-dashboard-clean1513">      <span class="pill">PLANÈTE ACTIVE</span>      <div class="planet-current-card clean1513">        <strong>${p.name||"Planète"}</strong>        <small>${activePlanetIndex()+1} / ${state.planets.length} · ${p.isHomeworld?"Planète mère":(p.type||"Colonie")}</small>      </div>     </div>
     <div class="card panel">
      <span class="pill">${planetVisualType(p)}</span>
      <h2>${p.name}</h2>
@@ -4118,34 +4112,25 @@ function planetShowcaseView(){
      <div class="resource"><span>Production Titane</span><strong>+${fmt(prod.titanium)}/h</strong></div>
      <div class="resource"><span>Production Xénite</span><strong>+${fmt(prod.xenite)}/h</strong></div>
      <div class="resource"><span>Énergie empire</span><strong class="${energy.balance>=0?"ok":"error"}">${fmt(energy.balance)} MW</strong></div>
+     <div class="resource"><span>Puissance totale</span><strong>${fmt(totalPower)}</strong></div>
     </div>
    </div>
-   <div class="planet-showcase-board player-profile-center-board">
-    <div style="height:100%;display:grid;place-items:center;padding:24px;">
-     <div class="card panel player-profile-center-card" style="width:min(680px,92%);text-align:center;border-color:rgba(79,195,247,.26);box-shadow:0 0 70px rgba(79,195,247,.10);">
-      <span class="pill">PROFIL JOUEUR</span>
-      <div style="font-size:54px;margin:14px 0 4px">${flag}</div>
-      <h1 style="margin:6px 0 4px;color:#4FC3F7;letter-spacing:2px">${commander}</h1>
-      <p class="small muted" style="margin:0 0 12px">${email}</p>
-      <div class="profile-grid" style="text-align:left;margin:14px 0">
-       <div class="profile-item"><small>Pays / origine</small><strong>${country}</strong></div>
-       <div class="profile-item"><small>Planètes</small><strong>${planetsCount}</strong></div>
-       <div class="profile-item"><small>Puissance flotte</small><strong>${fmt(totalFleet)}</strong></div>
-       <div class="profile-item"><small>Puissance défense</small><strong>${fmt(totalCommandement)}</strong></div>
-       <div class="profile-item"><small>Apparats possédés</small><strong>${ownedApparats}</strong></div>
-       <div class="profile-item"><small>Planète active</small><strong>${p.name}</strong></div>
-      </div>
-      <div class="player-profile-box" style="text-align:left;margin-top:12px">
-       <strong>Devise</strong>
-       <p class="muted" style="margin:8px 0 0">${motto}</p>
-       <p class="small muted" style="margin:8px 0 0">${desc}</p>
-      </div>
-      <div class="profile-actions" style="margin-top:14px">
-       <button class="btn" onclick="openProfileModalV16&&openProfileModalV16()">Modifier le profil</button>
-       <button class="btn btn-ghost" onclick="setView('galaxy')">Retour galaxie</button>
+   <div class="planet-showcase-board">
+    <div class="planet-center-title">
+     <span class="pill">PLANÈTE SÉLECTIONNÉE</span>
+     <h2 style="margin:8px 0 0">${p.name}</h2>
+     <p class="small muted" style="margin:4px 0 0">${p.isHomeworld?"Planète mère":(p.type||"Colonie")} · ${bonusLabel}</p>
+    </div>
+    <div class="rotating-planet-wrap clean apparat-system" data-orbit-planet="${p.id}">
+     <div class="planet-aura-layer ${auraType}"></div>
+     <div class="aura-particles"></div>
+     <div class="orbit-circle-guide g1"></div>
+     <div class="orbit-circle-guide g2"></div>
+     <div class="orbit-circle-guide g3"></div>
+     <div class="rotating-planet has-identity-img">
+      ${planetVisualHtml(p,"planet-orbital-sync")}
       </div>
      </div>
-    </div>
    </div>
    <div class="planet-right-panel">
     <div class="card panel planet-cosmetics-card">

@@ -147,7 +147,8 @@ html.st-stage1645 body.view-defenses .layout,
 html.st-stage1645 body.view-leaderboards .layout,
 html.st-stage1645 body.view-market .layout,
 html.st-stage1645 body.view-alliance .layout,
-html.st-stage1645 body.view-chests .layout{
+html.st-stage1645 body.view-chests .layout,
+html.st-stage1645 body.view-planet .layout{
   grid-template-columns:1fr!important;
 }
 html.st-stage1645 body.view-defenses .layout>.side.right,
@@ -159,7 +160,9 @@ html.st-stage1645 body.view-defenses .layout>.right,
 html.st-stage1645 body.view-leaderboards .layout>.right,
 html.st-stage1645 body.view-market .layout>.right,
 html.st-stage1645 body.view-alliance .layout>.right,
-html.st-stage1645 body.view-chests .layout>.right{
+html.st-stage1645 body.view-chests .layout>.right,
+html.st-stage1645 body.view-planet .layout>.side.right,
+html.st-stage1645 body.view-planet .layout>.right{
   display:none!important;
   visibility:hidden!important;
   pointer-events:none!important;
@@ -168,10 +171,19 @@ html.st-stage1645 body.view-defenses #center,
 html.st-stage1645 body.view-leaderboards #center,
 html.st-stage1645 body.view-market #center,
 html.st-stage1645 body.view-alliance #center,
-html.st-stage1645 body.view-chests #center{
+html.st-stage1645 body.view-chests #center,
+html.st-stage1645 body.view-planet #center{
   grid-column:1 / -1!important;
   width:100%!important;
   max-width:100%!important;
+}
+html.st-stage1645 body.view-planet .planet-showcase{
+  grid-template-columns:1fr!important;
+}
+html.st-stage1645 body.view-planet .planet-right-panel{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
 }
 html.st-stage1645 body.view-leaderboards .lbf-page,
 html.st-stage1645 body.view-market .market-p2p-clean,

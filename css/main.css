@@ -13598,3 +13598,21 @@ body.stable-ui1542b.view-buildings .topbar{
   gap:var(--sg-gap,12px)!important;
  }
 }
+
+/* === STELLARION 1.6.52 — Planète : colonne droite supprimée partout ===
+   La vue Planète affiche maintenant la planète sélectionnée au centre.
+   La colonne interne de droite devient redondante sur PC comme sur mobile. */
+body.view-planet .planet-showcase,
+body.stable-ui1542b.view-planet .planet-showcase{
+  grid-template-columns:minmax(280px,340px) minmax(0,1fr)!important;
+}
+body.view-planet .planet-right-panel,
+body.stable-ui1542b.view-planet .planet-right-panel{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+body.view-planet .planet-showcase-board,
+body.stable-ui1542b.view-planet .planet-showcase-board{
+  min-width:0!important;
+}
