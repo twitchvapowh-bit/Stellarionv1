@@ -5,15 +5,15 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>Stellarion V1 CLOUD ONLY — Alliances corrigées</title>
-<link rel="stylesheet" href="css/main.css?v=1657">
-<link rel="stylesheet" href="css/mobile.css?v=1657">
+<link rel="stylesheet" href="css/main.css?v=1658">
+<link rel="stylesheet" href="css/mobile.css?v=1658">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
 
 <meta name="theme-color" content="#020510">
 <meta property="og:title" content="Stellarion">
 <meta property="og:description" content="Age des Conquérants Stellaires">
 
-<script src="js/supabase.min.js?v=1657"></script>
+<script src="js/supabase.min.js?v=1658"></script>
 <script>if(!window.supabase){document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');}</script>
 
 <!-- STELLARION CORE PACK v0.2 — début -->
@@ -56,28 +56,34 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
   </div>
 </div>
 <div id="app"></div>
-<!-- STELLARION MOBILE R1.2 — moteur mobile INLINE : scène uniforme + topbar réparée + carrousel amarré en bas. -->
+<!-- STELLARION MOBILE R2 — moteur mobile INLINE. Sans transform : largeur logique fixe (932/430),
+     colonnes EMPILÉES (jamais supprimées), carrousel amarré en bas, topbar une ligne. -->
 <script>
 (function () {
   "use strict";
-  if (window.__stellarionMobileR1) return;
-  window.__stellarionMobileR1 = true;
-  // Neutralise les anciens patchs mobiles s'ils traînent encore en cache :
+  if (window.__stellarionMobileR2) return;
+  window.__stellarionMobileR2 = true;
+  // Neutralise toutes les anciennes couches mobiles si elles trainent en cache :
   window.__stellarionMobileSafe1643 = true;
   window.__stellarionStage1645 = true;
   window.__stellarionUniformScale1644 = true;
+  window.__stellarionMobileR1 = true;
+  window.__stellarionMobileLayout1637 = true;
+  window.__stellarionMobileReal1641 = true;
+  window.__stellarionMobileCanary1642 = true;
 
-  var DWL = 932, DHL = 430;   // scène paysage
-  var DWP = 430, DHP = 932;   // scène portrait
+  var W_LANDSCAPE = 932;  // largeur logique commune a tous les telephones
+  var W_PORTRAIT = 430;
 
   function phone() {
     return /iphone|ipad|ipod|android/i.test(navigator.userAgent || "") ||
       matchMedia("(pointer:coarse)").matches ||
       Math.min(screen.width, screen.height) <= 900;
   }
-  function vw() { return (window.visualViewport && visualViewport.width) || innerWidth; }
-  function vh() { return (window.visualViewport && visualViewport.height) || innerHeight; }
-  function isPortrait() { return vh() >= vw(); }
+  function isPortrait() {
+    try { return matchMedia("(orientation:portrait)").matches; }
+    catch (e) { return innerHeight >= innerWidth; }
+  }
   function authVisible() {
     var a = document.getElementById("auth-screen");
     if (!a) return false;
@@ -85,6 +91,10 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     return cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0";
   }
 
+  /* --- Uniformite SANS transform : largeur logique fixe du viewport.
+         Tous les telephones calculent la page a 932px (paysage) / 430px
+         (portrait) ; le navigateur met a l'echelle nativement. Le jeu
+         mesure des dimensions vraies : la carte galaxie fonctionne. --- */
   var meta = null;
   function ensureViewport() {
     if (!meta || !meta.isConnected) {
@@ -92,151 +102,128 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
       if (!meta) { meta = document.createElement("meta"); meta.name = "viewport"; document.head.appendChild(meta); }
     }
     var want = phone()
-      ? "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+      ? "width=" + (isPortrait() ? W_PORTRAIT : W_LANDSCAPE) + ", viewport-fit=cover"
       : "width=device-width, initial-scale=1.0, viewport-fit=cover";
     if (meta.getAttribute("content") !== want) meta.setAttribute("content", want);
   }
 
   function injectCss() {
-    if (document.getElementById("st-r1-css")) return;
+    if (document.getElementById("st-r2-css")) return;
     var s = document.createElement("style");
-    s.id = "st-r1-css";
+    s.id = "st-r2-css";
     s.textContent = "\n" +
-"html.stR1{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;overflow:hidden!important;background:#020510!important}\n" +
-"html.stR1 body{position:absolute!important;left:0!important;top:0!important;margin:0!important;padding:0!important;width:var(--r1dw,932px)!important;height:var(--r1dh,430px)!important;min-width:0!important;max-width:none!important;overflow:hidden!important;transform-origin:0 0!important;transform:translate(var(--r1ox,0px),var(--r1oy,0px)) scale(var(--r1k,1))!important;background:#020510!important}\n" +
-"html.stR1 body input,html.stR1 body textarea,html.stR1 body select,html.stR1 body button{font-size:16px!important}\n" +
-"/* --- Connexion : le jeu disparait totalement derriere --- */\n" +
-"html.stR1 body.stR1auth #app,html.stR1 body.stR1auth .topbar,html.stR1 body.stR1auth .carousel-container,html.stR1 body.stR1auth .stable-resourcebar1542b,html.stR1 body.stR1auth .layout,html.stR1 body.stR1auth #st-r1-nav,html.stR1 body.stR1auth #st-r1-badge{display:none!important}\n" +
-"html.stR1 body #auth-screen{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:100%!important;max-width:100%!important;overflow:auto!important;padding:14px!important;box-sizing:border-box!important;align-items:center!important;justify-content:center!important}\n" +
-"html.stR1 body #auth-screen>div{width:min(420px,92%)!important;max-width:92%!important;margin:auto!important;padding:0!important}\n" +
-"/* --- Topbar compacte --- */\n" +
-"html.stR1 body .topbar{width:100%!important;max-width:100%!important;height:40px!important;min-height:40px!important;padding:3px 8px!important;display:flex!important;align-items:center!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
-"html.stR1 body .topbar::-webkit-scrollbar{display:none!important}\n" +
-"html.stR1 body .brand{font-size:16px!important;letter-spacing:3px!important;white-space:nowrap!important}\n" +
-"/* --- Carrousel amarre dans le dock du bas --- */\n" +
-"html.stR1 body #st-r1-nav .carousel-container{display:flex!important;width:100%!important;max-width:100%!important;height:38px!important;min-height:38px!important;padding:0!important;margin:0!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
-"html.stR1 body #st-r1-nav .carousel-container::-webkit-scrollbar{display:none!important}\n" +
-"html.stR1 body #st-r1-nav .carousel-pages{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
-"html.stR1 body #st-r1-nav .carousel-pages::-webkit-scrollbar{display:none!important}\n" +
-"html.stR1 body #st-r1-nav .carousel-page,html.stR1 body #st-r1-nav .carousel-nav-btn{flex:0 0 auto!important;height:34px!important;min-height:34px!important;padding:0 12px!important;font-size:12px!important;white-space:nowrap!important}\n" +
-"html.stR1 body .carousel-container{max-width:100%!important}\n" +
+"body.stR2{position:fixed!important;inset:0!important;margin:0!important;padding:0!important;width:100%!important;min-width:0!important;max-width:100%!important;height:100dvh!important;overflow:hidden!important;background:#020510!important}\n" +
+"body.stR2 input,body.stR2 textarea,body.stR2 select,body.stR2 button{font-size:16px!important}\n" +
+"/* --- Connexion : jeu totalement masque derriere --- */\n" +
+"body.stR2.stR2auth #app,body.stR2.stR2auth .topbar,body.stR2.stR2auth .carousel-container,body.stR2.stR2auth .stable-resourcebar1542b,body.stR2.stR2auth .layout,body.stR2.stR2auth #st-r2-nav,body.stR2.stR2auth #st-r2-badge,body.stR2.stR2auth .bottom-queue{display:none!important}\n" +
+"body.stR2 #auth-screen{position:fixed!important;inset:0!important;width:100%!important;height:100dvh!important;min-height:100dvh!important;max-width:100%!important;overflow:auto!important;padding:14px!important;box-sizing:border-box!important;align-items:center!important;justify-content:center!important}\n" +
+"body.stR2 #auth-screen>div{width:min(420px,92%)!important;max-width:92%!important;margin:auto!important;padding:0!important}\n" +
+"/* --- Topbar : une seule ligne compacte (annule la media query 1000px de main.css) --- */\n" +
+"body.stR2 .topbar{flex-direction:row!important;align-items:center!important;gap:6px!important;width:100%!important;max-width:100%!important;height:48px!important;min-height:48px!important;max-height:48px!important;padding:3px 8px!important;overflow-x:auto!important;overflow-y:hidden!important;box-sizing:border-box!important;scrollbar-width:none!important}\n" +
+"body.stR2 .topbar::-webkit-scrollbar{display:none!important}\n" +
+"body.stR2 .topbar>*{flex:0 0 auto!important;min-height:0!important;max-height:44px!important;overflow:hidden!important}\n" +
+"body.stR2 .topbar .small,body.stR2 .topbar .muted{display:none!important}\n" +
+"body.stR2 .brand{font-size:16px!important;letter-spacing:3px!important;white-space:nowrap!important}\n" +
 "/* --- Barre ressources : une ligne scrollable --- */\n" +
-"html.stR1 body .stable-resourcebar1542b{width:100%!important;max-width:100%!important;margin:0!important;padding:3px 8px!important;border-radius:0!important;border-left:0!important;border-right:0!important;overflow:hidden!important;box-sizing:border-box!important}\n" +
-"html.stR1 body .stable-resource-list1542b{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
-"html.stR1 body .stable-resource-list1542b::-webkit-scrollbar{display:none!important}\n" +
-"html.stR1 body .stable-res1542b{flex:0 0 106px!important;min-width:106px!important;max-width:106px!important;min-height:40px!important;padding:4px 6px!important;display:grid!important;grid-template-columns:22px minmax(0,1fr)!important;gap:5px!important;align-items:center!important;box-sizing:border-box!important}\n" +
-"html.stR1 body .stable-res-ico1542b{font-size:17px!important}\n" +
-"html.stR1 body .stable-res1542b small{font-size:9px!important;line-height:1!important;white-space:nowrap!important}\n" +
-"html.stR1 body .stable-res1542b strong{font-size:13px!important;line-height:1!important;white-space:nowrap!important}\n" +
-"html.stR1 body .stable-clock1542b{display:none!important}\n" +
-"html.stR1 body .fragment-shop-entry1546{max-width:120px!important;height:22px!important;min-height:22px!important;line-height:22px!important;font-size:10px!important;padding:0 8px!important;margin:0!important}\n" +
-"/* --- Layout : une seule colonne pleine largeur --- */\n" +
-"html.stR1 body .layout,html.stR1 body .layout.has-bottom-queue{display:block!important;grid-template-columns:none!important;width:100%!important;max-width:100%!important;height:calc(100% - var(--r1top,96px) - 50px)!important;min-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important}\n" +
-"html.stR1 body .layout>.side,html.stR1 body .layout>.side.left,html.stR1 body .layout>.side.right{display:none!important}\n" +
-"html.stR1 body #center{display:block!important;width:100%!important;max-width:100%!important;height:100%!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important;box-sizing:border-box!important}\n" +
-"html.stR1 body .gwm-stage{width:100%!important;max-width:100%!important;height:100%!important;min-height:0!important;overflow:hidden!important}\n" +
-"html.stR1 body .card,html.stR1 body .panel{max-width:100%!important;box-sizing:border-box!important}\n" +
-"/* --- Barre d'onglets bas facon appli --- */\n" +
-"html.stR1 body #st-r1-nav{position:absolute!important;left:0!important;right:0!important;bottom:0!important;height:50px!important;display:flex!important;gap:6px!important;align-items:center!important;padding:6px 8px!important;box-sizing:border-box!important;background:linear-gradient(180deg,rgba(5,13,26,.92),#020510)!important;border-top:1px solid rgba(79,195,247,.28)!important;overflow-x:auto!important;overflow-y:hidden!important;z-index:600!important;scrollbar-width:none!important}\n" +
-"html.stR1 body #st-r1-nav::-webkit-scrollbar{display:none!important}\n" +
-"html.stR1 body #st-r1-nav button{flex:0 0 auto!important;height:38px!important;padding:0 13px!important;border-radius:11px!important;border:1px solid rgba(79,195,247,.28)!important;background:rgba(10,24,46,.9)!important;color:#cfe3fb!important;font:700 12px system-ui,Arial!important;white-space:nowrap!important;cursor:pointer}\n" +
-"html.stR1 body #st-r1-nav button.on{background:#4FC3F7!important;color:#04162e!important;border-color:#4FC3F7!important}\n" +
-"/* --- Temoin de chargement --- */\n" +
-"html.stR1 body #st-r1-badge{position:absolute!important;right:8px!important;bottom:58px!important;z-index:601!important;background:#19e68c!important;color:#00140b!important;border:2px solid #fff!important;border-radius:999px!important;padding:6px 9px!important;font:900 10px/1 system-ui,Arial!important;pointer-events:none!important}\n" +
-"/* --- R1.2 : neutralisation de la media query desktop max-width:1000px de main.css --- */\n" +
-"html.stR1 body .topbar{flex-direction:row!important;height:48px!important;min-height:48px!important;max-height:48px!important}\n" +
-"html.stR1 body .topbar>*{flex:0 0 auto!important;min-height:0!important;max-height:44px!important;overflow:hidden!important}\n" +
-"html.stR1 body .topbar .small,html.stR1 body .topbar .muted{display:none!important}\n" +
-"/* Pastilles etat carte galaxie (Planetes figees / hover actif) : inutiles au doigt */\n" +
-"html.stR1 body .gwm-footer{display:none!important}\n" +
-"/* Dock files d attente desktop : masque sur mobile (accessible via page Batiments) */\n" +
-"html.stR1 body .bottom-queue{display:none!important}\n" +
-"html.stR1 body .has-bottom-queue{padding-bottom:0!important}\n" +
-"html.stR1 body .galaxy-wrap{height:100%!important;min-height:0!important;max-width:100%!important}\n" +
-"/* --- Nettoyage des anciens overlays/patchs sur mobile --- */\n" +
-"html.stR1 body #stellarion-rotate1626,html.stR1 body #stellarion-scrollrail1628,html.stR1 body #stellarion-rotate-overlay-1641{display:none!important}\n" +
-"html.stR1 body .bpop1632{width:min(460px,calc(100% - 20px))!important;max-height:calc(100% - 70px)!important}\n";
+"body.stR2 .stable-resourcebar1542b{width:100%!important;max-width:100%!important;margin:0!important;padding:3px 8px!important;border-radius:0!important;border-left:0!important;border-right:0!important;overflow:hidden!important;box-sizing:border-box!important}\n" +
+"body.stR2 .stable-resource-list1542b{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
+"body.stR2 .stable-resource-list1542b::-webkit-scrollbar{display:none!important}\n" +
+"body.stR2 .stable-res1542b{flex:0 0 106px!important;min-width:106px!important;max-width:106px!important;min-height:40px!important;padding:4px 6px!important;display:grid!important;grid-template-columns:22px minmax(0,1fr)!important;gap:5px!important;align-items:center!important;box-sizing:border-box!important}\n" +
+"body.stR2 .stable-res-ico1542b{font-size:17px!important}\n" +
+"body.stR2 .stable-res1542b small{font-size:9px!important;line-height:1!important;white-space:nowrap!important}\n" +
+"body.stR2 .stable-res1542b strong{font-size:13px!important;line-height:1!important;white-space:nowrap!important}\n" +
+"body.stR2 .stable-clock1542b{display:none!important}\n" +
+"body.stR2 .fragment-shop-entry1546{max-width:120px!important;height:22px!important;min-height:22px!important;line-height:22px!important;font-size:10px!important;padding:0 8px!important;margin:0!important}\n" +
+"/* --- Layout : UNE colonne, RIEN n'est supprime. Le centre d'abord, puis les\n       panneaux lateraux empiles en dessous, pleine largeur. Le layout scrolle. --- */\n" +
+"body.stR2 .layout,body.stR2 .layout.has-bottom-queue{display:block!important;grid-template-columns:none!important;width:100%!important;max-width:100%!important;height:calc(100dvh - var(--r2top,96px) - 50px)!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;margin:0!important;padding:0 0 12px!important;box-sizing:border-box!important}\n" +
+"body.stR2 .layout>.side,body.stR2 .layout>.side.left,body.stR2 .layout>.side.right{display:block!important;width:100%!important;max-width:100%!important;border:0!important;padding:10px!important;box-sizing:border-box!important;overflow:visible!important}\n" +
+"body.stR2 #center{display:block!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:120px!important;overflow:visible!important;box-sizing:border-box!important}\n" +
+"/* Carte galaxie : hauteur pleine zone, dimensions vraies (pas de transform) */\n" +
+"body.stR2 .galaxy-wrap,body.stR2 .gwm-stage{width:100%!important;max-width:100%!important;height:calc(100dvh - var(--r2top,96px) - 62px)!important;min-height:300px!important;overflow:hidden!important}\n" +
+"body.stR2 .card,body.stR2 .panel{max-width:100%!important;box-sizing:border-box!important}\n" +
+"/* --- Dock bas : le VRAI carrousel amarre --- */\n" +
+"body.stR2 #st-r2-nav{position:fixed!important;left:0!important;right:0!important;bottom:0!important;height:50px!important;display:flex!important;align-items:center!important;padding:6px 8px!important;box-sizing:border-box!important;background:linear-gradient(180deg,rgba(5,13,26,.92),#020510)!important;border-top:1px solid rgba(79,195,247,.28)!important;z-index:600!important}\n" +
+"body.stR2 #st-r2-nav .carousel-container{display:flex!important;width:100%!important;max-width:100%!important;height:38px!important;min-height:38px!important;padding:0!important;margin:0!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
+"body.stR2 #st-r2-nav .carousel-container::-webkit-scrollbar{display:none!important}\n" +
+"body.stR2 #st-r2-nav .carousel-pages{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
+"body.stR2 #st-r2-nav .carousel-pages::-webkit-scrollbar{display:none!important}\n" +
+"body.stR2 #st-r2-nav .carousel-page,body.stR2 #st-r2-nav .carousel-nav-btn{flex:0 0 auto!important;height:34px!important;min-height:34px!important;padding:0 12px!important;font-size:12px!important;white-space:nowrap!important}\n" +
+"/* --- Temoin --- */\n" +
+"body.stR2 #st-r2-badge{position:fixed!important;right:8px!important;bottom:58px!important;z-index:601!important;background:#ffb300!important;color:#1a1200!important;border:2px solid #fff!important;border-radius:999px!important;padding:6px 9px!important;font:900 10px/1 system-ui,Arial!important;pointer-events:none!important}\n" +
+"/* --- Nettoyage mobile : pastilles carte, dock desktop, vieux overlays --- */\n" +
+"body.stR2 .gwm-footer{display:none!important}\n" +
+"body.stR2 .bottom-queue{display:none!important}\n" +
+"body.stR2 .has-bottom-queue{padding-bottom:0!important}\n" +
+"body.stR2 #stellarion-rotate1626,body.stR2 #stellarion-scrollrail1628,body.stR2 #stellarion-rotate-overlay-1641{display:none!important}\n" +
+"body.stR2 .bpop1632{width:min(460px,calc(100% - 20px))!important;max-height:calc(100dvh - 70px)!important}\n";
     document.head.appendChild(s);
   }
 
-  /* --- Scene a resolution fixe + echelle --- */
-  function fit() {
-    ensureViewport();
-    var r = document.documentElement;
-    if (!phone()) { r.classList.remove("stR1"); return; }
-    injectCss();
-    var p = isPortrait();
-    var dw = p ? DWP : DWL, dh = p ? DHP : DHL;
-    var k = Math.min(vw() / dw, vh() / dh);
-    r.style.setProperty("--r1dw", dw + "px");
-    r.style.setProperty("--r1dh", dh + "px");
-    r.style.setProperty("--r1k", String(k));
-    r.style.setProperty("--r1ox", Math.max(0, (vw() - dw * k) / 2).toFixed(2) + "px");
-    r.style.setProperty("--r1oy", Math.max(0, (vh() - dh * k) / 2).toFixed(2) + "px");
-    r.classList.add("stR1");
+  function measureTop() {
     var tb = document.querySelector(".topbar");
     var rb = document.querySelector(".stable-resourcebar1542b");
     var top = (tb ? tb.offsetHeight : 48) + (rb ? rb.offsetHeight : 48);
-    r.style.setProperty("--r1top", top + "px");
-    if (document.body) document.body.classList.toggle("stR1auth", authVisible());
-    try { window.scrollTo(0, 0); } catch (e) {}
+    document.documentElement.style.setProperty("--r2top", top + "px");
   }
 
-  /* --- Dock : le VRAI carrousel est deplace en bas de l'ecran ---
-     Apres chaque render, si un carrousel neuf apparait dans #app,
-     on l'adopte dans le dock (l'ancien est jete). Comportement natif conserve. */
   function dockCarousel() {
-    if (!phone() || !document.body) return;
-    var nav = document.getElementById("st-r1-nav");
+    if (!document.body) return;
+    var nav = document.getElementById("st-r2-nav");
     if (!nav) {
       nav = document.createElement("div");
-      nav.id = "st-r1-nav";
+      nav.id = "st-r2-nav";
       document.body.appendChild(nav);
     }
     var all = document.querySelectorAll(".carousel-container");
     var fresh = null;
     for (var i = 0; i < all.length; i++) {
-      if (all[i].parentNode !== nav) fresh = all[i]; // carrousel recree par un render
+      if (all[i].parentNode !== nav) fresh = all[i];
     }
-    if (fresh) {
-      nav.innerHTML = "";
-      nav.appendChild(fresh);
-    }
+    if (fresh) { nav.innerHTML = ""; nav.appendChild(fresh); }
   }
 
   function badge() {
-    if (!phone() || !document.body) return;
-    if (document.getElementById("st-r1-badge")) return;
+    if (!document.body || document.getElementById("st-r2-badge")) return;
     var b = document.createElement("div");
-    b.id = "st-r1-badge";
-    b.textContent = "MOBILE R1 OK";
+    b.id = "st-r2-badge";
+    b.textContent = "MOBILE R2 OK";
     document.body.appendChild(b);
   }
 
-  function apply() { fit(); dockCarousel(); badge(); }
+  function apply() {
+    ensureViewport();
+    if (!phone()) {
+      if (document.body) document.body.classList.remove("stR2", "stR2auth");
+      return;
+    }
+    injectCss();
+    if (!document.body) return;
+    document.body.classList.add("stR2");
+    document.body.classList.toggle("stR2auth", authVisible());
+    measureTop();
+    dockCarousel();
+    badge();
+  }
 
   apply();
   document.addEventListener("DOMContentLoaded", apply);
   window.addEventListener("load", apply);
   window.addEventListener("resize", function () { setTimeout(apply, 60); }, { passive: true });
-  window.addEventListener("orientationchange", function () { setTimeout(apply, 220); }, { passive: true });
-  if (window.visualViewport) {
-    try { visualViewport.addEventListener("resize", function () { setTimeout(fit, 60); }); } catch (e) {}
-  }
+  window.addEventListener("orientationchange", function () { setTimeout(apply, 220); setTimeout(apply, 600); }, { passive: true });
   try { new MutationObserver(function () { apply(); }).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) {}
   setInterval(apply, 700);
 
-  window.stellarionMobileR1Audit = function () {
-    var cs = getComputedStyle(document.documentElement);
+  window.stellarionMobileR2Audit = function () {
     return {
-      patch: "mobile-R1.2-inline",
-      actif: document.documentElement.classList.contains("stR1"),
+      patch: "mobile-R2-inline",
+      actif: !!(document.body && document.body.classList.contains("stR2")),
       phone: phone(),
       portrait: isPortrait(),
-      design: cs.getPropertyValue("--r1dw").trim() + " x " + cs.getPropertyValue("--r1dh").trim(),
-      echelle: cs.getPropertyValue("--r1k").trim(),
-      ecranReel: vw() + " x " + vh(),
-      carrouselDocke: !!document.querySelector("#st-r1-nav .carousel-container"),
+      viewport: meta && meta.getAttribute("content"),
+      innerW: innerWidth,
+      innerH: innerHeight,
+      topMesure: getComputedStyle(document.documentElement).getPropertyValue("--r2top").trim(),
+      carrouselDocke: !!document.querySelector("#st-r2-nav .carousel-container"),
       authVisible: authVisible()
     };
   };
@@ -246,15 +233,15 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
 <!-- STELLARION 1.5.78 — Alliance native field fix
      Objectif : réparer le focus Alliance sans casser la messagerie, sans bloquer les onglets, sans ralentir les changements de page. -->
-<script src="js/main.js?v=1657"></script>
-<script src="js/fragment-shop-stripe-patch.js?v=1657"></script>
+<script src="js/main.js?v=1658"></script>
+<script src="js/fragment-shop-stripe-patch.js?v=1658"></script>
 <!-- STELLARION 1.6.25 — Couche mobile : pinch-zoom galaxie + boutons zoom tactiles -->
-<script src="js/patch_1625_mobile.js?v=1657"></script>
+<script src="js/patch_1625_mobile.js?v=1658"></script>
 <!-- STELLARION 1.6.31 — Suppression des rapports de combat texte (format archive) -->
-<script src="js/patch_1631_reports.js?v=1657"></script>
+<script src="js/patch_1631_reports.js?v=1658"></script>
 <!-- STELLARION 1.6.32 — Construction : détail bâtiment en pop-up, colonnes supprimées -->
-<script src="js/patch_1632_building_popup.js?v=1657"></script>
+<script src="js/patch_1632_building_popup.js?v=1658"></script>
 <!-- STELLARION 1.6.35 — Anti-duplication de flotte (ledger) + réparation serveur -->
-<script src="js/patch_1634_fleet_ledger.js?v=1657"></script>
+<script src="js/patch_1634_fleet_ledger.js?v=1658"></script>
 </body>
 </html>
