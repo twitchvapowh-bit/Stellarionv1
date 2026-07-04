@@ -99,9 +99,16 @@ Deno.serve(async (req) => {
     // aussi, ce qui donnait l'impression que plus aucun coffre ne s'ouvrait.
     const isolateChestAction = action === "open_chest";
     const isolateBootAction = action === "bootstrap" || action === "state";
+    const isolateProcessAction = action === "process";
     let queueWarning: string | null = null;
-    if (!isolateChestAction && !isolateBootAction) {
+    if (!isolateChestAction && !isolateBootAction && !isolateProcessAction) {
       await processQueues(admin, supaUser, user.id);
+    } else if (isolateProcessAction) {
+      try { await processQueues(admin, supaUser, user.id); }
+      catch (qe) {
+        queueWarning = String((qe as Error)?.message || qe);
+        try { await processQueuesSafeNoCombat(admin, user.id); } catch (_) {}
+      }
     } else {
       try { await processQueuesSafeNoCombat(admin, user.id); }
       catch (qe) { queueWarning = String((qe as Error)?.message || qe); }
@@ -131,7 +138,7 @@ Deno.serve(async (req) => {
     } else if (action === "resolve_player_attack") {
       message = await resolvePlayerAttackNow(admin, supaUser, user.id, body);
     } else if (action === "process") {
-      message = "Files et flottes traitees.";
+      message = queueWarning ? "Traitement serveur partiel." : "Files et flottes traitees.";
     } else if (action === "repair_reduce_ships") {
       const repair = await repairReduceShips(admin, user.id, body);
       message = "Stock de vaisseaux reduit cote serveur.";
@@ -142,8 +149,14 @@ Deno.serve(async (req) => {
     }
 
     await accrueResources(admin, user.id);
-    if (!isolateChestAction && !isolateBootAction) {
+    if (!isolateChestAction && !isolateBootAction && !isolateProcessAction) {
       await processQueues(admin, supaUser, user.id);
+    } else if (isolateProcessAction) {
+      try { await processQueues(admin, supaUser, user.id); }
+      catch (qe) {
+        extra.queueWarningAfter = String((qe as Error)?.message || qe);
+        try { await processQueuesSafeNoCombat(admin, user.id); } catch (_) {}
+      }
     } else {
       try { await processQueuesSafeNoCombat(admin, user.id); }
       catch (qe) { extra.queueWarningAfter = String((qe as Error)?.message || qe); }
