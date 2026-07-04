@@ -232,9 +232,10 @@
    ou définitivement via le bouton (classe body).
    ============================================================ */
 #stellarion-rotate1626 {
-  position: fixed;
-  inset: 0;
-  z-index: 999999;
+  position: fixed !important;
+  inset: 0 !important;
+  /* Au-dessus du bootgate (2147483000) pour être visible dès le chargement */
+  z-index: 2147483200 !important;
   display: none;
   align-items: center;
   justify-content: center;
@@ -242,11 +243,12 @@
   color: #e6eefc;
   text-align: center;
   padding: 24px;
+  /* Immunisé contre le masquage bootgate (~* { visibility:hidden }) */
+  visibility: visible !important;
 }
-/* Visible uniquement : écran tactile + portrait + largeur téléphone */
-@media (hover: none) and (pointer: coarse) and (orientation: portrait) and (max-width: 620px) {
-  #stellarion-rotate1626 { display: flex; }
-}
+/* Affichage piloté par le JS (détection tactile + portrait, plus fiable
+   que la media query hover/pointer seule sur certains navigateurs) */
+#stellarion-rotate1626.sr1626-show { display: flex; }
 body.stellarion-rotate-dismissed1626 #stellarion-rotate1626 { display: none !important; }
 
 .sr1626-inner { max-width: 320px; }

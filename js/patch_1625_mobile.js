@@ -142,19 +142,25 @@
   if (window.__stellarionRotatePrompt1626) return;
   window.__stellarionRotatePrompt1626 = true;
 
-  function inject() {
-    if (document.getElementById("stellarion-rotate1626")) return;
-    if (!document.body) return;
+  function isTouchDevice() {
+    if (navigator.maxTouchPoints > 0) return true;
+    if ("ontouchstart" in window) return true;
+    try { return window.matchMedia("(hover: none) and (pointer: coarse)").matches; } catch (e) { return false; }
+  }
+  function isPortrait() {
+    try { return window.matchMedia("(orientation: portrait)").matches; } catch (e) {}
+    return window.innerHeight > window.innerWidth;
+  }
+  function isDismissed() {
+    try { return sessionStorage.getItem("stellarionRotateDismissed1626") === "1"; } catch (e) { return false; }
+  }
 
-    // Choix mémorisé pour la session : ne pas réafficher
-    var dismissed = false;
-    try { dismissed = sessionStorage.getItem("stellarionRotateDismissed1626") === "1"; } catch (e) {}
-    if (dismissed) {
-      document.body.classList.add("stellarion-rotate-dismissed1626");
-      return;
-    }
+  function ensureOverlay() {
+    if (!document.body) return null;
+    var overlay = document.getElementById("stellarion-rotate1626");
+    if (overlay) return overlay;
 
-    var overlay = document.createElement("div");
+    overlay = document.createElement("div");
     overlay.id = "stellarion-rotate1626";
     overlay.innerHTML =
       '<div class="sr1626-inner">' +
@@ -165,16 +171,39 @@
       '</div>';
     document.body.appendChild(overlay);
 
-    var btn = document.getElementById("sr1626-skip");
+    var btn = overlay.querySelector("#sr1626-skip");
     if (btn) btn.addEventListener("click", function () {
       document.body.classList.add("stellarion-rotate-dismissed1626");
+      overlay.classList.remove("sr1626-show");
       try { sessionStorage.setItem("stellarionRotateDismissed1626", "1"); } catch (e) {}
     });
-    // En paysage, la media query masque l'overlay toute seule : rien d'autre à faire.
+    return overlay;
   }
 
-  if (document.body) inject();
-  else document.addEventListener("DOMContentLoaded", inject);
+  function refresh() {
+    if (!isTouchDevice()) return;
+    var overlay = ensureOverlay();
+    if (!overlay) return;
+    if (isDismissed()) {
+      document.body.classList.add("stellarion-rotate-dismissed1626");
+      overlay.classList.remove("sr1626-show");
+      return;
+    }
+    // Téléphone uniquement (le petit côté de l'écran < 620px), pas les tablettes
+    var phoneSized = Math.min(window.innerWidth, window.innerHeight) < 620;
+    if (isPortrait() && phoneSized) overlay.classList.add("sr1626-show");
+    else overlay.classList.remove("sr1626-show");
+  }
+
+  function boot() {
+    refresh();
+    window.addEventListener("resize", refresh, { passive: true });
+    try { window.matchMedia("(orientation: portrait)").addEventListener("change", refresh); } catch (e) {}
+    setInterval(refresh, 1200); // réinjection si un render l'efface
+  }
+
+  if (document.body) boot();
+  else document.addEventListener("DOMContentLoaded", boot);
 })();
 
 /* STELLARION 1.6.28 — Rail de scroll tactile à droite de chaque page.
