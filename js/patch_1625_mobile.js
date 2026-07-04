@@ -132,3 +132,47 @@
     };
   };
 })();
+
+/* STELLARION 1.6.26 — Invite "tourne ton téléphone" (paysage recommandé).
+   Injectée au chargement ; visible seulement en portrait sur téléphone (CSS).
+   Disparaît automatiquement en paysage ; bouton pour continuer en portrait
+   (choix mémorisé pour la session). */
+(function () {
+  "use strict";
+  if (window.__stellarionRotatePrompt1626) return;
+  window.__stellarionRotatePrompt1626 = true;
+
+  function inject() {
+    if (document.getElementById("stellarion-rotate1626")) return;
+    if (!document.body) return;
+
+    // Choix mémorisé pour la session : ne pas réafficher
+    var dismissed = false;
+    try { dismissed = sessionStorage.getItem("stellarionRotateDismissed1626") === "1"; } catch (e) {}
+    if (dismissed) {
+      document.body.classList.add("stellarion-rotate-dismissed1626");
+      return;
+    }
+
+    var overlay = document.createElement("div");
+    overlay.id = "stellarion-rotate1626";
+    overlay.innerHTML =
+      '<div class="sr1626-inner">' +
+        '<div class="sr1626-phone"></div>' +
+        '<div class="sr1626-title">TOURNE TON T\u00c9L\u00c9PHONE</div>' +
+        '<div class="sr1626-text">STELLARION se joue en mode paysage pour profiter de toute la galaxie.</div>' +
+        '<button type="button" class="sr1626-btn" id="sr1626-skip">Continuer en portrait</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    var btn = document.getElementById("sr1626-skip");
+    if (btn) btn.addEventListener("click", function () {
+      document.body.classList.add("stellarion-rotate-dismissed1626");
+      try { sessionStorage.setItem("stellarionRotateDismissed1626", "1"); } catch (e) {}
+    });
+    // En paysage, la media query masque l'overlay toute seule : rien d'autre à faire.
+  }
+
+  if (document.body) inject();
+  else document.addEventListener("DOMContentLoaded", inject);
+})();
