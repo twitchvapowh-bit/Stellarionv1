@@ -9563,11 +9563,18 @@ function upgradeAuthScreenV16(){
 
 function addAccountWidgetV16(){
  try{
-  const top=document.querySelector('.topbar') || document.querySelector('[class*="topbar"]');
+  // Sur mobile (body.stR2), tout ce qui n'est pas le logo/bouton Menu vit
+  // dans .topbar-extra1512 (replie/deplie avec le reste). Sinon la puce
+  // profil venait s'incruster directement dans la topbar compacte et
+  // chevauchait le bouton ☰ en portrait. Sur desktop, .topbar-extra1512
+  // n'existe pas : on retombe sur .topbar comme avant.
+  const top=document.querySelector('.topbar-extra1512') || document.querySelector('.topbar') || document.querySelector('[class*="topbar"]');
   if(!top) return;
   let chip=document.getElementById('account-chip-v16');
   if(!chip){
    chip=document.createElement('button'); chip.id='account-chip-v16'; chip.className='account-chip-v16'; chip.type='button'; chip.onclick=openProfileModalV16;
+   top.appendChild(chip);
+  } else if(chip.parentElement!==top){
    top.appendChild(chip);
   }
   const flag=safeTextV16(state?.playerFlag||'',16);

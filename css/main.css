@@ -14995,3 +14995,16 @@ body.stR2.stR2.stR2.stR2menu .topbar-extra1512{
 body.stR2.stR2.stR2.stR2menu .topbar-extra1512::-webkit-scrollbar{
   display:none!important;
 }
+/* La puce profil (account-chip-v16) est deplacee dans .topbar-extra1512 en
+   mobile (voir addAccountWidgetV16 dans main.js) : elle ne doit plus se
+   pousser toute seule a droite (margin-left:auto d'origine) ni chevaucher
+   le bouton Menu, qui reste seul dans la bande compacte toujours visible. */
+body.stR2.stR2.stR2 .topbar-extra1512 .account-chip-v16{
+  margin-left:0!important;
+  order:3!important;
+  flex:0 0 auto!important;
+  max-width:150px!important;
+}
+body.stR2.stR2.stR2 .topbar-extra1512 .account-chip-v16 strong{
+  max-width:70px!important;
+}
