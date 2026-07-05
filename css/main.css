@@ -14925,3 +14925,73 @@ body.view-leaderboards #center{
 body.stR2.stR2menu .perf-panel-backdrop1528{
   padding-top:112px!important;
 }
+
+/* STELLARION — Bouton Menu deplace DANS la topbar : juste a droite du logo
+   STELLARION, juste a gauche de l'enveloppe/reglages. Desktop : invisible
+   (pas besoin d'un bouton menu). Mobile (body.stR2) : c'est lui qui
+   deplie/replie le reste (planete, notifs, reglages) + la barre ressources. */
+#st-r2-menu-inline{
+  display:none;
+}
+body.stR2.stR2.stR2 #st-r2-menu-inline{
+  display:inline-flex!important;
+  position:relative!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex:0 0 auto!important;
+  order:1!important;
+  width:36px!important;
+  height:32px!important;
+  min-width:36px!important;
+  margin:0 4px!important;
+  padding:0!important;
+  border-radius:9px!important;
+  border:1px solid rgba(79,195,247,.4)!important;
+  background:rgba(10,24,46,.94)!important;
+  color:#4FC3F7!important;
+  font-size:16px!important;
+  cursor:pointer!important;
+}
+body.stR2.stR2.stR2.stR2menu #st-r2-menu-inline{
+  background:#4FC3F7!important;
+  color:#04162e!important;
+}
+body.stR2.stR2.stR2 #st-r2-menu-inline .r2-menu-badge{
+  position:absolute!important;
+  top:-6px!important;
+  right:-6px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:16px!important;
+  height:16px!important;
+  padding:0 4px!important;
+  border-radius:999px!important;
+  background:#F44336!important;
+  color:#fff!important;
+  font-size:10px!important;
+  font-weight:950!important;
+  line-height:1!important;
+}
+body.stR2.stR2.stR2 .topbar-brand1512{
+  order:0!important;
+  flex:0 0 auto!important;
+  overflow:hidden!important;
+}
+body.stR2.stR2.stR2 .topbar-extra1512{
+  display:none!important;
+}
+body.stR2.stR2.stR2.stR2menu .topbar-extra1512{
+  display:flex!important;
+  order:2!important;
+  align-items:center!important;
+  gap:6px!important;
+  flex:1 1 auto!important;
+  min-width:0!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  scrollbar-width:none!important;
+}
+body.stR2.stR2.stR2.stR2menu .topbar-extra1512::-webkit-scrollbar{
+  display:none!important;
+}
