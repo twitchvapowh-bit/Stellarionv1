@@ -27205,6 +27205,7 @@ window.stellarionScrollAudit1610 = function(){
   function closeRewardsPopup(){
     var old=document.getElementById("chest-rewards-popup-1677");
     if(old) old.remove();
+    try{ document.body.classList.remove("chest-modal-open1677"); }catch(e){}
   }
   function openRewardsPopup(card){
     if(!card || !isMobileChestsR3()) return;
@@ -27230,7 +27231,14 @@ window.stellarionScrollAudit1610 = function(){
     modal.addEventListener("click",function(e){
       if(e.target===modal || e.target.closest(".chest-rewards-close1677")) closeRewardsPopup();
     });
+    try{ document.body.classList.add("chest-modal-open1677"); }catch(e){}
     document.body.appendChild(modal);
+    setTimeout(function(){
+      try{
+        var close=modal.querySelector(".chest-rewards-close1677");
+        if(close) close.focus({preventScroll:true});
+      }catch(e){}
+    },0);
   }
   window.closeChestRewardsPopup1677=closeRewardsPopup;
   window.openChestRewardsPopup1677=openRewardsPopup;
