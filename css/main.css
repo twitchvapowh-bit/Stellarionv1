@@ -14992,16 +14992,42 @@ body.stR2.stR2.stR2 .topbar-extra1512{
 body.stR2.stR2.stR2.stR2menu .topbar-extra1512{
   display:flex!important;
   order:2!important;
+  position:fixed!important;
+  top:44px!important;
+  left:0!important;
+  right:0!important;
+  z-index:719!important;
+  width:100%!important;
+  height:52px!important;
+  min-height:52px!important;
+  max-height:52px!important;
+  padding:6px 8px!important;
   align-items:center!important;
   gap:6px!important;
-  flex:1 1 auto!important;
+  flex:0 0 auto!important;
   min-width:0!important;
   overflow-x:auto!important;
   overflow-y:hidden!important;
+  box-sizing:border-box!important;
+  background:rgba(4,11,24,.98)!important;
+  border-top:1px solid rgba(79,195,247,.18)!important;
+  border-bottom:1px solid rgba(79,195,247,.28)!important;
+  box-shadow:0 16px 38px rgba(0,0,0,.58)!important;
+  pointer-events:auto!important;
   scrollbar-width:none!important;
 }
 body.stR2.stR2.stR2.stR2menu .topbar-extra1512::-webkit-scrollbar{
   display:none!important;
+}
+body.stR2.stR2.stR2.stR2menu .topbar-extra1512>*{
+  flex:0 0 auto!important;
+  max-width:100%!important;
+}
+body.stR2.stR2.stR2.stR2menu .topbar-extra1512 .global-planet-switcher1512,
+body.stR2.stR2.stR2.stR2menu .topbar-extra1512 .account-chip-v16,
+body.stR2.stR2.stR2.stR2menu .topbar-extra1512 .perf-gear1528{
+  position:relative!important;
+  z-index:720!important;
 }
 /* La puce profil (account-chip-v16) est deplacee dans .topbar-extra1512 en
    mobile (voir addAccountWidgetV16 dans main.js) : elle ne doit plus se
