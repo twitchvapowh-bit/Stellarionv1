@@ -5910,6 +5910,17 @@ async function initAllianceSystem() {
 async function saveAllianceToSupabase() {
   if(!supa || !state.alliance || !state.userId) return false;
 
+  // The cloud "alliances" table stores id as a uuid column. Older/local alliance
+  // objects can have no id at all, or a legacy non-uuid id like "ally_<timestamp>".
+  // Sending those straight to Supabase caused repeated
+  // "invalid input syntax for type uuid" errors (including id=eq.undefined).
+  // Normalize to a real uuid before doing anything else.
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(state.alliance.id||""))){
+    try{
+      state.alliance.id = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,function(c){const r=Math.random()*16|0,v=c==="x"?r:(r&3|8);return v.toString(16)});
+    }catch(e){ return false; }
+  }
+
   try {
     const allianceData = {
       id: state.alliance.id,
@@ -6073,7 +6084,7 @@ async function submitAllianceApplicationSupabase(allianceId) {
 // 5. SYNCHRONISATION TEMPS RÉEL
 // ============================================
 function subscribeToAllianceUpdates() {
-  if(!supa || !state.alliance) return;
+  if(!supa || !state.alliance || !state.alliance.id) return;
   try {
     if(state.__allianceRealtimeChannel && supa.removeChannel){
       try{supa.removeChannel(state.__allianceRealtimeChannel);}catch(e){}
