@@ -18368,7 +18368,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   window.stellarionUpdateChestsAvailableHeightV165=updateChestsAvailableHeightV165;
   window.addEventListener('resize', updateChestsAvailableHeightV165, {passive:true});
   window.addEventListener('orientationchange', updateChestsAvailableHeightV165, {passive:true});
-  setInterval(updateChestsAvailableHeightV165, 650);
+  // V16.80 : plus de boucle permanente sur mobile, elle provoquait un scintillement.
   document.addEventListener('click', function(){ setTimeout(updateChestsAvailableHeightV165, 0); }, true);
   const oldSetView=window.setView;
   if(typeof oldSetView==='function' && !oldSetView.__v165ChestsHeight){
@@ -18394,28 +18394,6 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     const hist=document.querySelector('.chest-history1525');
     const mobile=window.matchMedia&&window.matchMedia('(max-width: 900px)').matches;
     if(mobile){
-      if(page){
-        page.style.alignContent='start';
-        page.style.overflowY='visible';
-        page.style.height='auto';
-        page.style.maxHeight='none';
-      }
-      if(grid){
-        grid.style.height='auto';
-        grid.style.minHeight='0';
-        grid.style.maxHeight='none';
-        grid.style.overflow='visible';
-      }
-      [dup,hist].forEach(el=>{
-        if(el){
-          el.style.position='static';
-          el.style.zIndex='auto';
-          el.style.marginTop='0';
-          el.style.height='auto';
-          el.style.maxHeight='none';
-          el.style.overflow='visible';
-        }
-      });
       return;
     }
     if(page){ page.style.alignContent='start'; page.style.overflowY='auto'; }
@@ -18424,7 +18402,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   }
   window.stellarionFixChestNoOverlapV166=fixChestNoOverlapV166;
   window.addEventListener('resize',fixChestNoOverlapV166,{passive:true});
-  setInterval(fixChestNoOverlapV166,900);
+  // V16.80 : pas de correction en boucle, le CSS final gere le mobile.
   document.addEventListener('click',()=>setTimeout(fixChestNoOverlapV166,0),true);
   const oldSetView=window.setView;
   if(typeof oldSetView==='function' && !oldSetView.__v166ChestNoOverlap){
@@ -26898,7 +26876,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   }
 
   fixHeader();
-  setInterval(fixHeader, 200);
+  // V16.80 : intervalle retire, le header ne doit plus etre reecrit en continu.
   try {
     var mo = new MutationObserver(function(){ fixHeader(); });
     mo.observe(document.body, { childList: true, subtree: true });
@@ -27304,7 +27282,6 @@ window.stellarionScrollAudit1610 = function(){
     try{ render = wrapped; }catch(e){}
   }
   window.stellarionMobileChestsR3Enhance1672 = enhance;
-  setInterval(enhance, 700);
   enhance();
 })();
 
@@ -27407,8 +27384,6 @@ window.stellarionScrollAudit1610 = function(){
   window.stellarionMobileChestsNoStack1676=apply;
   window.addEventListener("resize",apply,{passive:true});
   window.addEventListener("orientationchange",function(){setTimeout(apply,80);},{passive:true});
-  document.addEventListener("click",function(){setTimeout(apply,0);setTimeout(apply,160);},true);
-  setInterval(apply,700);
   apply();
 })();
 

@@ -14471,3 +14471,26 @@ body.stable-ui1542b.view-planet .planet-showcase-board{
   color:#d9e8f7!important;
   font-size:12.5px!important;
 }
+
+/* === STELLARION 1.6.80 — Coffres mobile sans scintillement === */
+@media(max-width:980px),(pointer:coarse){
+  body.view-chests .chest-touch-hint1672{
+    display:none!important;
+  }
+  body.view-chests .chest-card1525 .chest-rewards-open1677,
+  body.view-chests .chest-card1525 button[data-chest-cost]{
+    display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    align-items:center!important;
+    justify-content:center!important;
+    grid-column:1 / -1!important;
+    position:relative!important;
+    z-index:3!important;
+    pointer-events:auto!important;
+  }
+  body.view-chests .chest-card1525 button[data-chest-cost]{
+    min-height:48px!important;
+    margin-top:6px!important;
+  }
+}
