@@ -204,6 +204,12 @@ async function audit(admin: any, playerId: string, action: string, ok: boolean, 
 }
 
 async function ensurePlayer(admin: any, playerId: string, snapshotPayload: any) {
+    try {
+    await admin.rpc("stellarion_ensure_home_planet", {
+      p_player_id: playerId,
+      p_name: "Planète mère"
+    });
+  } catch (_) {}
   const existing = await admin.from("game_resources").select("player_id").eq("player_id", playerId).maybeSingle();
   if (!existing.error && existing.data) {
     await admin.from("game_buildings").upsert({ player_id:playerId, planet_id:"home", building_id:"command_center", level:1, updated_at:new Date().toISOString() }, { onConflict:"player_id,planet_id,building_id", ignoreDuplicates:true });
