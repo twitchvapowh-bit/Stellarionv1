@@ -514,6 +514,32 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 })();
 </script>
 
+<!-- Lien vers le forum de la communauté (bouton flottant, en dehors de #app pour
+     survivre aux re-rendus du jeu qui remplacent tout le contenu de #app). -->
+<style>
+  #stellarion-forum-link{position:fixed;left:12px;bottom:12px;z-index:610;display:flex;align-items:center;gap:6px;padding:10px 14px;border-radius:999px;border:1px solid rgba(79,195,247,.35);background:rgba(4,11,24,.92);color:#e6eefc;font:700 12.5px system-ui,Arial;text-decoration:none;box-shadow:0 10px 30px rgba(0,0,0,.4);backdrop-filter:blur(6px)}
+  #stellarion-forum-link:hover{border-color:#4FC3F7;text-decoration:none}
+  body.st-auth-visible #stellarion-forum-link,
+  body.stR2.stR2auth #stellarion-forum-link{display:none!important}
+  body.stR2.stR2 #stellarion-forum-link{bottom:58px}
+</style>
+<script>
+(function(){
+  function add(){
+    if(document.getElementById("stellarion-forum-link") || !document.body) return;
+    var a = document.createElement("a");
+    a.id = "stellarion-forum-link";
+    a.href = "forum.html";
+    a.title = "Forum de la communauté Stellarion";
+    a.innerHTML = "💬 Forum";
+    document.body.appendChild(a);
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", add);
+  else add();
+  var iv = setInterval(add, 1000); // survit si un re-rendu du jeu supprime le body innerHTML ailleurs
+  window.addEventListener("beforeunload", function(){ clearInterval(iv); });
+})();
+</script>
 
 <!-- STELLARION 1.5.78 — Alliance native field fix
      Objectif : réparer le focus Alliance sans casser la messagerie, sans bloquer les onglets, sans ralentir les changements de page. -->

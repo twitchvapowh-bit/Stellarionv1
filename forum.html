@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Forum Stellarion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="js/supabase.min.js?v=1"></script>
+<script>if(!window.supabase){document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');}</script>
+<style>
+  :root{
+    --bg:#020510; --panel:rgba(8,18,36,.85); --panel2:rgba(5,13,28,.78);
+    --border:rgba(79,195,247,.22); --border2:rgba(79,195,247,.35);
+    --accent:#4FC3F7; --text:#e6eefc; --muted:#8aa6c8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(ellipse at 50% 0%,#0a1832,#020510 60%);color:var(--text);font-family:system-ui,Arial,sans-serif;min-height:100vh}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  header.fh{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;background:rgba(4,11,24,.92);border-bottom:1px solid var(--border);backdrop-filter:blur(10px)}
+  .fh-brand{font-family:'Orbitron',system-ui,Arial;font-weight:800;letter-spacing:3px;font-size:18px;color:#fff}
+  .fh-brand span{color:var(--accent)}
+  .fh-right{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--muted)}
+  .fh-right a.back{padding:8px 14px;border-radius:10px;border:1px solid var(--border);color:var(--text)}
+  .fh-right a.back:hover{border-color:var(--border2);text-decoration:none}
+  main{max-width:900px;margin:0 auto;padding:24px 16px 80px}
+  h1{font-family:'Orbitron',system-ui,Arial;font-size:22px;letter-spacing:1px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 22px}
+  .cat-grid{display:grid;grid-template-columns:1fr;gap:12px}
+  .cat-card{display:block;padding:16px 18px;background:var(--panel2);border:1px solid var(--border);border-radius:14px;transition:border-color .15s}
+  .cat-card:hover{border-color:var(--border2);text-decoration:none}
+  .cat-card h3{margin:0 0 4px;color:#fff;font-size:16px}
+  .cat-card p{margin:0;color:var(--muted);font-size:13px}
+  .crumbs{font-size:13px;color:var(--muted);margin-bottom:14px}
+  .thread-row{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--panel2);border:1px solid var(--border);border-radius:12px;margin-bottom:10px}
+  .thread-row:hover{border-color:var(--border2)}
+  .thread-row .pin{color:#ffd166;font-size:13px}
+  .thread-main{flex:1;min-width:0}
+  .thread-main a{color:#fff;font-weight:600;font-size:14.5px}
+  .thread-meta{color:var(--muted);font-size:12px;margin-top:3px}
+  .thread-stats{text-align:right;font-size:12px;color:var(--muted);white-space:nowrap}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:10px;border:1px solid var(--border2);background:linear-gradient(135deg,#4FC3F7,#3a8fd4);color:#04162e;font-weight:800;font-size:13px;cursor:pointer}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+  input,textarea{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:10px;background:#06101f;color:#fff;border:1px solid var(--border);font-size:14px;font-family:inherit}
+  textarea{min-height:120px;resize:vertical}
+  label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}
+  .field{margin-bottom:14px}
+  .post{padding:16px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+  .post:last-child{border-bottom:0}
+  .post-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:10px}
+  .post-author{font-weight:700;color:var(--accent);font-size:13.5px}
+  .post-date{color:var(--muted);font-size:11.5px;white-space:nowrap}
+  .post-body{white-space:pre-wrap;line-height:1.55;font-size:14px;color:#dbe8fb}
+  .post-actions{margin-top:8px}
+  .post-actions button{background:none;border:0;color:#ff9a8a;font-size:12px;cursor:pointer;padding:0}
+  .muted{color:var(--muted)}
+  .empty{padding:30px 0;text-align:center;color:var(--muted)}
+  .login-hint{padding:14px 16px;background:rgba(79,195,247,.08);border:1px solid var(--border);border-radius:12px;font-size:13px;color:var(--muted);margin-bottom:16px}
+  .login-hint a{font-weight:700}
+  .msg{font-size:13px;margin:10px 0;min-height:18px}
+  .msg.err{color:#ff9a8a}
+  .msg.ok{color:#7ee0a8}
+  @media(max-width:640px){
+    header.fh{padding:12px 14px}
+    main{padding:18px 12px 70px}
+    .thread-stats{display:none}
+  }
+</style>
+</head>
+<body>
+<header class="fh">
+  <div class="fh-brand">◈ <span>STELLARION</span> — FORUM</div>
+  <div class="fh-right">
+    <span id="fh-who">Chargement...</span>
+    <a class="back" href="index.html">← Retour au jeu</a>
+  </div>
+</header>
+<main id="app"><div class="empty">Chargement du forum...</div></main>
+
+<script>
+(function(){
+  "use strict";
+  var SUPABASE_URL = "https://sqmroxhcmymkalemfrth.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_6n_nEMgVZFt8HgkJamEVyg_PXxp5R6j";
+  var supa = null;
+  try{ if(window.supabase && window.supabase.createClient) supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }catch(e){}
+
+  var app = document.getElementById("app");
+  var whoEl = document.getElementById("fh-who");
+  var currentUser = null;   // { id, name }
+  var categories = [];
+  var categoriesById = {};
+
+  function esc(v){ return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];}); }
+  function fmtDate(iso){
+    try{
+      var d=new Date(iso);
+      return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})+' à '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    }catch(e){ return ""; }
+  }
+  function nav(hash){ location.hash = hash; }
+
+  /* ---------- Authentification (réutilise la session du jeu) ---------- */
+  function refreshWho(){
+    if(!currentUser){ whoEl.innerHTML = 'Non connecté'; return; }
+    whoEl.innerHTML = 'Connecté : <strong style="color:#fff">'+esc(currentUser.name)+'</strong>';
+  }
+  function loadCurrentUser(){
+    if(!supa) return Promise.resolve(null);
+    return supa.auth.getSession().then(function(r){
+      var user = r && r.data && r.data.session && r.data.session.user;
+      if(!user){ currentUser = null; refreshWho(); return null; }
+      return supa.from('players').select('username').eq('id', user.id).maybeSingle().then(function(res){
+        var name = (res && res.data && res.data.username) || (user.email ? user.email.split('@')[0] : 'Commandant');
+        currentUser = { id: user.id, name: name };
+        refreshWho();
+        return currentUser;
+      }).catch(function(){
+        currentUser = { id: user.id, name: user.email ? user.email.split('@')[0] : 'Commandant' };
+        refreshWho();
+        return currentUser;
+      });
+    }).catch(function(){ currentUser=null; refreshWho(); return null; });
+  }
+  if(supa && supa.auth && supa.auth.onAuthStateChange){
+    supa.auth.onAuthStateChange(function(){ loadCurrentUser().then(render); });
+  }
+
+  /* ---------- Rendu ---------- */
+  function loginHint(action){
+    return '<div class="login-hint">Connecte-toi depuis <a href="index.html">le jeu</a> avec ton compte Stellarion pour '+esc(action)+'.</div>';
+  }
+
+  function renderCategories(){
+    app.innerHTML =
+      '<h1>Forum de la communauté</h1><p class="sub">Discussions, alliances, stratégie et retours de bugs.</p>'+
+      '<div class="cat-grid" id="cat-grid"><div class="empty">Chargement...</div></div>';
+    supa.from('forum_categories').select('*').order('sort_order',{ascending:true}).then(function(res){
+      categories = (res && res.data) || [];
+      categoriesById = {};
+      categories.forEach(function(c){ categoriesById[c.id]=c; });
+      var grid = document.getElementById('cat-grid');
+      if(!categories.length){ grid.innerHTML = '<div class="empty">Aucune catégorie pour le moment.</div>'; return; }
+      grid.innerHTML = categories.map(function(c){
+        return '<a class="cat-card" href="#/c/'+esc(c.slug)+'"><h3>'+esc(c.name)+'</h3><p>'+esc(c.description||'')+'</p></a>';
+      }).join('');
+    });
+  }
+
+  function findCategoryBySlug(slug){
+    for(var i=0;i<categories.length;i++) if(categories[i].slug===slug) return categories[i];
+    return null;
+  }
+
+  function ensureCategoriesLoaded(then){
+    if(categories.length){ then(); return; }
+    supa.from('forum_categories').select('*').order('sort_order',{ascending:true}).then(function(res){
+      categories = (res && res.data) || [];
+      categories.forEach(function(c){ categoriesById[c.id]=c; });
+      then();
+    });
+  }
+
+  function renderThreadList(slug){
+    ensureCategoriesLoaded(function(){
+      var cat = findCategoryBySlug(slug);
+      if(!cat){ app.innerHTML = '<div class="empty">Catégorie introuvable. <a href="#/">Retour</a></div>'; return; }
+      app.innerHTML =
+        '<div class="crumbs"><a href="#/">Forum</a> / '+esc(cat.name)+'</div>'+
+        '<div class="toolbar"><h1 style="margin:0">'+esc(cat.name)+'</h1>'+
+        (currentUser?'<button class="btn" id="new-thread-btn">+ Nouveau sujet</button>':'')+
+        '</div>'+
+        (currentUser?'':loginHint('créer un sujet'))+
+        '<div id="new-thread-form"></div>'+
+        '<div id="thread-list"><div class="empty">Chargement...</div></div>';
+
+      if(currentUser){
+        document.getElementById('new-thread-btn').onclick = function(){
+          document.getElementById('new-thread-form').innerHTML =
+            '<div class="card">'+
+            '<div class="field"><label>Titre</label><input id="nt-title" maxlength="140" placeholder="Titre du sujet"></div>'+
+            '<div class="field"><label>Message</label><textarea id="nt-body" maxlength="8000" placeholder="Écris ton message..."></textarea></div>'+
+            '<div class="msg" id="nt-msg"></div>'+
+            '<button class="btn" id="nt-submit">Publier</button> <button class="btn ghost" id="nt-cancel">Annuler</button>'+
+            '</div>';
+          document.getElementById('nt-cancel').onclick=function(){ document.getElementById('new-thread-form').innerHTML=''; };
+          document.getElementById('nt-submit').onclick=function(){
+            var title=document.getElementById('nt-title').value.trim();
+            var body=document.getElementById('nt-body').value.trim();
+            var msg=document.getElementById('nt-msg');
+            if(title.length<3){ msg.className='msg err'; msg.textContent='Titre trop court.'; return; }
+            if(!body){ msg.className='msg err'; msg.textContent='Le message ne peut pas être vide.'; return; }
+            supa.from('forum_threads').insert({
+              category_id: cat.id, author_id: currentUser.id, author_name: currentUser.name,
+              title: title, body: body
+            }).select('id').single().then(function(res){
+              if(res.error){ msg.className='msg err'; msg.textContent='Erreur : '+res.error.message; return; }
+              nav('#/t/'+res.data.id);
+            });
+          };
+        };
+      }
+
+      supa.from('forum_threads').select('*').eq('category_id', cat.id)
+        .order('pinned',{ascending:false}).order('last_reply_at',{ascending:false})
+        .then(function(res){
+          var rows = (res && res.data) || [];
+          var list = document.getElementById('thread-list');
+          if(!rows.length){ list.innerHTML = '<div class="empty">Aucun sujet pour l\'instant. Sois le premier à en créer un !</div>'; return; }
+          list.innerHTML = rows.map(function(t){
+            return '<div class="thread-row">'+
+              (t.pinned?'<span class="pin">📌</span>':'')+
+              '<div class="thread-main"><a href="#/t/'+t.id+'">'+esc(t.title)+'</a>'+
+              '<div class="thread-meta">par '+esc(t.author_name)+' · '+fmtDate(t.created_at)+'</div></div>'+
+              '<div class="thread-stats">'+(t.reply_count||0)+' réponse'+(t.reply_count===1?'':'s')+'<br>maj '+fmtDate(t.last_reply_at)+'</div>'+
+              '</div>';
+          }).join('');
+        });
+    });
+  }
+
+  function renderThread(id){
+    supa.from('forum_threads').select('*').eq('id', id).maybeSingle().then(function(res){
+      var t = res && res.data;
+      if(!t){ app.innerHTML = '<div class="empty">Sujet introuvable. <a href="#/">Retour</a></div>'; return; }
+      ensureCategoriesLoaded(function(){
+        var cat = categoriesById[t.category_id];
+        var canDeleteThread = currentUser && currentUser.id === t.author_id;
+        app.innerHTML =
+          '<div class="crumbs"><a href="#/">Forum</a>'+(cat?' / <a href="#/c/'+esc(cat.slug)+'">'+esc(cat.name)+'</a>':'')+'</div>'+
+          '<div class="card">'+
+          '<div class="post-head"><span class="post-author">'+esc(t.author_name)+'</span><span class="post-date">'+fmtDate(t.created_at)+'</span></div>'+
+          '<h1 style="margin:6px 0 12px">'+esc(t.title)+'</h1>'+
+          '<div class="post-body">'+esc(t.body)+'</div>'+
+          (canDeleteThread?'<div class="post-actions"><button id="del-thread">Supprimer ce sujet</button></div>':'')+
+          '</div>'+
+          '<div id="posts-wrap"><div class="empty">Chargement des réponses...</div></div>'+
+          (currentUser?
+            '<div class="card"><div class="field"><label>Répondre</label><textarea id="reply-body" placeholder="Ta réponse..."></textarea></div><div class="msg" id="reply-msg"></div><button class="btn" id="reply-submit">Répondre</button></div>'
+            : loginHint('répondre'))+
+          '';
+
+        if(canDeleteThread){
+          document.getElementById('del-thread').onclick = function(){
+            if(!confirm('Supprimer définitivement ce sujet et toutes ses réponses ?')) return;
+            supa.from('forum_threads').delete().eq('id', t.id).then(function(){
+              if(cat) nav('#/c/'+cat.slug); else nav('#/');
+            });
+          };
+        }
+
+        function loadPosts(){
+          supa.from('forum_posts').select('*').eq('thread_id', t.id).order('created_at',{ascending:true}).then(function(pr){
+            var posts = (pr && pr.data) || [];
+            var wrap = document.getElementById('posts-wrap');
+            if(!posts.length){ wrap.innerHTML = '<div class="empty">Aucune réponse pour l\'instant.</div>'; return; }
+            wrap.innerHTML = '<div class="card">'+posts.map(function(p){
+              var canDel = currentUser && currentUser.id === p.author_id;
+              return '<div class="post">'+
+                '<div class="post-head"><span class="post-author">'+esc(p.author_name)+'</span><span class="post-date">'+fmtDate(p.created_at)+'</span></div>'+
+                '<div class="post-body">'+esc(p.body)+'</div>'+
+                (canDel?'<div class="post-actions"><button data-post-id="'+p.id+'">Supprimer</button></div>':'')+
+                '</div>';
+            }).join('')+'</div>';
+            wrap.querySelectorAll('[data-post-id]').forEach(function(btn){
+              btn.onclick = function(){
+                if(!confirm('Supprimer cette réponse ?')) return;
+                supa.from('forum_posts').delete().eq('id', btn.getAttribute('data-post-id')).then(loadPosts);
+              };
+            });
+          });
+        }
+        loadPosts();
+
+        if(currentUser){
+          document.getElementById('reply-submit').onclick = function(){
+            var body = document.getElementById('reply-body').value.trim();
+            var msg = document.getElementById('reply-msg');
+            if(!body){ msg.className='msg err'; msg.textContent='La réponse ne peut pas être vide.'; return; }
+            supa.from('forum_posts').insert({
+              thread_id: t.id, author_id: currentUser.id, author_name: currentUser.name, body: body
+            }).then(function(res){
+              if(res.error){ msg.className='msg err'; msg.textContent='Erreur : '+res.error.message; return; }
+              document.getElementById('reply-body').value='';
+              msg.className='msg ok'; msg.textContent='Réponse publiée.';
+              loadPosts();
+            });
+          };
+        }
+      });
+    });
+  }
+
+  function render(){
+    if(!supa){ app.innerHTML = '<div class="empty">Impossible de charger le forum (Supabase indisponible).</div>'; return; }
+    var hash = location.hash || '#/';
+    var m;
+    if((m = hash.match(/^#\/c\/([^\/]+)$/))){ renderThreadList(decodeURIComponent(m[1])); }
+    else if((m = hash.match(/^#\/t\/([^\/]+)$/))){ renderThread(decodeURIComponent(m[1])); }
+    else { renderCategories(); }
+  }
+
+  window.addEventListener('hashchange', render);
+  loadCurrentUser().then(render);
+})();
+</script>
+</body>
+</html>
