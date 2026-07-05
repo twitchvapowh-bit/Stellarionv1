@@ -27207,43 +27207,97 @@ window.stellarionScrollAudit1610 = function(){
   }
   window.closeChestRewardsPopup1677=closeRewardsPopup;
   window.openChestRewardsPopup1677=openRewardsPopup;
-  window.openChestRewardsFromButton1677=function(btn){
-    var card=btn&&btn.closest?btn.closest(".chest-card1525"):null;
-    openRewardsPopup(card);
-    return false;
-  };
+  tRewardsFromButton1677=function(btn){
+  var card = btn && btn.closest ? btn.closest(".chest-card1525") : null;
+  if(!card) return;
 
-  function enhance(){
-    if(!isMobileChestsR3()) return;
-    var cards = Array.prototype.slice.call(document.querySelectorAll(".chest-card1525"));
-    cards.forEach(function(card, index){
-      if(!card.dataset.mobileChestR3){
-        card.dataset.mobileChestR3 = "1";
-        card.dataset.mobileExpanded = "false";
-        card.setAttribute("role", "button");
-        card.setAttribute("tabindex", "0");
-        card.setAttribute("aria-expanded", card.dataset.mobileExpanded);
-        var hint = document.createElement("div");
-        hint.className = "chest-touch-hint1672";
-        hint.textContent = "Voir les récompenses";
-        hint.setAttribute("role", "button");
-        card.appendChild(hint);
-      }
-      if(!card.__mobileChestR3Direct1672){
-        card.__mobileChestR3Direct1672 = true;
-        card.addEventListener("click", function(e){
-          if(!isMobileChestsR3()) return;
-          if(e.target.closest("button,.btn,a,input,select,textarea")) return;
-          // V16.81 : la carte ne capture plus le tap. Le popup s'ouvre via
-          // le bouton dedie afin de ne pas perturber le scroll mobile.
-        });
-      }
-      card.classList.remove("mobile-expanded1672");
-      var hintEl = card.querySelector(".chest-touch-hint1672");
-      if(hintEl) hintEl.textContent = "Voir les récompenses";
-      card.setAttribute("aria-expanded", "false");
-    });
+  var title = card.querySelector("h2,h3,.chest-title1525");
+  var desc = card.querySelector("p,.chest-desc1525");
+  var cost = card.querySelector("[data-chest-cost]");
+  var rows = Array.prototype.slice.call(card.querySelectorAll(
+    ".chest-reward-row1677,.chest-rewards-row1677,.reward-row,li"
+  ));
+
+  var old = document.querySelector(".chest-mobile-modal1677");
+  if(old) old.remove();
+
+  var back = document.createElement("div");
+  back.className = "chest-mobile-modal1677";
+  back.innerHTML =
+    '<div class="chest-mobile-sheet1677" role="dialog" aria-modal="true">' +
+      '<button class="chest-mobile-close1677" type="button" aria-label="Fermer">×</button>' +
+      '<div class="chest-mobile-kicker1677">Récompenses</div>' +
+      '<h2 class="chest-mobile-title1677"></h2>' +
+      '<p class="chest-mobile-desc1677"></p>' +
+      '<div class="chest-mobile-meta1677"></div>' +
+      '<div class="chest-mobile-sub1677">Table de récompenses</div>' +
+      '<div class="chest-mobile-list1677"></div>' +
+    '</div>';
+
+  var sheet = back.querySelector(".chest-mobile-sheet1677");
+  back.querySelector(".chest-mobile-title1677").textContent =
+    title ? title.textContent.trim() : "Coffre";
+
+  back.querySelector(".chest-mobile-desc1677").textContent =
+    desc ? desc.textContent.trim() : "";
+
+  var meta = back.querySelector(".chest-mobile-meta1677");
+  var costText = cost ? cost.textContent.trim() : "";
+  meta.innerHTML =
+    '<div><span>Coût</span><strong>' + (costText || "—") + '</strong></div>' +
+    '<div><span>Tirages</span><strong>' + (card.dataset.draws || card.getAttribute("data-draws") || "—") + '</strong></div>';
+
+  var list = back.querySelector(".chest-mobile-list1677");
+
+  rows.forEach(function(row){
+    var txt = (row.textContent || "").replace(/\s+/g," ").trim();
+    if(!txt) return;
+
+    var value = "";
+    var label = txt;
+
+    var m = txt.match(/^(.*?)(\d+)\s*$/);
+    if(m){
+      label = m[1].trim();
+      value = m[2].trim();
+    }
+
+    var item = document.createElement("div");
+    item.className = "chest-mobile-item1677";
+    item.innerHTML =
+      '<span></span>' +
+      '<strong></strong>';
+
+    item.querySelector("span").textContent = label;
+    item.querySelector("strong").textContent = value;
+
+    list.appendChild(item);
+  });
+
+  if(!list.children.length){
+    list.innerHTML = '<div class="chest-mobile-empty1677">Aucune récompense trouvée.</div>';
   }
+
+  document.body.appendChild(back);
+
+  function close(){
+    back.remove();
+    document.body.classList.remove("chest-modal-open1677");
+  }
+
+  document.body.classList.add("chest-modal-open1677");
+
+  back.addEventListener("click", function(e){
+    if(e.target === back || e.target.closest(".chest-mobile-close1677")) close();
+  });
+
+  document.addEventListener("keydown", function esc(e){
+    if(e.key === "Escape"){
+      document.removeEventListener("keydown", esc);
+      close();
+    }
+  });
+};
 
   function toggle(card){
     if(!card || !isMobileChestsR3()) return;
@@ -27384,56 +27438,3 @@ window.stellarionScrollAudit1610 = function(){
   apply();
 })();
 
-/* STELLARION 1.6.78 — Popup recompenses coffres, listener final robuste. */
-(function(){
-  "use strict";
-  if(window.__stellarionChestRewardsPopup1678) return;
-  window.__stellarionChestRewardsPopup1678 = true;
-
-  function esc(v){
-    return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]||c;});
-  }
-  function close(){
-    var old=document.getElementById("chest-rewards-popup-1677");
-    if(old) old.remove();
-  }
-  function open(card){
-    if(!card) return false;
-    var title=(card.querySelector("h3")&&card.querySelector("h3").textContent.trim())||"Coffre";
-    var desc=(card.querySelector("p")&&card.querySelector("p").textContent.trim())||"";
-    var meta=card.querySelector(".chest-meta1525");
-    var table=card.querySelector(".chest-table1525");
-    close();
-    var modal=document.createElement("div");
-    modal.id="chest-rewards-popup-1677";
-    modal.className="chest-rewards-popup1677";
-    modal.setAttribute("role","dialog");
-    modal.setAttribute("aria-modal","true");
-    modal.innerHTML='<div class="chest-rewards-card1677" style="'+(card.getAttribute("style")||"")+'">'+
-      '<button class="chest-rewards-close1677" type="button" aria-label="Fermer">×</button>'+
-      '<span class="pill">RECOMPENSES</span>'+
-      '<h2>'+esc(title)+'</h2>'+
-      (desc?'<p>'+esc(desc)+'</p>':'')+
-      '<div class="chest-rewards-meta1677">'+(meta?meta.innerHTML:"")+'</div>'+
-      '<h3>Table de recompenses</h3>'+
-      '<div class="chest-rewards-table1677">'+(table?table.innerHTML:'<div>Aucune table disponible</div>')+'</div>'+
-    '</div>';
-    modal.addEventListener("click",function(e){
-      if(e.target===modal || e.target.closest(".chest-rewards-close1677")) close();
-    });
-    document.body.appendChild(modal);
-    return false;
-  }
-  window.openChestRewardsFromButton1677=function(btn){
-    return open(btn&&btn.closest?btn.closest(".chest-card1525"):null);
-  };
-  window.openChestRewardsPopup1678=open;
-  window.closeChestRewardsPopup1678=close;
-  document.addEventListener("click",function(e){
-    var btn=e.target&&e.target.closest?e.target.closest(".chest-rewards-open1677"):null;
-    if(!btn) return;
-    e.preventDefault();
-    e.stopPropagation();
-    open(btn.closest(".chest-card1525"));
-  },true);
-})();
