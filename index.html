@@ -139,14 +139,14 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 "body.stR2.stR2.stR2.stR2menu #st-r2-menu-back{display:block!important}\n" +
 "body.stR2.stR2.stR2.stR2auth #st-r2-menu-back{display:none!important}\n" +
 "/* --- Layout : UNE colonne, RIEN n'est supprime. Le centre d'abord, puis les\n       panneaux lateraux empiles en dessous, pleine largeur. Le layout scrolle. --- */\n" +
-"body.stR2.stR2.stR2 .layout,body.stR2.stR2.stR2 .layout.has-bottom-queue{display:flex!important;flex-direction:column!important;grid-template-columns:none!important;width:100%!important;max-width:100%!important;height:calc(100dvh - var(--r2top,96px) - 50px)!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;margin:0!important;padding:0 0 12px!important;box-sizing:border-box!important}\n" +
+"body.stR2.stR2.stR2 .layout,body.stR2.stR2.stR2 .layout.has-bottom-queue{display:flex!important;flex-direction:column!important;grid-template-columns:none!important;width:100%!important;max-width:100%!important;height:calc(100dvh - var(--r2top,44px) - 50px)!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;margin:0!important;padding:var(--r2top,44px) 0 12px!important;box-sizing:border-box!important}\n" +
 "body.stR2.stR2.stR2 .layout>*{flex:0 0 auto!important;width:100%!important;max-width:100%!important}\n" +
 "body.stR2.stR2.stR2 .layout>.side,body.stR2.stR2.stR2 .layout>.side.left,body.stR2.stR2.stR2 .layout>.side.right{display:block!important;width:100%!important;max-width:100%!important;border:0!important;padding:10px!important;box-sizing:border-box!important;overflow:visible!important}\n" +
 "/* ORDRE : contenu central EN PREMIER, colonnes ensuite */\n" +
 "body.stR2.stR2.stR2 .layout>#center,body.stR2.stR2.stR2 #center{order:1!important}\n" +
 "body.stR2.stR2.stR2 .layout>.side.right{order:2!important}\n" +
 "body.stR2.stR2.stR2 .layout>.side.left,body.stR2.stR2.stR2 .layout>.side{order:3!important}\n" +
-"body.stR2.stR2.stR2 #center{display:block!important;width:100%!important;max-width:100%!important;height:calc(100dvh - 50px)!important;min-height:0!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important;box-sizing:border-box!important}\n" +
+"body.stR2.stR2.stR2 #center{display:block!important;width:100%!important;max-width:100%!important;height:calc(100dvh - var(--r2top,44px) - 50px)!important;min-height:0!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important;box-sizing:border-box!important}\n" +
 "/* Carte galaxie : hauteur pleine zone, dimensions vraies (pas de transform) */\n" +
 "body.stR2.stR2.stR2 .galaxy-wrap,body.stR2.stR2.stR2 .gwm-stage{width:100%!important;max-width:100%!important;height:calc(100dvh - var(--r2top,96px) - 62px)!important;min-height:300px!important;overflow:hidden!important}\n" +
 "/* --- R2.3 : EPURATION DES PAGES. Une seule colonne partout, hauteurs pleines. --- */\n" +
@@ -237,8 +237,10 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
   }
 
   function measureTop() {
-    // Topbar et ressources sont des overlays : elles ne consomment plus d'espace.
-    document.documentElement.style.setProperty("--r2top", "0px");
+    // La topbar compacte (logo + bouton Menu) est desormais toujours visible :
+    // elle reserve reellement de la place en haut (44px), contrairement a
+    // avant ou tout etait replie et ne consommait aucun espace.
+    document.documentElement.style.setProperty("--r2top", "44px");
   }
 
   /* Le bouton Menu lui-meme vit maintenant DANS la topbar (voir main.js,
