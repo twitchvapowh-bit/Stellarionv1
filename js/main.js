@@ -8868,10 +8868,12 @@ function authMessage(text, ok){
 function showAuthScreen(){
  try{ window.__stellarionBootHold = false; }catch(e){}
  try{ document.body.classList.remove('stellarion-boot-hold'); }catch(e){}
+ try{ document.body.classList.add('st-auth-visible'); }catch(e){}
  const s = document.getElementById("auth-screen");
  if(s) s.style.display = "flex";
 }
 function hideAuthScreen(){
+ try{ document.body.classList.remove('st-auth-visible'); }catch(e){}
  const s = document.getElementById("auth-screen");
  if(s) s.style.display = "none";
 }
@@ -27387,4 +27389,3 @@ window.stellarionScrollAudit1610 = function(){
   window.addEventListener("orientationchange",function(){setTimeout(apply,80);},{passive:true});
   apply();
 })();
-

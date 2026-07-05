@@ -13,6 +13,54 @@
 <meta property="og:title" content="Stellarion">
 <meta property="og:description" content="Age des Conquérants Stellaires">
 
+<style>
+  body.st-auth-visible .topbar,
+  body.st-auth-visible .stable-resourcebar1542b,
+  body.st-auth-visible .layout,
+  body.st-auth-visible .carousel-container,
+  body.st-auth-visible .bottom-queue,
+  body.st-auth-visible #st-r2-nav,
+  body.st-auth-visible #st-r2-badge,
+  body.st-auth-visible #st-r2-menu-back {
+    display: none !important;
+    pointer-events: none !important;
+  }
+  #auth-screen {
+    z-index: 2147483600 !important;
+    overflow: hidden !important;
+    background: #020510 !important;
+  }
+  #auth-screen .auth-video-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    filter: saturate(1.05) contrast(1.06) brightness(.64);
+  }
+  #auth-screen:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+      radial-gradient(circle at 50% 42%, rgba(79,195,247,.12), transparent 38%),
+      linear-gradient(90deg, rgba(2,5,16,.88), rgba(2,5,16,.42) 48%, rgba(2,5,16,.84));
+    pointer-events: none;
+  }
+  #auth-screen > .auth-panel-wrap {
+    position: relative;
+    z-index: 2;
+  }
+  #auth-screen .auth-card {
+    background: rgba(5, 13, 28, .78) !important;
+    border: 1px solid rgba(79,195,247,.32) !important;
+    box-shadow: 0 26px 80px rgba(0,0,0,.48), 0 0 48px rgba(79,195,247,.13) !important;
+    backdrop-filter: blur(14px);
+  }
+</style>
+
 <script src="js/supabase.min.js?v=1668"></script>
 <script>if(!window.supabase){document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');}</script>
 
@@ -30,13 +78,14 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 <div id="stellarion-bootgate"><div class="sbg-inner"><div class="sbg-logo"><span class="brand">STELLARION</span></div><div class="sbg-spinner"></div></div></div>
 <!-- CSS déplacé vers css/main.css -->
 
-<div id="auth-screen" style="display:none;position:fixed;inset:0;z-index:99999;background:radial-gradient(ellipse at 50% 30%,#0a1832,#020510 70%);color:#e6eefc;font-family:system-ui,Arial,sans-serif;align-items:center;justify-content:center">
-  <div style="width:100%;max-width:420px;padding:24px">
+<div id="auth-screen" style="display:none;position:fixed;inset:0;z-index:2147483600;background:#020510;color:#e6eefc;font-family:system-ui,Arial,sans-serif;align-items:center;justify-content:center">
+  <video class="auth-video-bg" src="assets/video/stellarion-login-presentation-web.mp4" poster="assets/video/stellarion-login-presentation-poster.jpg" autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
+  <div class="auth-panel-wrap" style="width:100%;max-width:420px;padding:24px">
     <div style="text-align:center;margin-bottom:28px">
       <div class="brand" style="text-align:center;font-size:30px;letter-spacing:5px">STELLARION</div>
       <div style="color:#8aa6c8;font-size:13px;margin-top:6px">Stratégie spatiale multijoueur</div>
     </div>
-    <div style="background:rgba(8,18,36,.85);border:1px solid rgba(79,195,247,.22);border-radius:18px;padding:26px;box-shadow:0 0 40px rgba(79,195,247,.12)">
+    <div class="auth-card" style="background:rgba(8,18,36,.85);border:1px solid rgba(79,195,247,.22);border-radius:18px;padding:26px;box-shadow:0 0 40px rgba(79,195,247,.12)">
       <div id="auth-tabs" style="display:flex;gap:8px;margin-bottom:20px">
         <button id="tab-login" onclick="authSetMode('login')" style="flex:1;padding:11px;border-radius:10px;border:0;background:#4FC3F7;color:#04162e;font-weight:700;cursor:pointer">Connexion</button>
         <button id="tab-signup" onclick="authSetMode('signup')" style="flex:1;padding:11px;border-radius:10px;border:1px solid rgba(79,195,247,.3);background:transparent;color:#cfe3fb;font-weight:600;cursor:pointer">Inscription</button>
@@ -449,7 +498,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
 <!-- STELLARION 1.5.78 — Alliance native field fix
      Objectif : réparer le focus Alliance sans casser la messagerie, sans bloquer les onglets, sans ralentir les changements de page. -->
-<script src="js/main.js?v=1682"></script>
+<script src="js/main.js?v=1683"></script>
 <script src="js/fragment-shop-stripe-patch.js?v=1668"></script>
 <!-- STELLARION 1.6.25 — Couche mobile : pinch-zoom galaxie + boutons zoom tactiles -->
 <script src="js/patch_1625_mobile.js?v=1682"></script>
