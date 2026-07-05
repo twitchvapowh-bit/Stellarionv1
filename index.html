@@ -115,22 +115,19 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 "body.stR2.stR2.stR2{position:fixed!important;inset:0!important;margin:0!important;padding:0!important;width:100%!important;min-width:0!important;max-width:100%!important;height:100dvh!important;overflow:hidden!important;background:#020510!important}\n" +
 "body.stR2.stR2.stR2 input,body.stR2.stR2.stR2 textarea,body.stR2.stR2.stR2 select,body.stR2.stR2.stR2 button{font-size:16px!important}\n" +
 "/* --- Connexion : jeu totalement masque derriere --- */\n" +
-"body.stR2.stR2.stR2.stR2auth #app,body.stR2.stR2.stR2.stR2auth .topbar,body.stR2.stR2.stR2.stR2auth .carousel-container,body.stR2.stR2.stR2.stR2auth .stable-resourcebar1542b,body.stR2.stR2.stR2.stR2auth .layout,body.stR2.stR2.stR2.stR2auth #st-r2-nav,body.stR2.stR2.stR2.stR2auth #st-r2-badge,body.stR2.stR2.stR2.stR2auth .bottom-queue{display:none!important}\n" +
+"body.stR2.stR2.stR2.stR2auth #app,body.stR2.stR2.stR2.stR2auth .topbar,body.stR2.stR2.stR2.stR2auth .carousel-container,body.stR2.stR2.stR2.stR2auth .stable-resourcebar1542b,body.stR2.stR2.stR2.stR2auth .layout,body.stR2.stR2.stR2.stR2auth #st-r2-nav,body.stR2.stR2.stR2.stR2auth #st-r2-badge,body.stR2.stR2.stR2.stR2auth .bottom-queue,body.stR2.stR2.stR2.stR2auth #st-r2-menu,body.stR2.stR2.stR2.stR2auth #st-r2-menu-back{display:none!important}\n" +
 "body.stR2.stR2.stR2 #auth-screen{position:fixed!important;inset:0!important;width:100%!important;height:100dvh!important;min-height:100dvh!important;max-width:100%!important;overflow:auto!important;padding:14px!important;box-sizing:border-box!important;align-items:center!important;justify-content:center!important}\n" +
 "body.stR2.stR2.stR2 #auth-screen>div{width:min(420px,92%)!important;max-width:92%!important;margin:auto!important;padding:0!important}\n" +
-"/* --- R2.2 : topbar CACHEE par defaut, overlay sur demande (bouton menu) --- */\n" +
+"/* --- R2.11 : UN SEUL bouton Menu regroupe topbar (reglages/messages) + ressources,\n       pour ne plus avoir deux boutons/overlays separes qui se chevauchent. --- */\n" +
 "body.stR2.stR2.stR2 .topbar{display:none!important}\n" +
-"body.stR2.stR2.stR2.stR2top .topbar{display:flex!important;position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:591!important;box-shadow:0 14px 34px rgba(0,0,0,.55)!important;background:rgba(4,11,24,.97)!important}\n" +
-"body.stR2.stR2.stR2 #st-r2-top{position:fixed!important;top:7px!important;left:8px!important;z-index:602!important;width:38px!important;height:34px!important;border-radius:10px!important;border:1px solid rgba(79,195,247,.4)!important;background:rgba(10,24,46,.94)!important;color:#4FC3F7!important;font:800 15px system-ui,Arial!important;cursor:pointer!important}\n" +
-"body.stR2.stR2.stR2.stR2top #st-r2-top{background:#4FC3F7!important;color:#04162e!important}\n" +
-"body.stR2.stR2.stR2.stR2auth #st-r2-top{display:none!important}\n" +
-"body.stR2.stR2.stR2.stR2top .topbar{flex-direction:row!important;align-items:center!important;gap:6px!important;width:100%!important;max-width:100%!important;height:48px!important;min-height:48px!important;max-height:48px!important;padding:3px 8px!important;overflow-x:auto!important;overflow-y:hidden!important;box-sizing:border-box!important;scrollbar-width:none!important}\n" +
-"body.stR2.stR2.stR2.stR2top .topbar::-webkit-scrollbar{display:none!important}\n" +
-"body.stR2.stR2.stR2.stR2top .topbar>*{flex:0 0 auto!important;min-height:0!important;max-height:44px!important;overflow:hidden!important}\n" +
-"body.stR2.stR2.stR2.stR2top .topbar .small,body.stR2.stR2.stR2.stR2top .topbar .muted{display:none!important}\n" +
+"body.stR2.stR2.stR2 .stable-resourcebar1542b{display:none!important}\n" +
+"body.stR2.stR2.stR2.stR2menu .topbar{display:flex!important;position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:591!important;flex-direction:row!important;align-items:center!important;gap:6px!important;width:100%!important;max-width:100%!important;height:48px!important;min-height:48px!important;max-height:48px!important;padding:3px 8px!important;overflow-x:auto!important;overflow-y:hidden!important;box-sizing:border-box!important;scrollbar-width:none!important;box-shadow:0 14px 34px rgba(0,0,0,.55)!important;background:rgba(4,11,24,.97)!important}\n" +
+"body.stR2.stR2.stR2.stR2menu .topbar::-webkit-scrollbar{display:none!important}\n" +
+"body.stR2.stR2.stR2.stR2menu .topbar>*{flex:0 0 auto!important;min-height:0!important;max-height:44px!important;overflow:hidden!important}\n" +
+"body.stR2.stR2.stR2.stR2menu .topbar .small,body.stR2.stR2.stR2.stR2menu .topbar .muted{display:none!important}\n" +
 "body.stR2.stR2.stR2 .brand{font-size:16px!important;letter-spacing:3px!important;white-space:nowrap!important}\n" +
-"/* --- Barre ressources : une ligne scrollable --- */\n" +
-"body.stR2.stR2.stR2 .stable-resourcebar1542b{width:100%!important;max-width:100%!important;margin:0!important;padding:3px 8px!important;border-radius:0!important;border-left:0!important;border-right:0!important;overflow:hidden!important;box-sizing:border-box!important}\n" +
+"/* --- Barre ressources : affichee juste sous la topbar, meme bouton --- */\n" +
+"body.stR2.stR2.stR2.stR2menu .stable-resourcebar1542b{display:block!important;position:fixed!important;top:48px!important;left:0!important;right:0!important;z-index:590!important;width:100%!important;max-width:100%!important;margin:0!important;padding:6px 8px!important;border-radius:0!important;border-left:0!important;border-right:0!important;border-bottom:1px solid rgba(79,195,247,.35)!important;overflow:hidden!important;box-sizing:border-box!important;box-shadow:0 14px 34px rgba(0,0,0,.55)!important;background:rgba(4,11,24,.97)!important}\n" +
 "body.stR2.stR2.stR2 .stable-resource-list1542b{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important}\n" +
 "body.stR2.stR2.stR2 .stable-resource-list1542b::-webkit-scrollbar{display:none!important}\n" +
 "body.stR2.stR2.stR2 .stable-res1542b{flex:0 0 106px!important;min-width:106px!important;max-width:106px!important;min-height:40px!important;padding:4px 6px!important;display:grid!important;grid-template-columns:22px minmax(0,1fr)!important;gap:5px!important;align-items:center!important;box-sizing:border-box!important}\n" +
@@ -139,13 +136,15 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 "body.stR2.stR2.stR2 .stable-res1542b strong{font-size:13px!important;line-height:1!important;white-space:nowrap!important}\n" +
 "body.stR2.stR2.stR2 .stable-clock1542b{display:none!important}\n" +
 "body.stR2.stR2.stR2 .stable-fragments-shop-host1546 .fragment-shop-entry1546{display:none!important}\n" +
-"/* --- R2.1 : ressources A LA DEMANDE. Masquees par defaut, overlay via bouton. --- */\n" +
-"body.stR2.stR2.stR2 .stable-resourcebar1542b{display:none!important}\n" +
-"body.stR2.stR2.stR2.stR2res .stable-resourcebar1542b{display:block!important;position:fixed!important;top:46px!important;left:0!important;right:0!important;z-index:590!important;margin:0!important;padding:6px 8px!important;border-bottom:1px solid rgba(79,195,247,.35)!important;box-shadow:0 14px 34px rgba(0,0,0,.55)!important;background:rgba(4,11,24,.97)!important}\n" +
-"body.stR2.stR2.stR2 #st-r2-res{position:fixed!important;top:7px!important;right:8px!important;z-index:602!important;height:34px!important;padding:0 11px!important;border-radius:10px!important;border:1px solid rgba(79,195,247,.4)!important;background:rgba(10,24,46,.94)!important;color:#4FC3F7!important;font:800 12px system-ui,Arial!important;cursor:pointer!important}\n" +
-"body.stR2.stR2.stR2.stR2res #st-r2-res{background:#4FC3F7!important;color:#04162e!important}\n" +
-"body.stR2.stR2.stR2.stR2auth #st-r2-res{display:none!important}\n" +
-"body.stR2.stR2.stR2.stR2top .topbar{padding-left:52px!important;padding-right:120px!important}\n" +
+"/* --- Le bouton Menu unique + son fond semi-transparent pour fermer au tap exterieur --- */\n" +
+"body.stR2.stR2.stR2 #st-r2-menu{position:fixed!important;top:7px!important;right:8px!important;z-index:602!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;height:34px!important;padding:0 13px!important;border-radius:10px!important;border:1px solid rgba(79,195,247,.4)!important;background:rgba(10,24,46,.94)!important;color:#4FC3F7!important;font:800 13px system-ui,Arial!important;cursor:pointer!important;white-space:nowrap!important}\n" +
+"body.stR2.stR2.stR2.stR2menu #st-r2-menu{background:#4FC3F7!important;color:#04162e!important}\n" +
+"body.stR2.stR2.stR2.stR2auth #st-r2-menu{display:none!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-menu .r2-menu-badge{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:16px!important;height:16px!important;padding:0 4px!important;border-radius:999px!important;background:#F44336!important;color:#fff!important;font-size:10px!important;font-weight:950!important;line-height:1!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-menu-back{display:none;position:fixed;inset:0;z-index:589;background:rgba(0,4,12,.55)}\n" +
+"body.stR2.stR2.stR2.stR2menu #st-r2-menu-back{display:block!important}\n" +
+"body.stR2.stR2.stR2.stR2auth #st-r2-menu-back{display:none!important}\n" +
+"body.stR2.stR2.stR2.stR2menu .topbar{padding-left:8px!important;padding-right:130px!important}\n" +
 "/* --- Layout : UNE colonne, RIEN n'est supprime. Le centre d'abord, puis les\n       panneaux lateraux empiles en dessous, pleine largeur. Le layout scrolle. --- */\n" +
 "body.stR2.stR2.stR2 .layout,body.stR2.stR2.stR2 .layout.has-bottom-queue{display:flex!important;flex-direction:column!important;grid-template-columns:none!important;width:100%!important;max-width:100%!important;height:calc(100dvh - var(--r2top,96px) - 50px)!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;margin:0!important;padding:0 0 12px!important;box-sizing:border-box!important}\n" +
 "body.stR2.stR2.stR2 .layout>*{flex:0 0 auto!important;width:100%!important;max-width:100%!important}\n" +
@@ -226,7 +225,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 "body.stR2.stR2.stR2 #st-r2-nav .carousel-page,body.stR2.stR2.stR2 #st-r2-nav .carousel-nav-btn{flex:0 0 auto!important;height:34px!important;min-height:34px!important;padding:0 12px!important;font-size:12px!important;white-space:nowrap!important}\n" +
 "/* --- R2.5 : JEU EN PAYSAGE UNIQUEMENT. Portrait => invite a tourner. --- */\n" +
 "body.stR2.stR2.stR2 #st-r2-rotate{display:none}\n" +
-"body.stR2.stR2.stR2.stR2portrait #app,body.stR2.stR2.stR2.stR2portrait .topbar,body.stR2.stR2.stR2.stR2portrait .stable-resourcebar1542b,body.stR2.stR2.stR2.stR2portrait .layout,body.stR2.stR2.stR2.stR2portrait #st-r2-nav,body.stR2.stR2.stR2.stR2portrait #st-r2-badge,body.stR2.stR2.stR2.stR2portrait #st-r2-top,body.stR2.stR2.stR2.stR2portrait #st-r2-res,body.stR2.stR2.stR2.stR2portrait #st-r2-pop,body.stR2.stR2.stR2.stR2portrait #st-r2-pop-back{display:none!important}\n" +
+"body.stR2.stR2.stR2.stR2portrait #app,body.stR2.stR2.stR2.stR2portrait .topbar,body.stR2.stR2.stR2.stR2portrait .stable-resourcebar1542b,body.stR2.stR2.stR2.stR2portrait .layout,body.stR2.stR2.stR2.stR2portrait #st-r2-nav,body.stR2.stR2.stR2.stR2portrait #st-r2-badge,body.stR2.stR2.stR2.stR2portrait #st-r2-menu,body.stR2.stR2.stR2.stR2portrait #st-r2-menu-back,body.stR2.stR2.stR2.stR2portrait #st-r2-pop,body.stR2.stR2.stR2.stR2portrait #st-r2-pop-back{display:none!important}\n" +
 "body.stR2.stR2.stR2.stR2portrait #st-r2-rotate{display:grid!important;position:fixed;inset:0;z-index:2147483000;place-items:center;padding:24px;text-align:center;background:radial-gradient(circle at 50% 20%,#102248,#020510 72%);color:#eaf6ff}\n" +
 "body.stR2.stR2.stR2 #st-r2-rotate .r2rot-card{width:min(420px,92vw);border:1px solid rgba(79,195,247,.28);border-radius:24px;background:rgba(6,16,31,.86);box-shadow:0 0 60px rgba(79,195,247,.12);padding:26px 20px}\n" +
 "body.stR2.stR2.stR2 #st-r2-rotate .r2rot-title{color:#4FC3F7;font:900 24px system-ui,Arial;letter-spacing:5px;margin-bottom:12px}\n" +
@@ -249,17 +248,35 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     document.documentElement.style.setProperty("--r2top", "0px");
   }
 
-  function topButton() {
-    if (!document.body || document.getElementById("st-r2-top")) return;
+  function menuButton() {
+    if (!document.body) return;
+    if (!document.getElementById("st-r2-menu-back")) {
+      var back = document.createElement("div");
+      back.id = "st-r2-menu-back";
+      back.addEventListener("click", function () {
+        document.body.classList.remove("stR2menu");
+      });
+      document.body.appendChild(back);
+    }
+    if (document.getElementById("st-r2-menu")) return;
     var b = document.createElement("button");
-    b.id = "st-r2-top";
+    b.id = "st-r2-menu";
     b.type = "button";
-    b.textContent = "\u2630";
-    b.title = "Menu";
+    b.title = "Menu (reglages, messages, ressources)";
+    b.innerHTML = "\u2630 Menu<span class=\"r2-menu-badge\" id=\"st-r2-menu-badge\" style=\"display:none\"></span>";
     b.addEventListener("click", function () {
-      document.body.classList.toggle("stR2top");
+      document.body.classList.toggle("stR2menu");
     });
     document.body.appendChild(b);
+  }
+
+  function updateMenuBadge() {
+    var el = document.getElementById("st-r2-menu-badge");
+    if (!el) return;
+    var n = 0;
+    try { if (typeof window.unreadCount === "function") n = window.unreadCount() || 0; } catch (e) {}
+    if (n > 0) { el.textContent = n; el.style.display = "inline-flex"; }
+    else { el.style.display = "none"; }
   }
 
   /* Chasseur de pastilles fantomes ("Planetes figees / hover actif") :
@@ -278,18 +295,6 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
       }
       el.setAttribute("data-r2ghost", "1");
     }
-  }
-
-  function resButton() {
-    if (!document.body || document.getElementById("st-r2-res")) return;
-    var b = document.createElement("button");
-    b.id = "st-r2-res";
-    b.type = "button";
-    b.textContent = "\uD83D\uDC8E Ressources";
-    b.addEventListener("click", function () {
-      document.body.classList.toggle("stR2res");
-    });
-    document.body.appendChild(b);
   }
 
   function ensurePop() {
@@ -419,8 +424,8 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     document.body.classList.toggle("stR2portrait", false); // portrait autorise (decision Vapowh)
     rotateOverlay();
     measureTop();
-    topButton();
-    resButton();
+    menuButton();
+    updateMenuBadge();
     killGhosts();
     dockCarousel();
     adoptRightSide();
@@ -437,7 +442,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
   window.stellarionMobileR2Audit = function () {
     return {
-      patch: "mobile-R2.10-inline",
+      patch: "mobile-R2.11-inline",
       actif: !!(document.body && document.body.classList.contains("stR2")),
       phone: phone(),
       portrait: isPortrait(),
@@ -446,8 +451,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
       innerH: innerHeight,
       topMesure: getComputedStyle(document.documentElement).getPropertyValue("--r2top").trim(),
       carrouselDocke: !!document.querySelector("#st-r2-nav .carousel-container"),
-      ressourcesOuvertes: !!(document.body && document.body.classList.contains("stR2res")),
-      topbarOuverte: !!(document.body && document.body.classList.contains("stR2top")),
+      menuOuvert: !!(document.body && document.body.classList.contains("stR2menu")),
       popupOuvert: !!(document.body && document.body.classList.contains("stR2pop")),
       authVisible: authVisible()
     };
