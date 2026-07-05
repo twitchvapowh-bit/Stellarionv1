@@ -7395,7 +7395,7 @@ function stableResourceBar1542b(){
   ['💠','Fragments',r.fragments||r.artifacts||0,'','__fragments']
  ];
  return `<div class="stable-resourcebar1542b">
-  <div class="stable-resource-list1542b">${items.map(([ico,label,val,cls,key])=>`<div class="stable-res1542b ${cls} ${key==="__fragments"?"stable-fragments-shop-host1546":""}"><div class="stable-res-ico1542b">${ico}</div><div><small>${label}</small><strong data-sbar="${key}">${key==="__energy"?stableEnergyDisplay1542b():stableFormatResource1542b(val)}</strong>${key==="__fragments"?`<button type="button" class="fragment-shop-entry1546" onclick="openFragmentShop1546();event.stopPropagation();return false;" title="Boutique de fragments">Boutique</button>`:""}</div></div>`).join("")}</div>
+  <div class="stable-resource-list1542b">${items.map(([ico,label,val,cls,key])=>`<div class="stable-res1542b ${cls} ${key==="__fragments"?"stable-fragments-shop-host1546":""}"><div class="stable-res-ico1542b">${ico}</div><div><small>${label}</small><strong data-sbar="${key}">${key==="__energy"?stableEnergyDisplay1542b():stableFormatResource1542b(val)}</strong>${key==="__fragments"?`<button type="button" class="fragment-shop-entry1546" onclick="openFragmentShop1546();event.stopPropagation();return false;" title="Boutique de fragments">🛒 Boutique</button>`:""}</div></div>`).join("")}</div>
   <div class="stable-clock1542b" data-live-clock-v14><div>◷ <span id="stellarion-live-time-v14">${time}</span></div><div>▣ <span id="stellarion-live-date-v14">${date}</span></div></div>
  </div>`;
 }
