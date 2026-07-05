@@ -14524,3 +14524,70 @@ body.stable-ui1542b.view-planet .planet-showcase-board{
     pointer-events: auto !important;
   }
 }
+/* STELLARION — Mobile : réparation pop-up récompenses coffres */
+@media (max-width: 980px), (pointer: coarse) {
+  body.view-chests .chest-rewards-pop1677,
+  body.view-chests .chest-rewards-modal1677,
+  body.view-chests .chest-rewards-panel1677 {
+    width: calc(100vw - 28px) !important;
+    max-width: 430px !important;
+    max-height: calc(100dvh - 110px) !important;
+    overflow-y: auto !important;
+    padding: 18px !important;
+    border-radius: 18px !important;
+    box-sizing: border-box !important;
+  }
+
+  body.view-chests .chest-rewards-pop1677 *,
+  body.view-chests .chest-rewards-modal1677 *,
+  body.view-chests .chest-rewards-panel1677 * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
+  body.view-chests .chest-rewards-pop1677 .chest-card1525,
+  body.view-chests .chest-rewards-modal1677 .chest-card1525,
+  body.view-chests .chest-rewards-panel1677 .chest-card1525 {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  body.view-chests .chest-rewards-pop1677 h2,
+  body.view-chests .chest-rewards-modal1677 h2,
+  body.view-chests .chest-rewards-panel1677 h2 {
+    font-size: 24px !important;
+    line-height: 1.15 !important;
+    margin: 0 42px 14px 0 !important;
+  }
+
+  body.view-chests .chest-rewards-pop1677 p,
+  body.view-chests .chest-rewards-modal1677 p,
+  body.view-chests .chest-rewards-panel1677 p {
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+    margin: 8px 0 14px !important;
+  }
+
+  body.view-chests .chest-rewards-pop1677 .chest-reward-row1677,
+  body.view-chests .chest-rewards-modal1677 .chest-reward-row1677,
+  body.view-chests .chest-rewards-panel1677 .chest-reward-row1677,
+  body.view-chests .chest-rewards-pop1677 li,
+  body.view-chests .chest-rewards-modal1677 li,
+  body.view-chests .chest-rewards-panel1677 li {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    gap: 10px !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-height: 44px !important;
+    padding: 10px 12px !important;
+    margin: 8px 0 !important;
+  }
+}
