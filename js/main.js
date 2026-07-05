@@ -27219,6 +27219,16 @@ window.stellarionScrollAudit1610 = function(){
     openRewardsPopup(card);
   }
 
+  function enhance(){
+    try{
+      if(!isMobileChestsR3()) return;
+      document.querySelectorAll(".chest-card1525").forEach(function(card){
+        if(!card.hasAttribute("tabindex")) card.setAttribute("tabindex","0");
+        if(!card.hasAttribute("role")) card.setAttribute("role","button");
+      });
+    }catch(e){}
+  }
+
   document.addEventListener("click", function(e){
     var card = e.target && e.target.closest ? e.target.closest(".chest-card1525") : null;
     if(!card || !isMobileChestsR3()) return;
