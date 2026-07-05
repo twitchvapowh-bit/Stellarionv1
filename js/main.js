@@ -27164,6 +27164,7 @@ window.stellarionScrollAudit1610 = function(){
   "use strict";
   if(window.__stellarionMobileChestsR3_1672) return;
   window.__stellarionMobileChestsR3_1672 = true;
+  try{
 
   function isMobileChestsR3(){
     try{
@@ -27248,6 +27249,7 @@ window.stellarionScrollAudit1610 = function(){
   }
   window.stellarionMobileChestsR3Enhance1672 = enhance;
   enhance();
+  }catch(e){ console.error("STELLARION 1.6.72 erreur (isolee, n'affecte pas le reste du script)",e); }
 })();
 
 /* STELLARION 1.6.76 — Coffres mobile garde-fou anti-chevauchement final.
