@@ -85,7 +85,9 @@ function carouselPagesHtmlStatic(){
     const isActive = carouselIsActivePage(page.id,currentView);
     const icon = page.name.split(' ')[0];
     const name = page.name.split(' ')[1] || page.name;
-    return `<button class="carousel-page ${isActive ? 'active' : ''}" data-carousel-page="${page.id}" onclick="carouselGoToPage('${page.id}');return false;" title="${page.name}">${icon} ${name}</button>`;
+    const badge = (page.id==='messages' && typeof unreadCount==="function" && unreadCount()>0)
+      ? `<span class="carousel-msg-badge notify-pulse">${unreadCount()}</span>` : "";
+    return `<button class="carousel-page ${isActive ? 'active' : ''}" data-carousel-page="${page.id}" onclick="carouselGoToPage('${page.id}');return false;" title="${page.name}">${icon} ${name}${badge}</button>`;
   }).join('');
 }
 
@@ -99,6 +101,20 @@ function updateCarouselUI() {
   pagesEl.querySelectorAll('.carousel-page').forEach(btn=>{
     const pageId = btn.getAttribute('data-carousel-page');
     btn.classList.toggle('active', carouselIsActivePage(pageId,currentView));
+    if(pageId==='messages'){
+      const n = typeof unreadCount==="function" ? unreadCount() : 0;
+      let b = btn.querySelector('.carousel-msg-badge');
+      if(n>0){
+        if(!b){
+          b = document.createElement('span');
+          b.className = 'carousel-msg-badge notify-pulse';
+          btn.appendChild(b);
+        }
+        b.textContent = n;
+      } else if(b){
+        b.remove();
+      }
+    }
   });
 }
 

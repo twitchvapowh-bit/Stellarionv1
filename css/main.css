@@ -14809,3 +14809,28 @@ body.view-chests .sidebar-queue-box{
     overflow:visible!important;
   }
 }
+
+/* STELLARION — Badge messages non lus sur l'onglet Messages du carrousel */
+.carousel-page{
+  position:relative!important;
+}
+.carousel-msg-badge{
+  position:absolute!important;
+  top:-6px!important;
+  right:-6px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:18px!important;
+  height:18px!important;
+  padding:0 5px!important;
+  border-radius:999px!important;
+  background:#F44336!important;
+  color:#fff!important;
+  font-size:10px!important;
+  font-weight:950!important;
+  line-height:1!important;
+  box-shadow:0 0 12px rgba(244,67,54,.65),0 0 0 2px rgba(2,5,16,.9)!important;
+  pointer-events:none!important;
+  z-index:2!important;
+}
