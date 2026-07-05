@@ -14973,6 +14973,14 @@ body.stR2.stR2.stR2 #st-r2-menu-inline .r2-menu-badge{
   font-weight:950!important;
   line-height:1!important;
 }
+/* Desktop / PC (pas de body.stR2) : le wrapper ne doit RIEN changer au
+   rendu d'origine. display:contents le retire de la boite tout en gardant
+   ses enfants (planete, carrousel, cloche, reglages) comme enfants directs
+   de .topbar (display:flex) — exactement comme avant l'ajout du bouton
+   Menu mobile. Sans ca, ces boutons s'empilaient n'importe comment sur PC. */
+.topbar-extra1512{
+  display:contents;
+}
 body.stR2.stR2.stR2 .topbar-brand1512{
   order:0!important;
   flex:0 0 auto!important;
