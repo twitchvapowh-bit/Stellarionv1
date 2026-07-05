@@ -50,3 +50,107 @@
     else if (tries < 40) { setTimeout(waitReady, 600); }
   })();
 })();
+/* STELLARION 1.6.83 — Fix carrousel mobile */
+(function () {
+  "use strict";
+  if (window.__stellarionMobileCarouselScroll1683) return;
+  window.__stellarionMobileCarouselScroll1683 = true;
+
+  var savedLeft = 0;
+  var lastClick = 0;
+
+  function getCarousel() {
+    return document.querySelector("#st-r2-nav .carousel-container");
+  }
+
+  function remember() {
+    var c = getCarousel();
+    if (c) savedLeft = c.scrollLeft || savedLeft || 0;
+  }
+
+  function restore(centerActive) {
+    var c = getCarousel();
+    if (!c) return;
+
+    if (savedLeft > 0) c.scrollLeft = savedLeft;
+
+    if (centerActive) {
+      var active = c.querySelector(
+        ".active,.selected,.current,[aria-current='page']"
+      );
+
+      if (active && active.scrollIntoView) {
+        active.scrollIntoView({
+          block: "nearest",
+          inline: "center",
+          behavior: "auto"
+        });
+        savedLeft = c.scrollLeft || savedLeft;
+      }
+    }
+  }
+
+  function restoreSoon(centerActive) {
+    [0, 50, 120, 250, 500, 800].forEach(function (delay) {
+      setTimeout(function () {
+        restore(centerActive);
+      }, delay);
+    });
+  }
+
+  document.addEventListener("scroll", function (ev) {
+    if (ev.target && ev.target.closest && ev.target.closest("#st-r2-nav")) {
+      remember();
+    }
+  }, true);
+
+  document.addEventListener("pointerdown", function (ev) {
+    if (ev.target && ev.target.closest && ev.target.closest("#st-r2-nav")) {
+      lastClick = Date.now();
+      remember();
+    }
+  }, true);
+
+  document.addEventListener("click", function (ev) {
+    if (ev.target && ev.target.closest && ev.target.closest("#st-r2-nav")) {
+      lastClick = Date.now();
+      remember();
+      restoreSoon(true);
+    }
+  }, true);
+
+  function watch() {
+    var nav = document.getElementById("st-r2-nav");
+    if (!nav || nav.__carouselWatch1683) return;
+
+    nav.__carouselWatch1683 = true;
+
+    try {
+      new MutationObserver(function () {
+        if (Date.now() - lastClick < 2000) {
+          restoreSoon(true);
+        } else {
+          restore(false);
+        }
+      }).observe(nav, { childList: true, subtree: true });
+    } catch (e) {}
+  }
+
+  setInterval(function () {
+    watch();
+    if (Date.now() - lastClick < 2000) restore(false);
+  }, 250);
+
+  if (document.body) watch();
+  else document.addEventListener("DOMContentLoaded", watch);
+
+  window.stellarionMobileCarouselAudit1683 = function () {
+    var c = getCarousel();
+    return {
+      patch: "mobile-carousel-scroll-1683",
+      carousel: !!c,
+      savedLeft: savedLeft,
+      scrollLeft: c ? c.scrollLeft : null
+    };
+  };
+})();
