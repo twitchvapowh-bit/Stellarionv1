@@ -138,7 +138,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 "body.stR2.stR2.stR2 .stable-res1542b small{font-size:9px!important;line-height:1!important;white-space:nowrap!important}\n" +
 "body.stR2.stR2.stR2 .stable-res1542b strong{font-size:13px!important;line-height:1!important;white-space:nowrap!important}\n" +
 "body.stR2.stR2.stR2 .stable-clock1542b{display:none!important}\n" +
-"body.stR2.stR2.stR2 .fragment-shop-entry1546{max-width:120px!important;height:22px!important;min-height:22px!important;line-height:22px!important;font-size:10px!important;padding:0 8px!important;margin:0!important}\n" +
+"body.stR2.stR2.stR2 .stable-fragments-shop-host1546 .fragment-shop-entry1546{display:none!important}\n" +
 "/* --- R2.1 : ressources A LA DEMANDE. Masquees par defaut, overlay via bouton. --- */\n" +
 "body.stR2.stR2.stR2 .stable-resourcebar1542b{display:none!important}\n" +
 "body.stR2.stR2.stR2.stR2res .stable-resourcebar1542b{display:block!important;position:fixed!important;top:46px!important;left:0!important;right:0!important;z-index:590!important;margin:0!important;padding:6px 8px!important;border-bottom:1px solid rgba(79,195,247,.35)!important;box-shadow:0 14px 34px rgba(0,0,0,.55)!important;background:rgba(4,11,24,.97)!important}\n" +
@@ -234,7 +234,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 "body.stR2.stR2.stR2 #st-r2-rotate h2{margin:6px 0;font:800 21px system-ui,Arial}\n" +
 "body.stR2.stR2.stR2 #st-r2-rotate p{color:#bfd7ef;margin:8px 0;line-height:1.35;font:500 14px system-ui,Arial}\n" +
 "/* --- Temoin --- */\n" +
-"body.stR2.stR2.stR2 #st-r2-badge{position:fixed!important;right:8px!important;bottom:58px!important;z-index:601!important;background:#ffb300!important;color:#1a1200!important;border:2px solid #fff!important;border-radius:999px!important;padding:6px 9px!important;font:900 10px/1 system-ui,Arial!important;pointer-events:none!important}\n" +
+"body.stR2.stR2.stR2 #st-r2-badge{position:fixed!important;right:8px!important;bottom:58px!important;z-index:601!important;height:40px!important;display:flex!important;align-items:center!important;justify-content:center!important;background:linear-gradient(135deg,#22d2ff,#0d78c9)!important;color:#fff!important;border:2px solid rgba(255,255,255,.85)!important;border-radius:999px!important;padding:0 14px!important;font:900 12.5px/1 system-ui,Arial!important;box-shadow:0 0 18px rgba(0,210,255,.6)!important;cursor:pointer!important;pointer-events:auto!important}\n" +
 "/* --- Nettoyage mobile : pastilles carte, dock desktop, vieux overlays --- */\n" +
 "body.stR2.stR2.stR2 .gwm-footer{display:none!important}\n" +
 "body.stR2.stR2.stR2 .bottom-queue{display:none!important}\n" +
@@ -394,9 +394,14 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 
   function badge() {
     if (!document.body || document.getElementById("st-r2-badge")) return;
-    var b = document.createElement("div");
+    var b = document.createElement("button");
     b.id = "st-r2-badge";
-    b.textContent = "MOBILE R2.10 OK";
+    b.type = "button";
+    b.title = "Boutique de fragments";
+    b.innerHTML = "🛒 Boutique";
+    b.addEventListener("click", function () {
+      if (typeof window.openFragmentShop1546 === "function") window.openFragmentShop1546();
+    });
     document.body.appendChild(b);
   }
 
