@@ -172,8 +172,8 @@ html.st-stage1645 body #stellarion-scrollrail1628{display:none!important}
     r.classList.add("st-stage1645");
     r.classList.toggle("st-portrait1645", p);
     r.classList.toggle("st-landscape1645", !p);
-    // Toute la fenêtre reste à scroll 0 : le scroll vit dans #center
-    try { window.scrollTo(0, 0); } catch (e) {}
+    // Ne force plus le scroll fenêtre : cela provoquait des remontées automatiques
+    // sur les pages longues en mobile, notamment Coffres.
   }
 
   /* ---------- Détection police forcée par l'OS (seule limite restante) ---------- */

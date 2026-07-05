@@ -14967,8 +14967,8 @@ window.__stellarionKeepConstructionScroll = function(cb){
   }
   window.stellarionCleanChestLayoutV1611=cleanChestInlineV1611;
   window.addEventListener('resize',cleanChestInlineV1611,{passive:true});
-  document.addEventListener('click',function(){setTimeout(cleanChestInlineV1611,0)},true);
-  setInterval(cleanChestInlineV1611,1200);
+  // V16.81 : plus de correction globale au clic, elle pouvait relancer un layout
+  // pendant un tap mobile et provoquer une remontee de scroll.
   setTimeout(cleanChestInlineV1611,0);
 })();
 ;
@@ -18368,8 +18368,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   window.stellarionUpdateChestsAvailableHeightV165=updateChestsAvailableHeightV165;
   window.addEventListener('resize', updateChestsAvailableHeightV165, {passive:true});
   window.addEventListener('orientationchange', updateChestsAvailableHeightV165, {passive:true});
-  // V16.80 : plus de boucle permanente sur mobile, elle provoquait un scintillement.
-  document.addEventListener('click', function(){ setTimeout(updateChestsAvailableHeightV165, 0); }, true);
+  // V16.81 : pas de recalcul au clic, seulement resize/orientation/changement de vue.
   const oldSetView=window.setView;
   if(typeof oldSetView==='function' && !oldSetView.__v165ChestsHeight){
     window.setView=function(v){
@@ -18402,8 +18401,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   }
   window.stellarionFixChestNoOverlapV166=fixChestNoOverlapV166;
   window.addEventListener('resize',fixChestNoOverlapV166,{passive:true});
-  // V16.80 : pas de correction en boucle, le CSS final gere le mobile.
-  document.addEventListener('click',()=>setTimeout(fixChestNoOverlapV166,0),true);
+  // V16.81 : pas de correction au clic, le CSS final gere le mobile.
   const oldSetView=window.setView;
   if(typeof oldSetView==='function' && !oldSetView.__v166ChestNoOverlap){
     window.setView=function(){ const r=oldSetView.apply(this,arguments); setTimeout(fixChestNoOverlapV166,0); setTimeout(fixChestNoOverlapV166,120); return r; };
@@ -27236,9 +27234,8 @@ window.stellarionScrollAudit1610 = function(){
         card.addEventListener("click", function(e){
           if(!isMobileChestsR3()) return;
           if(e.target.closest("button,.btn,a,input,select,textarea")) return;
-          e.preventDefault();
-          e.stopPropagation();
-          openRewardsPopup(card);
+          // V16.81 : la carte ne capture plus le tap. Le popup s'ouvre via
+          // le bouton dedie afin de ne pas perturber le scroll mobile.
         });
       }
       card.classList.remove("mobile-expanded1672");
@@ -27257,8 +27254,8 @@ window.stellarionScrollAudit1610 = function(){
     var card = e.target && e.target.closest ? e.target.closest(".chest-card1525") : null;
     if(!card || !isMobileChestsR3()) return;
     if(e.target.closest("button,.btn,a,input,select,textarea")) return;
-    e.preventDefault();
-    openRewardsPopup(card);
+    // V16.81 : plus d'ouverture globale au tap carte, pour eviter les doubles
+    // reactions tactiles et les recadrages involontaires.
   }, true);
 
   document.addEventListener("keydown", function(e){
