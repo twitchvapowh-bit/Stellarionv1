@@ -14915,3 +14915,13 @@ body.view-leaderboards #center{
   0%,100%{box-shadow:0 0 12px rgba(0,210,255,.4);}
   50%{box-shadow:0 0 22px rgba(0,210,255,.85);}
 }
+
+/* STELLARION — Le panneau "Qualite du jeu" (reglages) etait imbrique dans la
+   topbar, qui a un backdrop-filter : ca en fait malgre lui le "conteneur" de
+   ses enfants en position fixed, donc le panneau restait coince/coupe dans la
+   bande de la topbar au lieu de couvrir tout l'ecran par-dessus. Il est
+   desormais rendu hors de la topbar (voir main.js) ; ici on l'ajuste pour
+   qu'il s'ouvre bien SOUS la barre menu mobile, au premier plan. */
+body.stR2.stR2menu .perf-panel-backdrop1528{
+  padding-top:112px!important;
+}
