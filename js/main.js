@@ -27275,3 +27275,107 @@ window.stellarionScrollAudit1610 = function(){
   setInterval(enhance, 700);
   enhance();
 })();
+
+/* STELLARION 1.6.76 — Coffres mobile garde-fou anti-chevauchement final.
+   Certains anciens patchs injectent encore des hauteurs inline apres render.
+   Ici on force la page mobile en pile verticale, avec !important inline. */
+(function(){
+  "use strict";
+  if(window.__stellarionMobileChestsNoStack1676) return;
+  window.__stellarionMobileChestsNoStack1676 = true;
+
+  function isMobile(){
+    try{
+      return document.body && document.body.classList.contains("view-chests") && (
+        matchMedia("(max-width: 980px)").matches ||
+        matchMedia("(pointer: coarse)").matches ||
+        (window.visualViewport && window.visualViewport.width <= 980) ||
+        document.documentElement.clientWidth <= 980
+      );
+    }catch(e){ return false; }
+  }
+  function imp(el, prop, value){
+    if(!el) return;
+    try{ el.style.setProperty(prop, value, "important"); }catch(e){}
+  }
+  function apply(){
+    if(!isMobile()) return;
+    var page=document.querySelector("#center > .chests-page1525");
+    var grid=document.querySelector(".chests-grid1525");
+    var cards=Array.prototype.slice.call(document.querySelectorAll(".chest-card1525"));
+    var dup=document.querySelector(".duplicate-stock1526");
+    var hist=document.querySelector(".chest-history1525");
+
+    imp(page,"display","flex");
+    imp(page,"flex-direction","column");
+    imp(page,"gap","14px");
+    imp(page,"height","auto");
+    imp(page,"min-height","0");
+    imp(page,"max-height","none");
+    imp(page,"overflow","visible");
+    imp(page,"align-content","stretch");
+
+    imp(grid,"display","flex");
+    imp(grid,"flex-direction","column");
+    imp(grid,"gap","14px");
+    imp(grid,"height","auto");
+    imp(grid,"min-height","0");
+    imp(grid,"max-height","none");
+    imp(grid,"overflow","visible");
+    imp(grid,"position","static");
+    imp(grid,"transform","none");
+    imp(grid,"margin","0");
+
+    cards.forEach(function(card){
+      imp(card,"display","grid");
+      imp(card,"grid-template-columns","64px minmax(0,1fr)");
+      imp(card,"grid-auto-rows","auto");
+      imp(card,"height","auto");
+      imp(card,"min-height","0");
+      imp(card,"max-height","none");
+      imp(card,"overflow","visible");
+      imp(card,"position","relative");
+      imp(card,"transform","none");
+      imp(card,"margin","0");
+      imp(card,"flex","0 0 auto");
+      imp(card,"z-index","auto");
+      var btn=card.querySelector("button[data-chest-cost]");
+      imp(btn,"grid-column","1 / -1");
+      imp(btn,"position","static");
+      imp(btn,"z-index","auto");
+      imp(btn,"margin","6px 0 0");
+    });
+    [dup,hist].forEach(function(el){
+      imp(el,"position","static");
+      imp(el,"grid-column","auto");
+      imp(el,"grid-row","auto");
+      imp(el,"height","auto");
+      imp(el,"min-height","0");
+      imp(el,"max-height","260px");
+      imp(el,"overflow","auto");
+      imp(el,"transform","none");
+      imp(el,"margin","0");
+      imp(el,"z-index","auto");
+    });
+  }
+
+  var oldRender=window.render;
+  if(typeof oldRender==="function" && !oldRender.__mobileChestsNoStack1676){
+    var wrapped=function(){
+      var r=oldRender.apply(this,arguments);
+      setTimeout(apply,0);
+      setTimeout(apply,80);
+      setTimeout(apply,240);
+      return r;
+    };
+    wrapped.__mobileChestsNoStack1676=true;
+    window.render=wrapped;
+    try{ render=wrapped; }catch(e){}
+  }
+  window.stellarionMobileChestsNoStack1676=apply;
+  window.addEventListener("resize",apply,{passive:true});
+  window.addEventListener("orientationchange",function(){setTimeout(apply,80);},{passive:true});
+  document.addEventListener("click",function(){setTimeout(apply,0);setTimeout(apply,160);},true);
+  setInterval(apply,700);
+  apply();
+})();
