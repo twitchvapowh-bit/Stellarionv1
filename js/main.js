@@ -7613,8 +7613,14 @@ function render(){
  window.__lastRenderView1610 = state.view;
  if(__scrollPos1610 && typeof restoreScrollState==="function"){
   restoreScrollState(__scrollPos1610);
-  // Re-applique après les setTimeout(0) internes (gwmInitInteractions, syncRightColumnToView1542h)
-  setTimeout(function(){ try{ restoreScrollState(__scrollPos1610); }catch(e){} }, 40);
+  // Re-applique en plusieurs passes : sur la page Construction (et les autres vues
+  // avec panneaux/images qui finissent de se mettre en page après coup), un seul
+  // rattrapage à 40ms ne suffit pas toujours sur mobile (CPU plus lent) — le scroll
+  // remonte visiblement en haut puis "saute" en place, ce qui est inconfortable.
+  // Mêmes délais que le correctif dédié de la page Construction (patch 1632).
+  [40,160,350,700].forEach(function(ms){
+   setTimeout(function(){ try{ restoreScrollState(__scrollPos1610); }catch(e){} }, ms);
+  });
  } else if(__viewChanged1610){
   try{
    window.scrollTo(0,0);
