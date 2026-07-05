@@ -13683,6 +13683,7 @@ const APPARAT_IMAGE_DATA_1521={"app_ancient_01.png":"data:image/png;base64,iVBOR
           <div class="chest-icon1525">${c.icon}</div><h3>${c.name}</h3><p>${c.desc}</p>
           <div class="chest-meta1525"><span>Coût</span><strong>${c.cost} fragments</strong><span>Tirages</span><strong>${c.rolls}</strong></div>
           <h4>Table de récompenses</h4>${chestTableHtml1525(c)}
+          <button type="button" class="chest-rewards-open1677" onclick="openChestRewardsFromButton1677(this);return false;">Voir les récompenses</button>
           <button class="btn btn-gold" data-chest-cost="${c.cost}" ${Number(state.resources.fragments||0)>=c.cost?"":"disabled"} onclick="openChest1525('${c.id}')">Ouvrir ce coffre</button>
         </article>`).join("")}
       </div>
@@ -27181,7 +27182,7 @@ window.stellarionScrollAudit1610 = function(){
 };
 
 /* STELLARION 1.6.72 — Coffres mobile R3
-   Une carte = une cible tactile. Taper la carte affiche/masque les recompenses,
+   Une carte = une cible tactile. Taper la carte ouvre un popup de recompenses,
    le bouton reste reserve a l'ouverture du coffre. */
 (function(){
   "use strict";
@@ -27195,6 +27196,47 @@ window.stellarionScrollAudit1610 = function(){
     }catch(e){ return false; }
   }
 
+  function esc1677(v){
+    return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]||c;});
+  }
+  function closeRewardsPopup(){
+    var old=document.getElementById("chest-rewards-popup-1677");
+    if(old) old.remove();
+  }
+  function openRewardsPopup(card){
+    if(!card || !isMobileChestsR3()) return;
+    var title=(card.querySelector("h3")&&card.querySelector("h3").textContent.trim())||"Coffre";
+    var desc=(card.querySelector("p")&&card.querySelector("p").textContent.trim())||"";
+    var table=card.querySelector(".chest-table1525");
+    var meta=card.querySelector(".chest-meta1525");
+    closeRewardsPopup();
+    var modal=document.createElement("div");
+    modal.id="chest-rewards-popup-1677";
+    modal.className="chest-rewards-popup1677";
+    modal.setAttribute("role","dialog");
+    modal.setAttribute("aria-modal","true");
+    modal.innerHTML='<div class="chest-rewards-card1677" style="'+(card.getAttribute("style")||"")+'">'+
+      '<button class="chest-rewards-close1677" type="button" aria-label="Fermer">×</button>'+
+      '<span class="pill">RECOMPENSES</span>'+
+      '<h2>'+esc1677(title)+'</h2>'+
+      (desc?'<p>'+esc1677(desc)+'</p>':'')+
+      '<div class="chest-rewards-meta1677">'+(meta?meta.innerHTML:"")+'</div>'+
+      '<h3>Table de recompenses</h3>'+
+      '<div class="chest-rewards-table1677">'+(table?table.innerHTML:'<div>Aucune table disponible</div>')+'</div>'+
+    '</div>';
+    modal.addEventListener("click",function(e){
+      if(e.target===modal || e.target.closest(".chest-rewards-close1677")) closeRewardsPopup();
+    });
+    document.body.appendChild(modal);
+  }
+  window.closeChestRewardsPopup1677=closeRewardsPopup;
+  window.openChestRewardsPopup1677=openRewardsPopup;
+  window.openChestRewardsFromButton1677=function(btn){
+    var card=btn&&btn.closest?btn.closest(".chest-card1525"):null;
+    openRewardsPopup(card);
+    return false;
+  };
+
   function enhance(){
     if(!isMobileChestsR3()) return;
     var cards = Array.prototype.slice.call(document.querySelectorAll(".chest-card1525"));
@@ -27207,7 +27249,7 @@ window.stellarionScrollAudit1610 = function(){
         card.setAttribute("aria-expanded", card.dataset.mobileExpanded);
         var hint = document.createElement("div");
         hint.className = "chest-touch-hint1672";
-        hint.textContent = "Toucher pour voir les récompenses";
+        hint.textContent = "Voir les récompenses";
         hint.setAttribute("role", "button");
         card.appendChild(hint);
       }
@@ -27218,29 +27260,19 @@ window.stellarionScrollAudit1610 = function(){
           if(e.target.closest("button,.btn,a,input,select,textarea")) return;
           e.preventDefault();
           e.stopPropagation();
-          toggle(card);
+          openRewardsPopup(card);
         });
       }
-      card.classList.toggle("mobile-expanded1672", card.dataset.mobileExpanded === "true");
+      card.classList.remove("mobile-expanded1672");
       var hintEl = card.querySelector(".chest-touch-hint1672");
-      if(hintEl) hintEl.textContent = card.dataset.mobileExpanded === "true" ? "Récompenses visibles" : "Toucher pour voir les récompenses";
-      card.setAttribute("aria-expanded", card.dataset.mobileExpanded);
+      if(hintEl) hintEl.textContent = "Voir les récompenses";
+      card.setAttribute("aria-expanded", "false");
     });
   }
 
   function toggle(card){
     if(!card || !isMobileChestsR3()) return;
-    var open = card.dataset.mobileExpanded !== "true";
-    document.querySelectorAll(".chest-card1525[data-mobile-chest-r3]").forEach(function(other){
-      other.dataset.mobileExpanded = "false";
-      other.classList.remove("mobile-expanded1672");
-      other.setAttribute("aria-expanded", "false");
-    });
-    card.dataset.mobileExpanded = open ? "true" : "false";
-    card.classList.toggle("mobile-expanded1672", open);
-    card.setAttribute("aria-expanded", open ? "true" : "false");
-    var hint = card.querySelector(".chest-touch-hint1672");
-    if(hint) hint.textContent = open ? "Récompenses visibles" : "Toucher pour voir les récompenses";
+    openRewardsPopup(card);
   }
 
   document.addEventListener("click", function(e){
@@ -27248,7 +27280,7 @@ window.stellarionScrollAudit1610 = function(){
     if(!card || !isMobileChestsR3()) return;
     if(e.target.closest("button,.btn,a,input,select,textarea")) return;
     e.preventDefault();
-    toggle(card);
+    openRewardsPopup(card);
   }, true);
 
   document.addEventListener("keydown", function(e){
@@ -27256,7 +27288,7 @@ window.stellarionScrollAudit1610 = function(){
     var card = e.target && e.target.closest ? e.target.closest(".chest-card1525") : null;
     if(!card || !isMobileChestsR3()) return;
     e.preventDefault();
-    toggle(card);
+    openRewardsPopup(card);
   }, true);
 
   var oldRender = window.render;
@@ -27378,4 +27410,58 @@ window.stellarionScrollAudit1610 = function(){
   document.addEventListener("click",function(){setTimeout(apply,0);setTimeout(apply,160);},true);
   setInterval(apply,700);
   apply();
+})();
+
+/* STELLARION 1.6.78 — Popup recompenses coffres, listener final robuste. */
+(function(){
+  "use strict";
+  if(window.__stellarionChestRewardsPopup1678) return;
+  window.__stellarionChestRewardsPopup1678 = true;
+
+  function esc(v){
+    return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]||c;});
+  }
+  function close(){
+    var old=document.getElementById("chest-rewards-popup-1677");
+    if(old) old.remove();
+  }
+  function open(card){
+    if(!card) return false;
+    var title=(card.querySelector("h3")&&card.querySelector("h3").textContent.trim())||"Coffre";
+    var desc=(card.querySelector("p")&&card.querySelector("p").textContent.trim())||"";
+    var meta=card.querySelector(".chest-meta1525");
+    var table=card.querySelector(".chest-table1525");
+    close();
+    var modal=document.createElement("div");
+    modal.id="chest-rewards-popup-1677";
+    modal.className="chest-rewards-popup1677";
+    modal.setAttribute("role","dialog");
+    modal.setAttribute("aria-modal","true");
+    modal.innerHTML='<div class="chest-rewards-card1677" style="'+(card.getAttribute("style")||"")+'">'+
+      '<button class="chest-rewards-close1677" type="button" aria-label="Fermer">×</button>'+
+      '<span class="pill">RECOMPENSES</span>'+
+      '<h2>'+esc(title)+'</h2>'+
+      (desc?'<p>'+esc(desc)+'</p>':'')+
+      '<div class="chest-rewards-meta1677">'+(meta?meta.innerHTML:"")+'</div>'+
+      '<h3>Table de recompenses</h3>'+
+      '<div class="chest-rewards-table1677">'+(table?table.innerHTML:'<div>Aucune table disponible</div>')+'</div>'+
+    '</div>';
+    modal.addEventListener("click",function(e){
+      if(e.target===modal || e.target.closest(".chest-rewards-close1677")) close();
+    });
+    document.body.appendChild(modal);
+    return false;
+  }
+  window.openChestRewardsFromButton1677=function(btn){
+    return open(btn&&btn.closest?btn.closest(".chest-card1525"):null);
+  };
+  window.openChestRewardsPopup1678=open;
+  window.closeChestRewardsPopup1678=close;
+  document.addEventListener("click",function(e){
+    var btn=e.target&&e.target.closest?e.target.closest(".chest-rewards-open1677"):null;
+    if(!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    open(btn.closest(".chest-card1525"));
+  },true);
 })();

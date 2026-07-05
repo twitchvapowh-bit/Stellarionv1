@@ -14339,6 +14339,7 @@ body.stable-ui1542b.view-planet .planet-showcase-board{
     grid-column:2!important;
   }
   body.view-chests .chest-card1525 .chest-touch-hint1672,
+  body.view-chests .chest-card1525 .chest-rewards-open1677,
   body.view-chests .chest-card1525 h4,
   body.view-chests .chest-card1525 .chest-table1525,
   body.view-chests .chest-card1525 button[data-chest-cost]{
@@ -14348,6 +14349,21 @@ body.stable-ui1542b.view-planet .planet-showcase-board{
     position:static!important;
     z-index:auto!important;
     margin:6px 0 0!important;
+  }
+  body.view-chests .chest-card1525 .chest-rewards-open1677{
+    position:static!important;
+    z-index:auto!important;
+    width:100%!important;
+    min-height:42px!important;
+    margin:4px 0 0!important;
+    border-radius:14px!important;
+    border:1px solid rgba(79,195,247,.28)!important;
+    color:#bdeeff!important;
+    background:rgba(79,195,247,.10)!important;
+    font:900 12px Inter,Segoe UI,Arial,sans-serif!important;
+    text-transform:uppercase!important;
+    letter-spacing:0!important;
+    touch-action:manipulation!important;
   }
   body.view-chests .duplicate-stock1526,
   body.view-chests .chest-history1525{
@@ -14362,4 +14378,96 @@ body.stable-ui1542b.view-planet .planet-showcase-board{
     margin:0!important;
     z-index:auto!important;
   }
+}
+
+/* === STELLARION 1.6.77 — Popup recompenses coffres mobile === */
+.chest-rewards-popup1677{
+  position:fixed!important;
+  inset:0!important;
+  z-index:2147483600!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:14px!important;
+  background:rgba(2,5,16,.78)!important;
+  backdrop-filter:blur(8px)!important;
+}
+.chest-rewards-card1677{
+  position:relative!important;
+  box-sizing:border-box!important;
+  width:min(430px,calc(100vw - 22px))!important;
+  max-height:calc(100dvh - 24px)!important;
+  overflow:auto!important;
+  border:1px solid color-mix(in srgb,var(--chest,#4fc3f7) 58%,rgba(255,255,255,.12))!important;
+  border-radius:18px!important;
+  padding:16px!important;
+  color:#f7fbff!important;
+  background:
+    radial-gradient(circle at 50% 0%,color-mix(in srgb,var(--chest,#4fc3f7) 20%,transparent),transparent 44%),
+    linear-gradient(180deg,rgba(8,19,39,.98),rgba(2,7,18,.98))!important;
+  box-shadow:0 24px 90px rgba(0,0,0,.64),0 0 34px color-mix(in srgb,var(--chest,#4fc3f7) 22%,transparent)!important;
+}
+.chest-rewards-close1677{
+  position:absolute!important;
+  top:10px!important;
+  right:10px!important;
+  width:38px!important;
+  height:38px!important;
+  border-radius:50%!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+  color:#fff!important;
+  background:rgba(255,255,255,.08)!important;
+  font-size:26px!important;
+  line-height:1!important;
+}
+.chest-rewards-card1677 h2{
+  margin:12px 44px 8px 0!important;
+  font-size:25px!important;
+  line-height:1.1!important;
+  color:#fff!important;
+}
+.chest-rewards-card1677 p{
+  margin:0 0 12px!important;
+  color:#b7c6d8!important;
+  line-height:1.42!important;
+}
+.chest-rewards-card1677 h3{
+  margin:14px 0 8px!important;
+  color:#7dd3fc!important;
+  font-size:12px!important;
+  text-transform:uppercase!important;
+}
+.chest-rewards-meta1677{
+  display:grid!important;
+  grid-template-columns:1fr auto!important;
+  gap:8px 12px!important;
+  padding:10px!important;
+  border-radius:14px!important;
+  border:1px solid rgba(255,255,255,.10)!important;
+  background:rgba(255,255,255,.045)!important;
+}
+.chest-rewards-meta1677 span{
+  color:#8fb1c9!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+}
+.chest-rewards-meta1677 strong{
+  color:#fff!important;
+}
+.chest-rewards-table1677{
+  display:grid!important;
+  gap:7px!important;
+}
+.chest-rewards-table1677 div{
+  display:grid!important;
+  grid-template-columns:18px minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:8px!important;
+  min-height:34px!important;
+  padding:7px 9px!important;
+  border-radius:11px!important;
+  background:rgba(255,255,255,.045)!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+  color:#d9e8f7!important;
+  font-size:12.5px!important;
 }
