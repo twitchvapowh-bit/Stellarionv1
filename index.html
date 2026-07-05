@@ -241,26 +241,18 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     document.documentElement.style.setProperty("--r2top", "0px");
   }
 
-  function menuButton() {
-    if (!document.body) return;
-    if (!document.getElementById("st-r2-menu-back")) {
-      var back = document.createElement("div");
-      back.id = "st-r2-menu-back";
-      back.addEventListener("click", function () {
-        document.body.classList.remove("stR2menu");
-      });
-      document.body.appendChild(back);
-    }
-    if (document.getElementById("st-r2-menu")) return;
-    var b = document.createElement("button");
-    b.id = "st-r2-menu";
-    b.type = "button";
-    b.title = "Menu (reglages, messages, ressources)";
-    b.innerHTML = "\u2630 Menu<span class=\"r2-menu-badge\" id=\"st-r2-menu-badge\" style=\"display:none\"></span>";
-    b.addEventListener("click", function () {
-      document.body.classList.toggle("stR2menu");
+  /* Le bouton Menu lui-meme vit maintenant DANS la topbar (voir main.js,
+     #st-r2-menu-inline), juste apres le logo STELLARION. Ici on se contente
+     de garantir le fond semi-transparent qui permet de refermer le menu
+     deplie en tapant a cote. */
+  function menuBackdrop() {
+    if (!document.body || document.getElementById("st-r2-menu-back")) return;
+    var back = document.createElement("div");
+    back.id = "st-r2-menu-back";
+    back.addEventListener("click", function () {
+      document.body.classList.remove("stR2menu");
     });
-    document.body.appendChild(b);
+    document.body.appendChild(back);
   }
 
   function updateMenuBadge() {
@@ -417,7 +409,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
     document.body.classList.toggle("stR2portrait", false); // portrait autorise (decision Vapowh)
     rotateOverlay();
     measureTop();
-    menuButton();
+    menuBackdrop();
     updateMenuBadge();
     killGhosts();
     dockCarousel();
