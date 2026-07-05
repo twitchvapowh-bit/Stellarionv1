@@ -14494,3 +14494,33 @@ body.stable-ui1542b.view-planet .planet-showcase-board{
     margin-top:6px!important;
   }
 }
+/* STELLARION — Coffres : bouton récompenses visible mobile, caché PC */
+@media (min-width: 981px) and (hover: hover) and (pointer: fine) {
+  body.view-chests .chest-card1525 .chest-touch-hint1672,
+  body.view-chests .chest-card1525 .chest-rewards-open1677 {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
+/* Mobile/tablette tactile : on garde le bouton et le pop-up */
+@media (max-width: 980px), (pointer: coarse) {
+  body.view-chests .chest-card1525 .chest-touch-hint1672,
+  body.view-chests .chest-card1525 .chest-rewards-open1677 {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    min-height: 44px !important;
+    padding: 0 12px !important;
+    margin-top: 8px !important;
+    pointer-events: auto !important;
+  }
+}
