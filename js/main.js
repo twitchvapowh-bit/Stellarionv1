@@ -27207,97 +27207,11 @@ window.stellarionScrollAudit1610 = function(){
   }
   window.closeChestRewardsPopup1677=closeRewardsPopup;
   window.openChestRewardsPopup1677=openRewardsPopup;
-  tRewardsFromButton1677=function(btn){
-  var card = btn && btn.closest ? btn.closest(".chest-card1525") : null;
-  if(!card) return;
-
-  var title = card.querySelector("h2,h3,.chest-title1525");
-  var desc = card.querySelector("p,.chest-desc1525");
-  var cost = card.querySelector("[data-chest-cost]");
-  var rows = Array.prototype.slice.call(card.querySelectorAll(
-    ".chest-reward-row1677,.chest-rewards-row1677,.reward-row,li"
-  ));
-
-  var old = document.querySelector(".chest-mobile-modal1677");
-  if(old) old.remove();
-
-  var back = document.createElement("div");
-  back.className = "chest-mobile-modal1677";
-  back.innerHTML =
-    '<div class="chest-mobile-sheet1677" role="dialog" aria-modal="true">' +
-      '<button class="chest-mobile-close1677" type="button" aria-label="Fermer">×</button>' +
-      '<div class="chest-mobile-kicker1677">Récompenses</div>' +
-      '<h2 class="chest-mobile-title1677"></h2>' +
-      '<p class="chest-mobile-desc1677"></p>' +
-      '<div class="chest-mobile-meta1677"></div>' +
-      '<div class="chest-mobile-sub1677">Table de récompenses</div>' +
-      '<div class="chest-mobile-list1677"></div>' +
-    '</div>';
-
-  var sheet = back.querySelector(".chest-mobile-sheet1677");
-  back.querySelector(".chest-mobile-title1677").textContent =
-    title ? title.textContent.trim() : "Coffre";
-
-  back.querySelector(".chest-mobile-desc1677").textContent =
-    desc ? desc.textContent.trim() : "";
-
-  var meta = back.querySelector(".chest-mobile-meta1677");
-  var costText = cost ? cost.textContent.trim() : "";
-  meta.innerHTML =
-    '<div><span>Coût</span><strong>' + (costText || "—") + '</strong></div>' +
-    '<div><span>Tirages</span><strong>' + (card.dataset.draws || card.getAttribute("data-draws") || "—") + '</strong></div>';
-
-  var list = back.querySelector(".chest-mobile-list1677");
-
-  rows.forEach(function(row){
-    var txt = (row.textContent || "").replace(/\s+/g," ").trim();
-    if(!txt) return;
-
-    var value = "";
-    var label = txt;
-
-    var m = txt.match(/^(.*?)(\d+)\s*$/);
-    if(m){
-      label = m[1].trim();
-      value = m[2].trim();
-    }
-
-    var item = document.createElement("div");
-    item.className = "chest-mobile-item1677";
-    item.innerHTML =
-      '<span></span>' +
-      '<strong></strong>';
-
-    item.querySelector("span").textContent = label;
-    item.querySelector("strong").textContent = value;
-
-    list.appendChild(item);
-  });
-
-  if(!list.children.length){
-    list.innerHTML = '<div class="chest-mobile-empty1677">Aucune récompense trouvée.</div>';
-  }
-
-  document.body.appendChild(back);
-
-  function close(){
-    back.remove();
-    document.body.classList.remove("chest-modal-open1677");
-  }
-
-  document.body.classList.add("chest-modal-open1677");
-
-  back.addEventListener("click", function(e){
-    if(e.target === back || e.target.closest(".chest-mobile-close1677")) close();
-  });
-
-  document.addEventListener("keydown", function esc(e){
-    if(e.key === "Escape"){
-      document.removeEventListener("keydown", esc);
-      close();
-    }
-  });
-};
+  window.openChestRewardsFromButton1677=function(btn){
+    var card = btn && btn.closest ? btn.closest(".chest-card1525") : null;
+    if(!card) return;
+    openRewardsPopup(card);
+  };
 
   function toggle(card){
     if(!card || !isMobileChestsR3()) return;
