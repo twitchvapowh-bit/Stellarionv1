@@ -14877,3 +14877,41 @@ body.view-leaderboards #center{
   pointer-events:none!important;
   z-index:2!important;
 }
+
+/* STELLARION — Bouton "Boutique" (fragments) trop petit/ecrase sur mobile,
+   quasi invisible dans la barre de ressources compacte. On lui donne sa
+   propre ligne bien visible dans sa case. */
+@media(max-width:900px),(pointer:coarse){
+  .stable-fragments-shop-host1546{
+    position:relative!important;
+    z-index:1!important;
+  }
+  .stable-fragments-shop-host1546 > div:last-child{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:5px!important;
+  }
+  .fragment-shop-entry1546{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:100%!important;
+    min-height:32px!important;
+    padding:7px 8px!important;
+    margin:2px 0 0!important;
+    font-size:12.5px!important;
+    font-weight:950!important;
+    letter-spacing:.2px!important;
+    border-radius:9px!important;
+    border:1px solid rgba(120,220,255,.85)!important;
+    background:linear-gradient(135deg,#22d2ff,#0d78c9)!important;
+    color:#fff!important;
+    box-shadow:0 0 18px rgba(0,210,255,.55)!important;
+    animation:fragShopPulse1546 1.8s ease-in-out infinite!important;
+  }
+}
+@keyframes fragShopPulse1546{
+  0%,100%{box-shadow:0 0 12px rgba(0,210,255,.4);}
+  50%{box-shadow:0 0 22px rgba(0,210,255,.85);}
+}
