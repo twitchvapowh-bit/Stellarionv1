@@ -7636,7 +7636,7 @@ function sidebarQueueHtml(){
 
 function leftPanel(prod,energy){
  return `<div class="stable-left-stack1542c">
-   ${sidebarQueueHtml()}
+   ${(state&&state.view==="chests")?"":sidebarQueueHtml()}
    ${typeof window.stellarionQuestPanelBridge==="function"?window.stellarionQuestPanelBridge():""}
  </div>`;
 }
