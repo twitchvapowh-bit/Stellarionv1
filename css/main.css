@@ -14494,18 +14494,3 @@ body.stable-ui1542b.view-planet .planet-showcase-board{
     margin-top:6px!important;
   }
 }
-
-
-/* PC uniquement : cache le bouton "Voir les récompenses" des coffres */
-@media (min-width: 1001px) {
-  .chest-touch-hint1672 {
-    display: none !important;
-  }
-}
-
-/* Mobile : conserve le bouton */
-@media (max-width: 1000px) {
-  .chest-touch-hint1672 {
-    display: block !important;
-  }
-}
