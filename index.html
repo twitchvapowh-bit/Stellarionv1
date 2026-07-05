@@ -78,8 +78,27 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
 <div id="stellarion-bootgate"><div class="sbg-inner"><div class="sbg-logo"><span class="brand">STELLARION</span></div><div class="sbg-spinner"></div></div></div>
 <!-- CSS déplacé vers css/main.css -->
 
-<div id="auth-screen" style="display:none;position:fixed;inset:0;z-index:2147483600;background:#020510;color:#e6eefc;font-family:system-ui,Arial,sans-serif;align-items:center;justify-content:center">
-  <video class="auth-video-bg" src="assets/video/stellarion-login-presentation-web.mp4" poster="assets/video/stellarion-login-presentation-poster.jpg" autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
+<div id="auth-screen" style="display:none;position:fixed;inset:0;z-index:2147483600;background:#020510 url('assets/video/stellarion-login-presentation-poster.jpg') center/cover no-repeat;color:#e6eefc;font-family:system-ui,Arial,sans-serif;align-items:center;justify-content:center">
+  <video class="auth-video-bg" data-src="assets/video/stellarion-login-presentation-web.mp4" poster="assets/video/stellarion-login-presentation-poster.jpg" muted loop playsinline preload="none" aria-hidden="true"></video>
+  <script>
+  // Le fond video (8 Mo) ne doit jamais bloquer ni ralentir l'ouverture sur mobile/donnees limitees :
+  // sur telephone (ou reseau lent/economie de donnees), on garde juste l'image poster en fond CSS
+  // (deja posee ci-dessus) et on ne charge/joue la video que sur desktop avec une connexion correcte.
+  (function(){
+    try{
+      var v = document.currentScript.previousElementSibling;
+      if(!v || v.tagName!=="VIDEO") return;
+      var conn = navigator.connection || navigator.webkitConnection || navigator.mozConnection;
+      var slow = !!(conn && (conn.saveData || /2g/.test(conn.effectiveType||"")));
+      var isPhone = matchMedia("(pointer:coarse)").matches || Math.min(screen.width,screen.height) <= 900;
+      if(isPhone || slow){ v.remove(); return; }
+      v.addEventListener("error", function(){ try{ v.remove(); }catch(e){} });
+      v.src = v.getAttribute("data-src");
+      v.autoplay = true;
+      v.play && v.play().catch(function(){});
+    }catch(e){}
+  })();
+  </script>
   <div class="auth-panel-wrap" style="width:100%;max-width:420px;padding:24px">
     <div style="text-align:center;margin-bottom:28px">
       <div class="brand" style="text-align:center;font-size:30px;letter-spacing:5px">STELLARION</div>
