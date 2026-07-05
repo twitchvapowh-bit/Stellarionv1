@@ -817,6 +817,11 @@ try {
     gate.classList.add('sbg-hide');
     setTimeout(function(){ if(gate&&gate.parentNode) gate.parentNode.removeChild(gate); }, 450);
   }
+  function forceRelease(){
+    try{ window.__stellarionBootHold = false; }catch(e){}
+    try{ document.body.classList.remove('stellarion-boot-hold'); }catch(e){}
+    hide();
+  }
   function ready(){
     try{
       var app=document.getElementById('app');
@@ -837,6 +842,7 @@ try {
   else tick();
   window.addEventListener('load', function(){ setTimeout(function(){ if(ready()) hide(); }, 900); });
   setTimeout(function(){ if(!window.__stellarionBootHold) hide(); }, 6500); // filet de sécurité absolu
+  setTimeout(function(){ if(!done) forceRelease(); }, 12000); // jamais de chargement bloque indefiniment
 })();
 ;
 
@@ -23853,6 +23859,13 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
       if(document.body) document.body.classList.toggle('stellarion-server-booting', !!on);
       G.__stellarionBootHold = !!on;
       if(document.body) document.body.classList.toggle('stellarion-boot-hold', !!on);
+      if(!on){
+        var gate=document.getElementById('stellarion-bootgate');
+        if(gate){
+          gate.classList.add('sbg-hide');
+          setTimeout(function(){ try{ if(gate&&gate.parentNode) gate.parentNode.removeChild(gate); }catch(e){} }, 250);
+        }
+      }
     }catch(e){}
   }
 
@@ -23991,6 +24004,8 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
       return !!out;
     }catch(e){
       st().__serverAuthority1570 = { patch:PATCH, ok:false, at:Date.now(), error:String(e.message||e) };
+      try{ G.__stellarionServerStateLoaded1570 = true; }catch(_e){}
+      setBootMask(false);
       log('⚠️ Sécurité serveur non prête : lance le SQL 1570 puis déploie la fonction game-action. ('+(e.message||e)+')');
       return false;
     }finally{ busy = false; }
@@ -24126,7 +24141,10 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
           }catch(saveErr){ console.warn('save ui-only after server bootstrap 1570', saveErr); }
         }
       }catch(e){}finally{
-        if(booted || !online()) setBootMask(false);
+        if(!booted){
+          try{ G.__stellarionServerStateLoaded1570 = true; }catch(_e){}
+        }
+        setBootMask(false);
       }
       return out;
     };
