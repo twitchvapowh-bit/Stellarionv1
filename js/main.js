@@ -12340,6 +12340,8 @@ function questPowerStatusHtml(required,current){
       + '<button class="btn btn-ghost" data-pos="'+esc38(pos)+'" onclick="gwmCopy(this.dataset.pos)">Copier position</button>'
       + ((p&&p.owned&&p.planetId)?'<button class="btn btn-ghost" data-pid="'+esc38(p.planetId)+'" onclick="state.activePlanetId=this.dataset.pid;setView(&quot;planet&quot;)">Voir planete</button>':'')
       + '</div>'
+      + ((p&&p.owned&&p.planetId&&typeof renamePlanetHtml==="function")?renamePlanetHtml(p.planetId):'')
+      + ((p&&p.owned&&p.planetId&&typeof relocatePlanetHtml==="function")?relocatePlanetHtml(p.planetId):'')
       + (mission?'<div class="galaxy-mission-wrap">'+mission+'</div>':'')
       + '</div>';
   }
