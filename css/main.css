@@ -1744,7 +1744,7 @@ body.view-messages .messages-view,
 body.view-messages .message-layout{
   height:100%!important;
   display:grid!important;
-  grid-template-columns:330px minmax(0,1fr)!important;
+  grid-template-columns:330px minmax(0,1fr) 300px!important;
   gap:12px!important;
   overflow:hidden!important;
 }
@@ -1752,6 +1752,10 @@ body.view-messages .messages-list,
 body.view-messages .message-detail{
   min-height:0!important;
   overflow:auto!important;
+}
+body.view-messages #globalChatDockLive1700{
+  min-height:0!important;
+  overflow:hidden!important;
 }
 
 /* Alliance : lisible et compacte, sans plein écran destructeur. */

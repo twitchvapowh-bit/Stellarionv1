@@ -18422,7 +18422,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     }).join(''):'<p class="muted small">Aucun message pour le moment. Envoie une sonde pour recevoir un rapport.</p>';
     var bodyHtml=selected?(typeof window.stellarionFormatMessageBody==='function'?window.stellarionFormatMessageBody(selected):'<pre style="white-space:pre-wrap;line-height:1.45;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;color:#dbeafe">'+esc(String(selected.body||'').replaceAll('\\n','\n'))+'</pre>'):'';
     var detail=selected?'<span class="pill">'+(typeof messageIcon==='function'?messageIcon(selected.type):'📩')+' MESSAGE</span><h2>'+esc(selected.subject)+'</h2><p class="small muted">'+new Date(selected.createdAt).toLocaleString('fr-FR')+'</p>'+bodyHtml+'<div class="quick-message-actions"><button class="btn" onclick="openReplyToMessage(\''+esc(selected.id)+'\')">↩️ Répondre</button><button class="btn btn-ghost" onclick="deleteMessage(\''+esc(selected.id)+'\')">Supprimer</button></div>':'<p class="muted">Sélectionne un message.</p>';
-    return '<div class="messages-view message-layout" style="height:100%;display:grid;grid-template-columns:360px 1fr;gap:14px;padding:18px;overflow:hidden"><div class="card panel messages-list" style="overflow:auto"><span class="pill">MESSAGERIE · '+(typeof unreadCount==='function'?unreadCount():0)+' non lu(s)</span><div class="stellarion-compose-card-v16fix"><strong>Écrire à un joueur</strong><p class="small muted">Correctif V16.1 : plus de champ inline qui se fait rerender. Le bouton ouvre une fenêtre de saisie protégée.</p><button class="btn" style="width:100%;margin-top:8px" onclick="openStellarionMessageV16Fix()">✍️ Nouveau message</button></div>'+rows+'</div><div class="card panel message-detail" style="overflow:auto">'+detail+'</div></div>';
+    return '<div class="messages-view message-layout" style="height:100%;display:grid;grid-template-columns:360px 1fr 320px;gap:14px;padding:18px;overflow:hidden"><div class="card panel messages-list" style="overflow:auto"><span class="pill">MESSAGERIE · '+(typeof unreadCount==='function'?unreadCount():0)+' non lu(s)</span><div class="stellarion-compose-card-v16fix"><strong>Écrire à un joueur</strong><p class="small muted">Correctif V16.1 : plus de champ inline qui se fait rerender. Le bouton ouvre une fenêtre de saisie protégée.</p><button class="btn" style="width:100%;margin-top:8px" onclick="openStellarionMessageV16Fix()">✍️ Nouveau message</button></div>'+rows+'</div><div class="card panel message-detail" style="overflow:auto">'+detail+'</div><div id="globalChatDockLive1700" style="overflow:hidden;min-height:0"></div></div>';
   };
 
   // Anti-vol de focus léger : pendant la saisie dans la fenêtre protégée, les rendus automatiques ne touchent pas la modale.
@@ -27472,4 +27472,171 @@ window.stellarionScrollAudit1610 = function(){
   window.addEventListener("resize",apply,{passive:true});
   window.addEventListener("orientationchange",function(){setTimeout(apply,80);},{passive:true});
   apply();
+})();
+
+/* ---- STELLARION 1.7.00 — Chat global permanent + compteur de joueurs en ligne (page Messagerie) ---- */
+(function(){
+  "use strict";
+  if(window.__stellarionGlobalChatLive1700) return;
+  window.__stellarionGlobalChatLive1700=true;
+
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function getSupa(){ try{ return (typeof supa!=='undefined'&&supa)?supa:(window.supa||null); }catch(e){ return window.supa||null; } }
+  function currentUserId(){
+    try{
+      var id=window.state&&state.userId;
+      if(!id||id==='local_player'||id==='invite') return null;
+      return id;
+    }catch(e){ return null; }
+  }
+
+  var draftText="";
+
+  function renderMessagesListInto(forceScrollBottom){
+    var list=document.getElementById('globalChatMessagesListLive1700');
+    if(!list) return;
+    var atBottom=forceScrollBottom||(list.scrollHeight-list.scrollTop-list.clientHeight<40);
+    var msgs=((window.state&&state.globalChat)||[]).slice(0,60).slice().reverse();
+    list.innerHTML=msgs.length?msgs.map(function(m){
+      return '<div style="padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.03)">'+
+        '<div class="small muted" style="display:flex;justify-content:space-between;gap:8px">'+
+          '<strong style="color:#7dd3fc">'+esc(m.sender_name||'???')+'</strong>'+
+          '<span>'+new Date(m.timestamp||Date.now()).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+'</span>'+
+        '</div>'+
+        '<div style="word-break:break-word">'+esc(m.text||'')+'</div>'+
+      '</div>';
+    }).join(''):'<p class="muted small">Aucun message pour le moment. Sois le premier à écrire !</p>';
+    if(atBottom) list.scrollTop=list.scrollHeight;
+  }
+
+  var sending=false;
+  async function doSend(){
+    var ta=document.getElementById('globalChatInputLive1700');
+    if(!ta) return;
+    var text=(ta.value||'').trim();
+    if(!text||sending) return;
+    if(text.length>500) text=text.slice(0,500);
+    var uid=currentUserId();
+    if(!uid){ try{ if(typeof addLog==='function') addLog('Connecte-toi pour utiliser le chat global.'); }catch(e){} return; }
+    sending=true;
+    var btn=document.getElementById('globalChatSendBtnLive1700');
+    if(btn) btn.disabled=true;
+    try{
+      var name=(typeof playerDisplayName==='function')?playerDisplayName():((window.state&&state.username)||'Commandant');
+      var msg={id:'msg_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),sender_id:uid,sender_name:name,text:text,timestamp:Date.now(),reactions:[]};
+      window.state=window.state||{};
+      state.globalChat=state.globalChat||[];
+      state.globalChat.unshift(msg);
+      if(state.globalChat.length>200) state.globalChat.length=200;
+      draftText=''; ta.value='';
+      renderMessagesListInto(true);
+      var c=getSupa();
+      if(c){
+        var res=await c.from('global_chat').insert([{id:msg.id,sender_id:msg.sender_id,sender_name:msg.sender_name,text:msg.text,timestamp:msg.timestamp,reactions:[]}]);
+        if(res&&res.error){ try{ if(typeof addLog==='function') addLog('Chat global : message envoyé localement, pas encore synchronisé ('+res.error.message+').'); }catch(e){} }
+      }
+    }catch(e){ try{ console.log('Chat global : erreur d\'envoi',e); }catch(_){} }
+    finally{ sending=false; if(btn) btn.disabled=false; try{ta.focus({preventScroll:true});}catch(e){} }
+  }
+  window.sendGlobalChatMessageLive1700=doSend;
+
+  async function fetchGlobalChatFromServer(){
+    var c=getSupa();
+    if(!c) return;
+    try{
+      var res=await c.from('global_chat').select('id,sender_id,sender_name,text,timestamp,reactions').order('timestamp',{ascending:false}).limit(60);
+      if(res&&res.data){
+        var byId={};
+        res.data.forEach(function(m){ byId[m.id]=m; });
+        ((window.state&&state.globalChat)||[]).forEach(function(m){ if(m&&m.id&&!byId[m.id]) byId[m.id]=m; });
+        var merged=Object.keys(byId).map(function(k){return byId[k];}).sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0);}).slice(0,100);
+        window.state=window.state||{};
+        state.globalChat=merged;
+        renderMessagesListInto();
+      }
+    }catch(e){ /* chat non critique : on ignore silencieusement une panne réseau ponctuelle */ }
+  }
+
+  async function heartbeat(){
+    var uid=currentUserId(), c=getSupa();
+    if(!uid||!c) return;
+    try{ await c.from('players').update({last_seen:new Date().toISOString()}).eq('id',uid); }catch(e){}
+  }
+
+  async function refreshOnlineCount(){
+    var c=getSupa();
+    if(!c) return;
+    try{
+      var cutoff=new Date(Date.now()-70000).toISOString();
+      var res=await c.from('players').select('id',{count:'exact',head:true}).gte('last_seen',cutoff);
+      var n=(res&&typeof res.count==='number')?res.count:null;
+      var el=document.getElementById('globalChatOnlineCountLive1700');
+      if(el&&n!=null) el.textContent='🟢 '+n+' en ligne';
+    }catch(e){}
+  }
+
+  function ensureChatPanelMounted(){
+    if(!document.body.classList.contains('view-messages')) return;
+    var dock=document.getElementById('globalChatDockLive1700');
+    if(!dock||dock.__mountedLive1700) return;
+    dock.__mountedLive1700=true;
+    dock.innerHTML='<div class="card panel" style="display:flex;flex-direction:column;height:100%;overflow:hidden">'+
+      '<span class="pill">💬 CHAT GLOBAL <span id="globalChatOnlineCountLive1700" class="small muted" style="margin-left:6px">…</span></span>'+
+      '<div id="globalChatMessagesListLive1700" style="flex:1;overflow-y:auto;margin:10px 0;display:flex;flex-direction:column;gap:8px;min-height:0"></div>'+
+      '<div style="display:flex;gap:8px;flex:0 0 auto">'+
+        '<textarea id="globalChatInputLive1700" maxlength="500" placeholder="Écris un message à tout le monde..." style="flex:1;resize:none;min-height:40px;max-height:90px;border-radius:10px;border:1px solid rgba(79,195,247,.25);background:rgba(0,0,0,.18);color:#dbeafe;padding:8px"></textarea>'+
+        '<button class="btn" id="globalChatSendBtnLive1700" type="button">Envoyer</button>'+
+      '</div>'+
+    '</div>';
+    var ta=document.getElementById('globalChatInputLive1700');
+    ta.value=draftText;
+    ta.addEventListener('input',function(){ draftText=ta.value; });
+    ta.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); doSend(); } });
+    var btn=document.getElementById('globalChatSendBtnLive1700');
+    if(btn) btn.addEventListener('click',doSend);
+    renderMessagesListInto(true);
+    refreshOnlineCount();
+    fetchGlobalChatFromServer();
+  }
+
+  var oldRender=window.render;
+  if(typeof oldRender==='function'&&!oldRender.__globalChatLive1700){
+    var wrappedRender=function(){
+      var out=oldRender.apply(this,arguments);
+      try{ ensureChatPanelMounted(); }catch(e){}
+      return out;
+    };
+    wrappedRender.__globalChatLive1700=true;
+    window.render=wrappedRender;
+    try{ render=wrappedRender; }catch(e){}
+  }
+
+  var heartbeatTimer=null, onlineTimer=null, chatPollTimer=null;
+  function ensureTimers(){
+    if(!heartbeatTimer){ heartbeat(); heartbeatTimer=setInterval(heartbeat,25000); }
+    if(!onlineTimer){ refreshOnlineCount(); onlineTimer=setInterval(refreshOnlineCount,20000); }
+    if(!chatPollTimer){
+      chatPollTimer=setInterval(function(){
+        if(document.body.classList.contains('view-messages')) fetchGlobalChatFromServer();
+      },6000);
+    }
+  }
+
+  window.stellarionGlobalChatAudit1700=function(){
+    return {
+      patch:'global-chat-live-1700',
+      mounted:!!document.getElementById('globalChatMessagesListLive1700'),
+      messages:(window.state&&state.globalChat&&state.globalChat.length)||0,
+      onlineLabel:(document.getElementById('globalChatOnlineCountLive1700')||{}).textContent||null
+    };
+  };
+
+  var tries=0;
+  (function waitReady(){
+    tries++;
+    if(window.state&&typeof window.render==='function'){
+      ensureTimers();
+      ensureChatPanelMounted();
+    }else if(tries<60){ setTimeout(waitReady,500); }
+  })();
 })();
