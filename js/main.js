@@ -10582,6 +10582,21 @@ window.stellarionThreatCanvasHtml=function(threat,size=112){
       state.resources.fragments=(Number(state.resources.fragments)||0)+loot.fragments;
       state.resources.darkMatter=0;
     }
+    // Correctif bug "recompense qui disparait" : le stock serveur fait autorite et
+    // se resynchronise toutes les 30s (ca05_tick_all_my_planets), ce qui effacait
+    // ce gain purement local. On credite donc aussi cote serveur, en arriere-plan,
+    // avec une cle de reclamation unique par menace pour eviter tout double-credit.
+    try{
+      if(typeof window.stellarionServerAuthorityAction1570==="function"){
+        window.stellarionServerAuthorityAction1570("credit_quest_reward",{
+          claim_key:"threat_"+target.id,
+          titanium:loot.titanium,
+          xenite:loot.xenite,
+          antimatter:loot.antimatter,
+          fragments:loot.fragments
+        }).catch(function(e){ try{console.warn("[quest] credit serveur echoue pour "+target.id,e);}catch(e2){} });
+      }
+    }catch(e){}
     return true;
   }
   function threatSvg(t,variant=0){
@@ -10612,7 +10627,7 @@ window.stellarionThreatCanvasHtml=function(threat,size=112){
           <div class="small muted">Détruis 6 cibles IA. Les récompenses de combat et le bonus final sont augmentés.</div>
           <div class="quest1328-bar"><i style="width:${dailyP}%"></i></div>
           <div class="quest1328-reward"><strong>Récompense bonus :</strong><br>${rewardShort(dailyReward)}<br><span class="tiny ok">${dailyHint}</span></div>
-          <div class="quest1328-actions"><button class="btn btn-ghost" onclick="focusNextThreat('daily')">Voir cible</button><button class="btn btn-gold" ${d.progress>=d.target&&!d.claimed?"":"disabled"} onclick="claimGalacticQuest('daily')">Réclamer</button></div>
+          <div class="quest1328-actions"><button class="btn btn-ghost" onclick="focusNextThreat('daily')">Voir cible</button><button class="btn btn-gold" ${(d.progress>=d.target&&!d.claimed&&!d.claiming)?"":"disabled"} onclick="claimGalacticQuest('daily')">${d.claiming?"Envoi...":"Réclamer"}</button></div>
         </div>
       </div>
 
@@ -10623,7 +10638,7 @@ window.stellarionThreatCanvasHtml=function(threat,size=112){
           <div class="small muted">Plus le boss est puissant, plus la récompense grimpe.</div>
           <div class="quest1328-bar"><i style="width:${weeklyP}%"></i></div>
           <div class="quest1328-reward"><strong>Récompense bonus :</strong><br>${rewardShort(weeklyReward)}<br><span class="tiny warn">${weeklyHint}</span></div>
-          <div class="quest1328-actions"><button class="btn btn-ghost" onclick="focusNextThreat('weekly')">Voir boss</button><button class="btn btn-gold" ${w.progress>=w.target&&!w.claimed?"":"disabled"} onclick="claimGalacticQuest('weekly')">Réclamer</button></div>
+          <div class="quest1328-actions"><button class="btn btn-ghost" onclick="focusNextThreat('weekly')">Voir boss</button><button class="btn btn-gold" ${(w.progress>=w.target&&!w.claimed&&!w.claiming)?"":"disabled"} onclick="claimGalacticQuest('weekly')">${w.claiming?"Envoi...":"Réclamer"}</button></div>
         </div>
       </div>
     </div>`;
@@ -10640,14 +10655,39 @@ window.stellarionThreatCanvasHtml=function(threat,size=112){
     const x=Math.round(t.x/18), y=Math.round(t.y/18);
     state.view="galaxy";state.selected=t;state.uiState=state.uiState||{};state.uiState.gwmCamera={x,y,zoom:(gwmCamera&&gwmCamera().zoom)||1};save();render();
   };
-  window.claimGalacticQuest=function(kind){
+  window.claimGalacticQuest=async function(kind){
     ensureQuests();
     const q=kind==="weekly"?state.galacticQuests.weekly:state.galacticQuests.daily;
     const reward=questCompletionReward(kind);
     if(q.claimed||q.progress<q.target){addLog("Quete pas encore terminee.");render();return}
-    if(typeof stellarionCreditLootToActivePlanet==="function")stellarionCreditLootToActivePlanet(reward);
-    else {state.resources.titanium+=reward.titanium;state.resources.xenite+=reward.xenite;state.resources.antimatter+=reward.antimatter;state.resources.artifacts=(state.resources.artifacts||0)+(reward.artifacts||0);}
-    q.claimed=true;addLog((kind==="weekly"?"Boss hebdomadaire":"Quete journaliere")+" reclamee : "+rewardText(reward)+".");save();render();
+    if(q.claiming)return;
+    const claimKey=(kind==="weekly"?"weekly_bonus_":"daily_bonus_")+(kind==="weekly"?state.galacticQuests.weeklyKey:state.galacticQuests.dailyKey);
+    const act=(typeof window.stellarionServerAuthorityAction1570==="function")?window.stellarionServerAuthorityAction1570:null;
+    // Correctif bug "recompense qui disparait" : cette recompense doit etre creditee
+    // cote serveur (source de verite des ressources), sinon la synchronisation
+    // periodique (toutes les 30s) remet le stock precedent et efface le gain,
+    // ce qui donnait l'impression que la recompense apparaissait puis disparaissait.
+    if(!act){
+      addLog("Connexion serveur requise pour reclamer cette recompense. Reessaie dans un instant.");
+      render();
+      return;
+    }
+    q.claiming=true;render();
+    try{
+      await act("credit_quest_reward",{
+        claim_key:claimKey,
+        titanium:reward.titanium,
+        xenite:reward.xenite,
+        antimatter:reward.antimatter,
+        fragments:reward.artifacts||0
+      });
+      q.claimed=true;
+      addLog((kind==="weekly"?"Boss hebdomadaire":"Quete journaliere")+" reclamee : "+rewardText(reward)+".");
+    }catch(e){
+      addLog("Recompense non creditee : "+String((e&&e.message)||e)+". Reessaie dans quelques secondes.");
+    }finally{
+      q.claiming=false;save();render();
+    }
   };
   function markThreatVictory(target,result){
     if(!target||!target.aiThreat||!result||!result.victory)return;

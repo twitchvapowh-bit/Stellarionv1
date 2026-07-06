@@ -145,6 +145,8 @@ Deno.serve(async (req) => {
       const repair = await repairReduceShips(admin, user.id, body);
       message = "Stock de vaisseaux reduit cote serveur.";
       extra.repair = repair;
+    } else if (action === "credit_quest_reward") {
+      message = await creditQuestReward(admin, user.id, body);
     } else {
       await audit(admin, user.id, action, false, { error:"unknown_action" });
       return json({ ok:false, error:"action_inconnue", state: await snapshot(admin, user.id) }, 400);
@@ -689,6 +691,30 @@ async function addResources(admin: any, playerId: string, delta: any) {
   r.antimatter = n(r.antimatter) + n(delta.antimatter,0,50_000_000);
   r.fragments = n(r.fragments) + n(delta.fragments,0,100_000);
   await setResources(admin, playerId, r);
+}
+
+// STELLARION — correctif "recompense qui disparait" (quetes journalieres / boss hebdomadaire).
+// Avant ce correctif, les recompenses de Menaces galactiques (creditQuestRewardOnce /
+// claimGalacticQuest cote client) n'etaient creditees qu'en local (state.resources),
+// jamais transmises au serveur. Comme game_resources fait autorite et se resynchronise
+// toutes les 30s (ca05_tick_all_my_planets), le gain local etait systematiquement efface
+// au tick suivant : le joueur voyait la recompense apparaitre puis disparaitre.
+// claim_key garantit qu'une meme recompense (menace tuee ou bonus quete/boss) ne peut
+// etre creditee qu'une seule fois, meme en cas de double-clic ou de nouvel essai reseau.
+async function creditQuestReward(admin: any, playerId: string, body: any) {
+  const claimKey = String(body.claim_key || body.claimKey || "").slice(0, 160);
+  if (!claimKey) throw new Error("claim_key_manquant");
+  if (!(await claimGameActionOnce(admin, playerId, "quest_reward", claimKey))) {
+    return `Recompense deja creditee pour ${claimKey}.`;
+  }
+  const reward = {
+    titanium: n(body.titanium, 0, 2_000_000),
+    xenite: n(body.xenite, 0, 2_000_000),
+    antimatter: n(body.antimatter, 0, 500_000),
+    fragments: n(body.fragments, 0, 5_000),
+  };
+  await addResources(admin, playerId, reward);
+  return `Recompense objectif galactique creditee : ${reward.titanium} Ti / ${reward.xenite} Xe / ${reward.antimatter} AM / ${reward.fragments} fragments.`;
 }
 function hasEnough(r: any, c: Cost) { return n(r.titanium) >= n(c.titanium) && n(r.xenite) >= n(c.xenite) && n(r.antimatter) >= n(c.antimatter); }
 function spend(r: any, c: Cost) { r.titanium = n(r.titanium) - n(c.titanium); r.xenite = n(r.xenite) - n(c.xenite); r.antimatter = n(r.antimatter) - n(c.antimatter); }
