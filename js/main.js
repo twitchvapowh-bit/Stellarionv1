@@ -9235,19 +9235,15 @@ onAuthenticated = async function(user){
  }
 };
 
-// Badge de statut cloud dans la topbar, sans casser la DA.
-(function(){
- const oldRender=render;
- render=function(){
-  oldRender();
-  try{
-   const brand=document.querySelector('.topbar-brand1512')||document.querySelector('.topbar .brand')?.parentElement;
-   if(brand && !document.getElementById('cloudStatusV15')){
-    brand.insertAdjacentHTML('beforeend',`<div class="tiny muted">☁️ <span id="cloudStatusV15">${__cloudStatusV15}</span></div>`);
-   }
-  }catch(e){}
- };
-})();
+// Correctif joueur (retour Vapowh) : ce badge affichait des libellés techniques
+// bruts ("cloud chargé", "cloud uniquement", "cloud OK"...) directement dans la
+// topbar à chaque démarrage. Ce n'était pas un bug fonctionnel ni un ralentissement
+// mesurable (juste une mise à jour de texte), mais c'est du texte de debug interne
+// qui n'a rien à faire sous les yeux du joueur — ça ressemble à une erreur alors
+// que ce n'en est pas une. Le suivi de statut (setCloudStatusV15) continue de
+// fonctionner normalement en interne (utile pour le support/debug via la console),
+// seul l'affichage public du badge est désactivé.
+window.stellarionCloudStatusBadgeDisabled1683 = true;
 
 
 // ===== Alpha 1.5.44 V16 — Auth complète + profil persistant =====

@@ -493,7 +493,11 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
   window.addEventListener("resize", function () { setTimeout(apply, 60); }, { passive: true });
   window.addEventListener("orientationchange", function () { setTimeout(apply, 220); setTimeout(apply, 600); }, { passive: true });
   try { new MutationObserver(function () { apply(); }).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) {}
-  setInterval(apply, 700);
+  // Allégement : le MutationObserver ci-dessus réagit déjà instantanément à tout
+  // changement du DOM. Cet intervalle n'est qu'un filet de sécurité ; il tournait
+  // à 700ms (~1,4 fois/seconde) en continu pendant toute la session, ce qui pèse
+  // inutilement sur le CPU/la batterie sans bénéfice perceptible pour le joueur.
+  setInterval(apply, 2000);
 
   window.stellarionMobileR2Audit = function () {
     return {
@@ -536,7 +540,7 @@ Raffinerie d'Antimatière : baseRate corrigé dans le moteur réel de 4/h à 75/
   }
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", add);
   else add();
-  var iv = setInterval(add, 1000); // survit si un re-rendu du jeu supprime le body innerHTML ailleurs
+  var iv = setInterval(add, 2500); // survit si un re-rendu du jeu supprime le body innerHTML ailleurs (allégé : 1000ms -> 2500ms, le lien réapparaît toujours en moins de 3s, invisible pour le joueur, pour moins de CPU en continu)
   window.addEventListener("beforeunload", function(){ clearInterval(iv); });
 })();
 </script>
