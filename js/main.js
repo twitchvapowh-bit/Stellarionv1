@@ -27612,6 +27612,12 @@ window.stellarionScrollAudit1610 = function(){
     ['pointerdown','pointerup','touchstart','touchend','click','keydown','keyup','keypress','input'].forEach(function(ev){
       ta.addEventListener(ev,function(e){ e.stopPropagation(); }, false);
     });
+    // Correctif 1.7.06 : sur mobile, l'ouverture du clavier virtuel fait bouger/retrecir
+    // brievement l'ancre pendant la frappe (reflow de page). Si on repositionne le panneau
+    // a ce moment-la, on peut le masquer une fraction de seconde — ce qui coupe le focus et
+    // ferme le clavier. On gele donc tout repositionnement tant que le champ a le focus.
+    ta.addEventListener('focus',function(){ chatInputFocused=true; },false);
+    ta.addEventListener('blur',function(){ chatInputFocused=false; setTimeout(syncPanelPosition,150); },false);
     var btn=panel.querySelector('#globalChatSendBtnLive1700');
     if(btn) btn.addEventListener('click',doSend);
     renderMessagesListInto(true);
@@ -27620,16 +27626,26 @@ window.stellarionScrollAudit1610 = function(){
   }
 
   // --- Repositionnement : le panneau flotte exactement au-dessus de son ancre dans la grille ---
+  var chatInputFocused=false;
+  var lastGoodRect=null;
   function syncPanelPosition(){
     var panel=document.getElementById('globalChatPanelLive1700');
     if(!panel) return;
+    if(chatInputFocused) return; // on ne touche a rien pendant que le joueur ecrit
     var anchor=document.getElementById('globalChatDockLive1700');
     if(!anchor||!document.body.classList.contains('view-messages')){
       panel.style.display='none';
+      lastGoodRect=null;
       return;
     }
     var r=anchor.getBoundingClientRect();
-    if(r.width<10||r.height<10){ panel.style.display='none'; return; }
+    if(r.width<10||r.height<10){
+      // Mesure probablement transitoire (reflow en cours) : on garde la derniere position connue
+      // plutot que de masquer le panneau, pour eviter tout clignotement.
+      if(!lastGoodRect) panel.style.display='none';
+      return;
+    }
+    lastGoodRect=r;
     panel.style.display='block';
     panel.style.left=Math.round(r.left)+'px';
     panel.style.top=Math.round(r.top)+'px';
