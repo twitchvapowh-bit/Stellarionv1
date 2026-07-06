@@ -6939,7 +6939,10 @@ vlibAssetFor=function(p,x,y){
  if(p&&p.system&&p.system.aiThreat)return __stellarionAtlasOldVlibAssetFor(p,x,y);
  if(p&&p.kind==="quest"&&String(p.name||"").toLowerCase().includes("station"))return __stellarionAtlasOldVlibAssetFor(p,x,y);
  const owned=!!(p&&p.owned),quest=!!(p&&p.quest),w=atlasWorldFor(p,x,y);
- return {html:atlasCanvasHtml({world:w},w.name),src:"",signature:owned?"leviathan":quest?"phoenix":w.kind==="lava"?"phoenix":w.kind==="terra"?"leviathan":"cosmic",type:w.kind,variant:w.idx,world:w};
+ // Correctif 1.7.01 : le rendu visuel (relief/couleurs) vient de l'atlas, mais le nom affiché
+ // en infobulle doit rester le nom canonique de la planète (p.name), pas le nom "atlas" interne.
+ const canonicalName=(p&&p.name)||w.name;
+ return {html:atlasCanvasHtml({world:w},canonicalName),src:"",signature:owned?"leviathan":quest?"phoenix":w.kind==="lava"?"phoenix":w.kind==="terra"?"leviathan":"cosmic",type:w.kind,variant:w.idx,world:w};
 };
 
 function vlibZoneVisuals(){
@@ -7052,7 +7055,10 @@ function gwmWorldMapView(){
    if(p){
     const kind=gwmKind(p,xx,yy);
     const asset=vlibAssetFor(p,xx,yy);
-     const displayName=p.cloudPlayer?(p.ownerName||p.username||p.name||"Joueur"):(asset.world&&!p.owned&&!p.aiThreat&&!p.quest)?asset.world.name:p.name;
+     // Correctif 1.7.01 : la carte affichait le nom "atlas" (visuel procédural, ex. "Theron-513")
+     // au lieu du nom canonique de la planète (celui utilisé par le panneau de droite, les missions,
+     // les rapports de combat, etc., ex. "Sirius-104"). On force ici la même source partout : p.name.
+     const displayName=p.cloudPlayer?(p.ownerName||p.username||p.name||"Joueur"):p.name;
     const displayMeta=asset.world?asset.world.type:"";
     const ring=p.owned||p.quest||kind==="dark";
     const baseZoom=Math.max(0.12,Number(cam.zoom)||1);
@@ -11594,12 +11600,14 @@ function questPowerStatusHtml(required,current){
         const asset=oldVlib81.apply(this,arguments);
         if(asset&&asset.world){
           const src=staticPlanetSrc81(asset.world);
-          if(src)return Object.assign({},asset,{html:imgHtml81(src,asset.world.name||p&&p.name,"planet-static-img"),src:""});
+          // Correctif 1.7.01 : priorite au nom canonique de la planete (p.name), le nom "atlas"
+          // n'est qu'un identifiant visuel interne et ne doit pas s'afficher a la place.
+          if(src)return Object.assign({},asset,{html:imgHtml81(src,(p&&p.name)||asset.world.name,"planet-static-img"),src:""});
         }
         if(asset&&asset.html&&/atlas-planet-canvas/.test(asset.html)){
           const world=typeof atlasWorldFor==="function"?atlasWorldFor(p,x,y):null;
           const src=staticPlanetSrc81(world);
-          if(src)return Object.assign({},asset,{html:imgHtml81(src,world&&world.name||p&&p.name,"planet-static-img"),src:""});
+          if(src)return Object.assign({},asset,{html:imgHtml81(src,(p&&p.name)||(world&&world.name),"planet-static-img"),src:""});
         }
         return asset;
       }
