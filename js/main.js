@@ -2316,7 +2316,12 @@ function validateUniqueCoordinates(){
 function isCoordFree(x,y,exceptId=null){
  return !occupiedCoordSet(exceptId).has(coordKey(x,y));
 }
-function relocateCostForPlanet(pid){return 500}
+function relocateCostForPlanet(pid){
+ // Correctif 1.7.02 : premier déplacement offert (nouveaux joueurs inclus), 50 fragments ensuite.
+ const p=(state.planets||[]).find(x=>x.id===pid);
+ if(!p)return 50;
+ return p.relocatedOnce?50:0;
+}
 function setRelocateDraft(pid,field,value){
  state.relocateDrafts=state.relocateDrafts||{};
  state.relocateDrafts[pid]=state.relocateDrafts[pid]||{x:0,y:0};
@@ -2330,10 +2335,11 @@ function relocatePlanet(pid){
  if(!Number.isFinite(x)||!Number.isFinite(y)){addLog("Coordonnées invalides.");render();return}
  if(!isCoordFree(x,y,p.id)){addLog("Position déjà occupée : "+coordTextFromXY(x,y));render();return}
  const cost=relocateCostForPlanet(pid);
- if(!spendFragmentsPremium(cost,"relocaliser"))return;
+ if(cost>0 && !spendFragmentsPremium(cost,"relocaliser"))return;
  p.galaxyX=x; p.galaxyY=y;
  p.x=x*90; p.y=y*90;
- addLog("Relocalisation effectuée : "+p.name+" → "+coordTextFromXY(x,y)+" pour "+cost+" fragments.");
+ p.relocatedOnce=true;
+ addLog("Relocalisation effectuée : "+p.name+" → "+coordTextFromXY(x,y)+(cost>0?" pour "+cost+" fragments.":" gratuitement."));
  save(); render();
 }
 function relocatePlanetHtml(pid){
@@ -2349,8 +2355,8 @@ function relocatePlanetHtml(pid){
    <input class="geo-input" type="number" value="${d.x}" onchange="setRelocateDraft('${pid}','x',this.value)" placeholder="Longitude X">
    <input class="geo-input" type="number" value="${d.y}" onchange="setRelocateDraft('${pid}','y',this.value)" placeholder="Latitude Y">
   </div>
-  <div class="geo-status">Statut : <span class="${free?"coord-free":"coord-busy"}">${free?"Libre":"Occupée"}</span> · coût ${cost} fragments</div>
-  <button class="btn btn-gold" style="width:100%;margin-top:8px" onclick="relocatePlanet('${pid}')">Déplacer la planète</button>
+  <div class="geo-status">Statut : <span class="${free?"coord-free":"coord-busy"}">${free?"Libre":"Occupée"}</span> · ${cost===0?"premier déplacement offert":"coût "+cost+" fragments"}</div>
+  <button class="btn btn-gold" style="width:100%;margin-top:8px" onclick="relocatePlanet('${pid}')">${cost===0?"Déplacer gratuitement":"Déplacer pour "+cost+" fragments"}</button>
  </div>`;
 }
 
@@ -3798,10 +3804,8 @@ function planetSwitcherTopbarHtml1512(){
 
 
 function renameCostForPlanet(pid){
- const p=(state.planets||[]).find(x=>x.id===pid);
- if(!p)return 0;
- if(!p.renamedOnce)return 0;
- return 25;
+ // Correctif 1.7.02 : renommer une planète est toujours gratuit, sans limite.
+ return 0;
 }
 function setRenameDraft(pid,value){
  state.renameDrafts=state.renameDrafts||{};
@@ -3813,7 +3817,6 @@ function cleanPlanetName(name){
 function renamePlanet(pid){
  const p=(state.planets||[]).find(x=>x.id===pid);
  if(!p){addLog("Planète introuvable.");render();return}
- if(p.isHomeworld){addLog("La planète mère ne peut pas être renommée pour le moment.");render();return}
  state.renameDrafts=state.renameDrafts||{};
  const newName=cleanPlanetName(state.renameDrafts[pid]);
  if(!newName || newName.length<3){addLog("Nom invalide : minimum 3 caractères.");render();return}
@@ -3823,20 +3826,19 @@ function renamePlanet(pid){
  p.name=newName;
  p.renamedOnce=true;
  state.renameDrafts[pid]="";
- addLog("Planète renommée : "+old+" → "+newName+(cost>0?" pour "+cost+" fragments.":" gratuitement."));
+ addLog("Planète renommée : "+old+" → "+newName+" gratuitement.");
  save();
  render();
 }
 function renamePlanetHtml(pid){
  const p=(state.planets||[]).find(x=>x.id===pid);
- if(!p || p.isHomeworld)return "";
- const cost=renameCostForPlanet(pid);
+ if(!p)return "";
  const val=(state.renameDrafts&&state.renameDrafts[pid])||"";
  return `<div class="rename-box">
-  <strong>✏️ Renommer la colonie</strong>
-  <div class="rename-cost">${cost===0?"Premier renommage gratuit":"Renommage payant : "+cost+" fragments"}</div>
+  <strong>✏️ Renommer ${p.isHomeworld?"la planète mère":"la colonie"}</strong>
+  <div class="rename-cost">Toujours gratuit</div>
   <input class="rename-input" maxlength="24" placeholder="Nouveau nom de planète" value="${val}" oninput="setRenameDraft('${pid}',this.value)">
-  <button class="btn" style="width:100%;margin-top:8px" onclick="renamePlanet('${pid}')">${cost===0?"Renommer gratuitement":"Renommer pour "+cost+" MN"}</button>
+  <button class="btn" style="width:100%;margin-top:8px" onclick="renamePlanet('${pid}')">Renommer gratuitement</button>
  </div>`;
 }
 
