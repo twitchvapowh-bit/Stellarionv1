@@ -136,7 +136,7 @@
   }
 
   scanAndIsolate();
-  setInterval(scanAndIsolate, 80); // filet de sécurité
+  setInterval(scanAndIsolate, 1000); // filet de sécurité (réduit de 80ms à 1000ms : le MutationObserver ci-dessous couvre déjà le cas instantané, l'intervalle court était inutile et coûteux en CPU/batterie)
 
   // Détection instantanée dès qu'un render() recrée un des champs ciblés
   try {

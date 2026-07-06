@@ -54,14 +54,14 @@ const SHIPS: Record<string, ShipDef> = Object.fromEntries([
   {id:"heavy_fighter",cost:{titanium:600,xenite:317,antimatter:7},time:85,cargo:100,attack:780,hull:663,can:["attack","explore"]},
   {id:"frigate",cost:{titanium:1000,xenite:567,antimatter:17},time:120,cargo:500,attack:1300,hull:1105,can:["attack","transfer","explore"]},
   {id:"cruiser",cost:{titanium:1600,xenite:633,antimatter:33},time:150,cargo:1200,attack:2200,hull:1870,can:["attack","explore"]},
-  {id:"battleship",cost:{titanium:3167,xenite:1300,antimatter:83},time:280,cargo:2000,attack:5000,hull:4250,can:["attack"]},
+  {id:"battleship",cost:{titanium:3167,xenite:1300,antimatter:83},time:280,cargo:2000,attack:6200,hull:4600,can:["attack"]},
   {id:"destroyer",cost:{titanium:4500,xenite:2400,antimatter:183},time:390,cargo:1500,attack:8600,hull:7310,can:["attack"]},
   {id:"bomber",cost:{titanium:3167,xenite:2333,antimatter:200},time:370,cargo:800,attack:7800,hull:6630,can:["attack"]},
   {id:"siege_cruiser",cost:{titanium:7000,xenite:4000,antimatter:467},time:600,cargo:3000,attack:14400,hull:12240,can:["attack"]},
   {id:"titan",cost:{titanium:20667,xenite:12000,antimatter:2500},time:1600,cargo:8000,attack:52000,hull:44200,can:["attack"]},
   {id:"carrier",cost:{titanium:25333,xenite:15333,antimatter:3500},time:2200,cargo:25000,attack:29000,hull:24650,can:["attack","transfer"]},
   {id:"mothership",cost:{titanium:80000,xenite:48333,antimatter:12667},time:5200,cargo:100000,attack:180000,hull:153000,can:["attack","transfer"]},
-  {id:"colon_ship",cost:{titanium:11667,xenite:6333,antimatter:333},time:14400,cargo:10000,attack:0,hull:44000,can:["colonize"]},
+  {id:"colon_ship",cost:{titanium:8200,xenite:4400,antimatter:230},time:7800,cargo:10000,attack:0,hull:44000,can:["colonize"]},
 ].map((s: any) => {
   const c: Cost = {};
   for (const k of ["titanium","xenite","antimatter"] as const) c[k] = Math.round((s.cost[k] || 0) * ECONOMY.unitPriceMultiplier);
@@ -197,7 +197,7 @@ function buildTime(def: BuildingDef, next: number) { return Math.max(20, Math.ro
 function fragmentFinishCost(remainingSeconds: number) { return remainingSeconds <= 0 ? 0 : Math.max(1, Math.ceil(remainingSeconds / 60)); }
 function resourceProduction(base: number, level: number) { return Math.round(base * Math.pow(ECONOMY.productionScale, Math.max(0, level))); }
 function energyProduction(level: number) { return level <= 0 ? 0 : Math.round(120 * Math.pow(ECONOMY.productionScale, level)); }
-function energyConsumption(base: number, level: number) { return level <= 0 ? 0 : Math.round(base * Math.pow(1.85, Math.max(0, level - 1))); }
+function energyConsumption(base: number, level: number) { return level <= 0 ? 0 : Math.round(base * Math.pow(ECONOMY.productionScale, Math.max(0, level - 1))); }
 
 async function audit(admin: any, playerId: string, action: string, ok: boolean, details: Record<string, unknown>) {
   try { await admin.from("game_security_audit").insert({ player_id: playerId, action, ok, details }); } catch (_) {}

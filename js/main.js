@@ -915,20 +915,25 @@ const SHIPS=[
  {id:"heavy_fighter",name:"Chasseur lourd",icon:"🛫",tier:"Moyen",cost:{titanium:600,xenite:317,antimatter:7},time:85,role:"Combat polyvalent",cargo:100,attack:780,hull:663,can:["attack","explore"],desc:"Plus solide que le chasseur léger.",strong:"Chasseurs",weak:"Destroyers", __balanced_v1:true},
  {id:"frigate",name:"Frégate",icon:"🛡️",tier:"Moyen",cost:{titanium:1000,xenite:567,antimatter:17},time:120,role:"Escorte",cargo:500,attack:1300,hull:1105,can:["attack","transfer","explore"],desc:"Escorte fiable pour protéger les cargos.",strong:"Escorte",weak:"Cuirassés", __balanced_v1:true},
  {id:"cruiser",name:"Croiseur",icon:"🚢",tier:"Moyen",cost:{titanium:1600,xenite:633,antimatter:33},time:150,role:"Percée",cargo:1200,attack:2200,hull:1870,can:["attack","explore"],desc:"Bon vaisseau de percée contre petites flottes.",strong:"Chasseurs, cargos",weak:"Destroyers", __balanced_v1:true},
- {id:"battleship",name:"Cuirassé",icon:"🏴‍☠️",tier:"Lourd",cost:{titanium:3167,xenite:1300,antimatter:83},time:280,role:"Assaut lourd",cargo:2000,attack:5000,hull:4250,can:["attack"],desc:"Vaisseau lourd central pour les offensives.",strong:"Croiseurs",weak:"Destroyers", __balanced_v1:true},
+ {id:"battleship",name:"Cuirassé",icon:"🏴‍☠️",tier:"Lourd",cost:{titanium:3167,xenite:1300,antimatter:83},time:280,role:"Assaut lourd",cargo:2000,attack:6200,hull:4600,can:["attack"],desc:"Vaisseau lourd central pour les offensives.",strong:"Croiseurs",weak:"Destroyers", __balanced_v1:true, __rebalanced_audit_1:true},
  {id:"destroyer",name:"Destroyer",icon:"💥",tier:"Lourd",cost:{titanium:4500,xenite:2400,antimatter:183},time:390,role:"Anti-lourd",cargo:1500,attack:8600,hull:7310,can:["attack"],desc:"Conçu pour détruire les vaisseaux lourds.",strong:"Cuirassés, Titans",weak:"Surnombre léger", __balanced_v1:true},
  {id:"bomber",name:"Bombardier",icon:"☄️",tier:"Lourd",cost:{titanium:3167,xenite:2333,antimatter:200},time:370,role:"Anti-défense",cargo:800,attack:7800,hull:6630,can:["attack"],desc:"Spécialiste des défenses planétaires.",strong:"Commandements",weak:"Intercepteurs", __balanced_v1:true},
  {id:"siege_cruiser",name:"Croiseur de siège",icon:"🧨",tier:"Lourd",cost:{titanium:7000,xenite:4000,antimatter:467},time:600,role:"Siège",cargo:3000,attack:14400,hull:12240,can:["attack"],desc:"Lent mais puissant contre les mondes fortifiés.",strong:"Fortifications",weak:"Flottes rapides", __balanced_v1:true},
  {id:"titan",name:"Titan",icon:"🔱",tier:"Élite",cost:{titanium:20667,xenite:12000,antimatter:2500},time:1600,role:"Super-unité",cargo:8000,attack:52000,hull:44200,can:["attack"],desc:"Unité rare et extrêmement puissante.",strong:"Flottes moyennes",weak:"Coût énorme", __balanced_v1:true},
  {id:"carrier",name:"Porte-vaisseaux",icon:"🛸",tier:"Élite",cost:{titanium:25333,xenite:15333,antimatter:3500},time:2200,role:"Support capital",cargo:25000,attack:29000,hull:24650,can:["attack","transfer"],desc:"Soutien lourd pour grandes offensives.",strong:"Support",weak:"Siège", __balanced_v1:true},
  {id:"mothership",name:"Mothership",icon:"🌌",tier:"Élite",cost:{titanium:80000,xenite:48333,antimatter:12667},time:5200,role:"Vaisseau amiral",cargo:100000,attack:180000,hull:153000,can:["attack","transfer"],desc:"Vaisseau mythique d’empire.",strong:"Domination",weak:"Lenteur, prix", __balanced_v1:true},
- {id:"colon_ship",name:"Vaisseau colon",icon:"🪐",tier:"Civil",cost:{titanium:11667,xenite:6333,antimatter:333},time:14400,role:"Colonisation",cargo:10000,attack:0,hull:44000,can:["colonize"],desc:"Permet de fonder une colonie. Non accélérable côté colonisation.",strong:"Expansion",weak:"Pas offensif", __balanced_v1:true}
+ {id:"colon_ship",name:"Vaisseau colon",icon:"🪐",tier:"Civil",cost:{titanium:8200,xenite:4400,antimatter:230},time:7800,role:"Colonisation",cargo:10000,attack:0,hull:44000,can:["colonize"],desc:"Permet de fonder une colonie. Non accélérable côté colonisation.",strong:"Expansion",weak:"Pas offensif", __balanced_v1:true, __rebalanced_audit_1:true}
 ];
 const DEFENSES=[
  {id:"laser_turret",name:"Tourelle laser",icon:"🔴",cost:{titanium:1500,xenite:700,antimatter:0},time:80,attack:80,hull:180},
  {id:"gauss_cannon",name:"Canon Gauss",icon:"🟣",cost:{titanium:6000,xenite:3500,antimatter:100},time:180,attack:320,hull:700},
  {id:"orbital_shield",name:"Bouclier orbital",icon:"🛡️",cost:{titanium:9000,xenite:7000,antimatter:300},time:240,attack:40,hull:2500},
- {id:"missile_battery",name:"Batterie missile",icon:"🚀",cost:{titanium:11000,xenite:4500,antimatter:500},time:300,attack:650,hull:900}
+ {id:"missile_battery",name:"Batterie missile",icon:"🚀",cost:{titanium:11000,xenite:4500,antimatter:500},time:300,attack:650,hull:900},
+ {id:"railgun",name:"Canon de Rail",icon:"🔵",cost:{titanium:17000,xenite:8000,antimatter:900},time:380,attack:1450,hull:1900},
+ {id:"plasma_battery",name:"Batterie plasma",icon:"🟢",cost:{titanium:26000,xenite:13000,antimatter:1600},time:480,attack:2600,hull:3400},
+ {id:"orbital_minefield",name:"Champ de mines orbital",icon:"⚫",cost:{titanium:34000,xenite:19000,antimatter:2400},time:560,attack:900,hull:6800},
+ {id:"ion_cannon",name:"Canon ionique",icon:"🟡",cost:{titanium:46000,xenite:26000,antimatter:3600},time:650,attack:5200,hull:4200},
+ {id:"planetary_fortress",name:"Forteresse planétaire",icon:"🏰",cost:{titanium:70000,xenite:42000,antimatter:6500},time:900,attack:8200,hull:12000}
 ];
 
 SHIPS.forEach(s=>{ if(!s._ecoV2){ for(const k of ["titanium","xenite","antimatter"]){s.cost[k]=Math.round((s.cost[k]||0)*ECONOMY_V2.unitPriceMultiplier)} s._ecoV2=true; }});
@@ -1160,7 +1165,7 @@ function spendFragmentsPremium(amount,reason){
  return true;
 }
 function energyProduction(level){return level<=0?0:Math.round(120*Math.pow(ECONOMY_V2.productionScale,level))}
-function energyConsumption(base,level){return level<=0?0:Math.round(base*Math.pow(1.85,Math.max(0,level-1)))}
+function energyConsumption(base,level){return level<=0?0:Math.round(base*Math.pow(ECONOMY_V2.productionScale,Math.max(0,level-1)))}
 function resourceProduction(base,level){return Math.round(base*Math.pow(ECONOMY_V2.productionScale,Math.max(0,level)))}
 function rarityRoll(r){const x=r();return x<.01?"Mythic":x<.05?"Legendary":x<.15?"Epic":x<.40?"Rare":"Common"}
 function planetProfile(system){
@@ -3231,7 +3236,7 @@ function simulateCombat(attackerPower=0, defenderPower=0, opts={}){
  const attackRoll=attackerPower*(0.85+Math.random()*0.30);
  const defenseRoll=defenderPower*(0.85+Math.random()*0.30);
  const victory=attackRoll>=defenseRoll;
- const lossRatio=victory?Math.min(.35, defenderPower/Math.max(1,attackerPower+defenderPower)*.45):Math.min(.85, defenderPower/Math.max(1,attackerPower)*.55);
+ const lossRatio=victory?Math.min(.45, defenderPower/Math.max(1,attackerPower+defenderPower)*.55):Math.min(.65, defenderPower/Math.max(1,attackerPower)*.45);
  return {
   victory,
   attackerPower,
