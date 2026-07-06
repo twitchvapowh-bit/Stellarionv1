@@ -27482,7 +27482,14 @@ window.stellarionScrollAudit1610 = function(){
   apply();
 })();
 
-/* ---- STELLARION 1.7.00 — Chat global permanent + compteur de joueurs en ligne (page Messagerie) ---- */
+/* ---- STELLARION 1.7.05 — Chat global permanent + compteur de joueurs en ligne (page Messagerie) ----
+   Correctif important : le panneau vivait auparavant DANS #center, qui est entierement reconstruit
+   par render() (le jeu appelle render() tres souvent : ticks de ressources, retours de flotte, etc.).
+   Reconstruire le <textarea> a chaque render() detruit le focus en cours — le clavier mobile se
+   fermait / le tap "tombait dans le vide" car l'element tape n'existait deja plus une fraction de
+   seconde plus tard. Le panneau est desormais cree UNE SEULE FOIS, attache a document.body (comme
+   la fenetre de composition de message, deja immunisee contre render() de la meme facon), et
+   simplement repositionne par-dessus une ancre invisible placee dans la grille de la messagerie. */
 (function(){
   "use strict";
   if(window.__stellarionGlobalChatLive1700) return;
@@ -27497,8 +27504,6 @@ window.stellarionScrollAudit1610 = function(){
       return id;
     }catch(e){ return null; }
   }
-
-  var draftText="";
 
   function renderMessagesListInto(forceScrollBottom){
     var list=document.getElementById('globalChatMessagesListLive1700');
@@ -27536,7 +27541,7 @@ window.stellarionScrollAudit1610 = function(){
       state.globalChat=state.globalChat||[];
       state.globalChat.unshift(msg);
       if(state.globalChat.length>200) state.globalChat.length=200;
-      draftText=''; ta.value='';
+      ta.value='';
       renderMessagesListInto(true);
       var c=getSupa();
       if(c){
@@ -27583,12 +27588,15 @@ window.stellarionScrollAudit1610 = function(){
     }catch(e){}
   }
 
-  function ensureChatPanelMounted(){
-    if(!document.body.classList.contains('view-messages')) return;
-    var dock=document.getElementById('globalChatDockLive1700');
-    if(!dock||dock.__mountedLive1700) return;
-    dock.__mountedLive1700=true;
-    dock.innerHTML='<div class="card panel" style="display:flex;flex-direction:column;height:100%;overflow:hidden">'+
+  // --- Panneau construit UNE SEULE FOIS, hors de #app, jamais touché par render() ---
+  var panelBuilt=false;
+  function buildPanelOnce(){
+    if(panelBuilt) return;
+    panelBuilt=true;
+    var panel=document.createElement('div');
+    panel.id='globalChatPanelLive1700';
+    panel.style.cssText='position:fixed;display:none;z-index:2400;box-sizing:border-box;';
+    panel.innerHTML='<div class="card panel" style="display:flex;flex-direction:column;height:100%;overflow:hidden;box-sizing:border-box">'+
       '<span class="pill">💬 CHAT GLOBAL <span id="globalChatOnlineCountLive1700" class="small muted" style="margin-left:6px">…</span></span>'+
       '<div id="globalChatMessagesListLive1700" style="flex:1;overflow-y:auto;margin:10px 0;display:flex;flex-direction:column;gap:8px;min-height:0"></div>'+
       '<div style="display:flex;gap:8px;flex:0 0 auto">'+
@@ -27596,15 +27604,42 @@ window.stellarionScrollAudit1610 = function(){
         '<button class="btn" id="globalChatSendBtnLive1700" type="button">Envoyer</button>'+
       '</div>'+
     '</div>';
-    var ta=document.getElementById('globalChatInputLive1700');
-    ta.value=draftText;
-    ta.addEventListener('input',function(){ draftText=ta.value; });
+    document.body.appendChild(panel);
+    var ta=panel.querySelector('#globalChatInputLive1700');
     ta.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); doSend(); } });
-    var btn=document.getElementById('globalChatSendBtnLive1700');
+    // Empeche les gestionnaires globaux (drag de carte, raccourcis clavier du jeu, etc.) d'intercepter
+    // les interactions dans le champ de saisie — meme principe que la fenetre de composition protegee.
+    ['pointerdown','pointerup','touchstart','touchend','click','keydown','keyup','keypress','input'].forEach(function(ev){
+      ta.addEventListener(ev,function(e){ e.stopPropagation(); }, false);
+    });
+    var btn=panel.querySelector('#globalChatSendBtnLive1700');
     if(btn) btn.addEventListener('click',doSend);
     renderMessagesListInto(true);
     refreshOnlineCount();
     fetchGlobalChatFromServer();
+  }
+
+  // --- Repositionnement : le panneau flotte exactement au-dessus de son ancre dans la grille ---
+  function syncPanelPosition(){
+    var panel=document.getElementById('globalChatPanelLive1700');
+    if(!panel) return;
+    var anchor=document.getElementById('globalChatDockLive1700');
+    if(!anchor||!document.body.classList.contains('view-messages')){
+      panel.style.display='none';
+      return;
+    }
+    var r=anchor.getBoundingClientRect();
+    if(r.width<10||r.height<10){ panel.style.display='none'; return; }
+    panel.style.display='block';
+    panel.style.left=Math.round(r.left)+'px';
+    panel.style.top=Math.round(r.top)+'px';
+    panel.style.width=Math.round(r.width)+'px';
+    panel.style.height=Math.round(r.height)+'px';
+  }
+
+  function ensureChatPanelMounted(){
+    buildPanelOnce();
+    syncPanelPosition();
   }
 
   var oldRender=window.render;
@@ -27619,6 +27654,13 @@ window.stellarionScrollAudit1610 = function(){
     try{ render=wrappedRender; }catch(e){}
   }
 
+  // Filet de sécurité : resize, rotation, ouverture du clavier mobile (visualViewport),
+  // et un petit polling pour rattraper les cas où render() n'est pas repassé entre-temps.
+  window.addEventListener('resize',function(){ try{ syncPanelPosition(); }catch(e){} },{passive:true});
+  window.addEventListener('orientationchange',function(){ setTimeout(syncPanelPosition,120); },{passive:true});
+  try{ if(window.visualViewport) window.visualViewport.addEventListener('resize',function(){ try{ syncPanelPosition(); }catch(e){} },{passive:true}); }catch(e){}
+  setInterval(function(){ try{ syncPanelPosition(); }catch(e){} },500);
+
   var heartbeatTimer=null, onlineTimer=null, chatPollTimer=null;
   function ensureTimers(){
     if(!heartbeatTimer){ heartbeat(); heartbeatTimer=setInterval(heartbeat,25000); }
@@ -27632,8 +27674,9 @@ window.stellarionScrollAudit1610 = function(){
 
   window.stellarionGlobalChatAudit1700=function(){
     return {
-      patch:'global-chat-live-1700',
+      patch:'global-chat-live-1705',
       mounted:!!document.getElementById('globalChatMessagesListLive1700'),
+      panelVisible:(document.getElementById('globalChatPanelLive1700')||{}).style&&document.getElementById('globalChatPanelLive1700').style.display!=='none',
       messages:(window.state&&state.globalChat&&state.globalChat.length)||0,
       onlineLabel:(document.getElementById('globalChatOnlineCountLive1700')||{}).textContent||null
     };
