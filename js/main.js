@@ -11130,14 +11130,10 @@ window.stellarionThreatCanvasHtml=function(threat,size=112){
   };
 
   function installPill(){
-    try{
-      if(document.querySelector(".planet-hover-realfix-pill"))return;
-      const pill=document.createElement("div");
-      pill.className="planet-hover-realfix-pill";
-      pill.textContent="Planètes figées · hover actif";
-      document.body.appendChild(pill);
-      setTimeout(()=>{pill.style.opacity=".35"},4500);
-    }catch(e){}
+    // Correctif 1.7.03 : ce badge de debug ("Planètes figées · hover actif") s'affichait en
+    // permanence à l'écran sans utilité pour le joueur. Le bascule hover (setPlanetHoverAnimations)
+    // continue de fonctionner normalement, seul l'indicateur visuel est retiré.
+    try{ const old=document.querySelector(".planet-hover-realfix-pill"); if(old)old.remove(); }catch(e){}
   }
 
   function init(){
