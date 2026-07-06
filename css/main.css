@@ -1823,6 +1823,16 @@ body.view-armament.armament-fullscreen .armament-grid{
     height:auto!important;
     overflow:auto!important;
   }
+  /* Correctif 1.7.04 : sur mobile, la vue messagerie passe en une seule colonne (height:auto).
+     Le panneau de chat global utilisait un height:100% en cascade qui, sans hauteur de parent
+     definie, s'effondrait a une hauteur quasi nulle : le champ de saisie existait dans le DOM
+     mais n'avait plus de zone cliquable reelle (le tap "tombait" sur un autre element en dessous).
+     On lui redonne une hauteur explicite pour que le focus fonctionne. */
+  body.view-messages #globalChatDockLive1700{
+    height:420px!important;
+    min-height:420px!important;
+    max-height:60vh!important;
+  }
 }
 
 
