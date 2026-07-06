@@ -5975,16 +5975,6 @@ body.view-chests .chests-page1525{
   gap:10px!important;
   padding:10px!important;
 }
-body.view-chests .chests-head1525{
-  padding:12px 14px!important;
-  min-height:0!important;
-  grid-template-columns:minmax(0,1fr) 150px!important;
-  gap:10px!important;
-}
-body.view-chests .chests-head1525 h2{
-  font-size:24px!important;
-  margin:2px 0 4px!important;
-}
 body.view-chests .chests-head1525 p{
   margin:0!important;
   font-size:13px!important;
@@ -5995,13 +5985,6 @@ body.view-chests .chest-frag-counter1525{
 }
 body.view-chests .chest-frag-counter1525 strong{
   font-size:24px!important;
-}
-body.view-chests .chests-grid1525{
-  min-height:0!important;
-  overflow:hidden!important;
-  display:grid!important;
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  gap:10px!important;
 }
 body.view-chests .chest-card1525{
   min-height:0!important;
@@ -6048,13 +6031,6 @@ body.view-chests .chest-card1525 .btn{
   width:100%!important;
   padding:10px!important;
 }
-body.view-chests .duplicate-stock1526,
-body.view-chests .chest-history1525{
-  min-height:0!important;
-  overflow:hidden!important;
-  margin:0!important;
-  padding:11px!important;
-}
 body.view-chests .chests-page1525 > .duplicate-stock1526{
   grid-column:auto!important;
 }
@@ -6071,10 +6047,6 @@ body.view-chests .chests-page1525 > .chest-history1525{
 }
 body.view-chests .chests-page1525{
   grid-template-columns:1fr 1fr!important;
-}
-body.view-chests .chests-head1525,
-body.view-chests .chests-grid1525{
-  grid-column:1 / -1!important;
 }
 body.view-chests .duplicate-count1526{
   margin:7px 0!important;
@@ -6187,16 +6159,6 @@ body.view-chests .chests-page1525{
   gap:10px!important;
   padding:10px 10px 28px 10px!important;
 }
-body.view-chests .chests-head1525,
-body.view-chests .chests-grid1525{
-  grid-column:1 / -1!important;
-}
-body.view-chests .chests-grid1525{
-  height:auto!important;
-  min-height:0!important;
-  overflow:visible!important;
-  align-items:stretch!important;
-}
 body.view-chests .chest-card1525{
   height:auto!important;
   min-height:420px!important;
@@ -6208,18 +6170,6 @@ body.view-chests .chest-table1525{
   scrollbar-width:none!important;
 }
 body.view-chests .chest-table1525::-webkit-scrollbar{
-  display:none!important;
-  width:0!important;
-}
-body.view-chests .duplicate-stock1526,
-body.view-chests .chest-history1525{
-  max-height:260px!important;
-  overflow-y:auto!important;
-  overscroll-behavior:contain!important;
-  scrollbar-width:none!important;
-}
-body.view-chests .duplicate-stock1526::-webkit-scrollbar,
-body.view-chests .chest-history1525::-webkit-scrollbar{
   display:none!important;
   width:0!important;
 }
@@ -11365,9 +11315,6 @@ body.view-chests #center > .chests-page1525{
   padding:14px!important;
   overflow:hidden!important;
 }
-body.view-chests .chests-head1525{
-  margin:0!important;
-}
 body.view-chests .chests-grid1525{
   min-height:0!important;
   height:100%!important;
@@ -11398,25 +11345,6 @@ body.view-chests .chest-table1525{
   scrollbar-width:none!important;
 }
 body.view-chests .chest-table1525::-webkit-scrollbar{
-  display:none!important;
-}
-body.view-chests .duplicate-stock1526,
-body.view-chests .chest-history1525{
-  margin:0!important;
-  min-height:80px!important;
-  max-height:200px!important;
-  overflow:auto!important;
-  scrollbar-width:none!important;
-}
-body.view-chests .duplicate-stock1526::-webkit-scrollbar,
-body.view-chests .chest-history1525::-webkit-scrollbar{
-  display:none!important;
-}
-body.view-chests .duplicate-stock1526 h3,
-body.view-chests .chest-history1525 h3{
-  margin:6px 0!important;
-}
-body.view-chests .duplicate-stock1526 p{
   display:none!important;
 }
 body.view-chests .side.left,
@@ -11492,28 +11420,6 @@ body.view-chests #center > .chests-page1525{
   padding:14px!important;
   overflow:hidden!important;
 }
-body.view-chests .chests-head1525,
-body.view-chests .chests-grid1525{
-  grid-column:1 / -1!important;
-  margin:0!important;
-}
-body.view-chests .chests-head1525{
-  padding:14px!important;
-}
-body.view-chests .chests-head1525 h2{
-  font-size:28px!important;
-  margin:4px 0!important;
-}
-body.view-chests .chests-head1525 p{
-  margin:0!important;
-}
-body.view-chests .chests-grid1525{
-  min-height:168px!important;
-  height:auto!important;
-  align-items:stretch!important;
-  overflow:auto!important;
-  max-height:60vh!important;
-}
 body.view-chests .chest-card1525{
   min-height:168px!important;
   height:auto!important;
@@ -11541,20 +11447,6 @@ body.view-chests .chest-card1525 button{
 body.view-chests .chest-card1525 p{
   min-height:0!important;
   margin-bottom:0!important;
-}
-body.view-chests .duplicate-stock1526,
-body.view-chests .chest-history1525{
-  margin:0!important;
-  min-height:0!important;
-  height:100%!important;
-  max-height:none!important;
-  overflow:auto!important;
-}
-body.view-chests .duplicate-stock1526{grid-column:1!important}
-body.view-chests .chest-history1525{grid-column:2!important}
-body.view-chests .duplicate-stock1526 h3,
-body.view-chests .chest-history1525 h3{
-  margin:8px 0!important;
 }
 body.view-chests .duplicate-count1526{
   margin-top:10px!important;
@@ -12041,7 +11933,6 @@ body.view-chests #center>.chests-page1525{box-sizing:border-box!important;height
 body.view-chests #center>.chests-page1525::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}
 body.view-chests .chests-head1525{grid-column:1/-1!important;grid-row:1!important;position:relative!important;z-index:5!important;display:grid!important;grid-template-columns:minmax(0,1fr) 150px!important;align-items:center!important;gap:12px!important;margin:0!important;padding:12px 14px!important;min-height:86px!important;max-height:none!important;overflow:hidden!important;transform:none!important;}
 body.view-chests .chests-head1525 .pill{position:static!important;transform:none!important;margin:0 0 6px 0!important;}
-body.view-chests .chests-head1525 h2{margin:0 0 4px 0!important;font-size:24px!important;line-height:1.1!important;}
 body.view-chests .chests-head1525 p{margin:0!important;line-height:1.25!important;white-space:normal!important;}
 body.view-chests .chest-frag-counter1525{align-self:center!important;justify-self:end!important;width:150px!important;min-height:58px!important;margin:0!important;position:relative!important;z-index:6!important;}
 body.view-chests .chests-grid1525{grid-column:1/-1!important;grid-row:2!important;position:relative!important;z-index:1!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;transform:none!important;align-items:stretch!important;}
@@ -12055,23 +11946,12 @@ body.view-chests .chest-table1525{flex:1 1 auto!important;min-height:90px!import
 body.view-chests .chest-table1525::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}
 body.view-chests .chest-card1525 .btn,body.view-chests .chest-card1525 button{flex:0 0 auto!important;width:100%!important;margin-top:auto!important;min-height:42px!important;position:relative!important;z-index:2!important;}
 body.view-chests .duplicate-stock1526,body.view-chests .chest-history1525{grid-row:3!important;position:relative!important;z-index:1!important;box-sizing:border-box!important;height:220px!important;min-height:220px!important;max-height:220px!important;overflow-y:auto!important;overflow-x:hidden!important;margin:0!important;padding:12px!important;scrollbar-width:none!important;}
-body.view-chests .duplicate-stock1526{grid-column:1!important;}
-body.view-chests .chest-history1525{grid-column:2!important;}
-body.view-chests .duplicate-stock1526::-webkit-scrollbar,body.view-chests .chest-history1525::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}
-body.view-chests .duplicate-stock1526 h3,body.view-chests .chest-history1525 h3{margin:8px 0!important;}
 body.view-chests .chests-right-planet1532{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;}
 @media(max-width:1350px){body.view-chests .layout,body.view-chests .layout.has-bottom-queue{grid-template-columns:270px minmax(0,1fr) 280px!important;}body.view-chests .chests-grid1525{grid-template-columns:repeat(2,minmax(0,1fr))!important;}body.view-chests .chest-card1525{height:420px!important;min-height:420px!important;max-height:420px!important;}}
 @media(max-width:1050px){body.view-chests,html:has(body.view-chests){overflow:auto!important;}body.view-chests #app{height:auto!important;overflow:visible!important;}body.view-chests .layout,body.view-chests .layout.has-bottom-queue{height:auto!important;grid-template-columns:1fr!important;overflow:visible!important;}body.view-chests .side.left,body.view-chests .side.right,body.view-chests #center{height:auto!important;max-height:none!important;overflow:visible!important;}body.view-chests #center>.chests-page1525{height:auto!important;max-height:none!important;overflow:visible!important;grid-template-columns:1fr!important;}body.view-chests .chests-grid1525{grid-template-columns:1fr!important;}body.view-chests .duplicate-stock1526,body.view-chests .chest-history1525{grid-column:1!important;height:auto!important;max-height:none!important;}}
 
 /* === v16-12-chests-real-clean-no-ghost-text === */
 /* V16.12 — Coffres : suppression réelle des textes fantômes, pas de cache-misère. */
-body.view-chests .chests-head1525{
-  min-height:72px!important;
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) 150px!important;
-  align-items:center!important;
-  overflow:visible!important;
-}
 body.view-chests .chests-head1525 h2{
   margin:4px 0 0 0!important;
   line-height:1.05!important;
@@ -12296,22 +12176,9 @@ body.view-chests #center > .chests-page1525{
   gap:10px!important;
   padding:12px!important;
 }
-body.view-chests .chests-head1525{
-  padding:12px 14px!important;
-  min-height:104px!important;
-}
 body.view-chests .chests-head1525 h2{
   font-size:27px!important;
   line-height:1.05!important;
-}
-body.view-chests .chests-grid1525{
-  grid-column:1 / -1!important;
-  min-height:0!important;
-  height:100%!important;
-  overflow:hidden!important;
-  display:grid!important;
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  gap:10px!important;
 }
 body.view-chests .chest-card1525{
   min-height:0!important;
@@ -12407,7 +12274,6 @@ body.view-chests .chest-history-item1525 em{
 }
 @media(max-width:1250px){
   body.view-chests #center > .chests-page1525{grid-template-rows:auto minmax(520px,1fr) 104px!important}
-  body.view-chests .chests-grid1525{grid-template-columns:1fr!important;overflow:auto!important}
   body.view-chests .chest-card1525{height:auto!important;min-height:360px!important}
 }
 
@@ -12989,20 +12855,6 @@ body.view-chests #center > .chests-page1525{
   overscroll-behavior:contain!important;
   scroll-padding-bottom:80px!important;
 }
-body.view-chests .chests-head1525,
-body.view-chests .chests-grid1525{
-  grid-column:1 / -1!important;
-  margin:0!important;
-}
-body.view-chests .chests-grid1525{
-  height:auto!important;
-  min-height:0!important;
-  max-height:none!important;
-  overflow:visible!important;
-  display:grid!important;
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  align-items:stretch!important;
-}
 body.view-chests .chest-card1525{
   height:min(430px, calc(var(--stellarion-visible-layout-h, 760px) - 255px))!important;
   min-height:330px!important;
@@ -13028,8 +12880,6 @@ body.view-chests .chest-history1525{
   padding-bottom:24px!important;
   overscroll-behavior:contain!important;
 }
-body.view-chests .duplicate-stock1526{grid-column:1!important;}
-body.view-chests .chest-history1525{grid-column:2!important;}
 body.view-chests .side.left::-webkit-scrollbar,
 body.view-chests .side.right::-webkit-scrollbar,
 body.view-chests #center > .chests-page1525::-webkit-scrollbar,
@@ -13047,9 +12897,7 @@ body.view-chests .chest-history1525{scrollbar-width:none!important;}
   body.view-chests .layout.has-bottom-queue{grid-template-columns:1fr!important;height:auto!important;max-height:none!important;overflow:auto!important;}
   body.view-chests,html:has(body.view-chests){overflow:auto!important;}
   body.view-chests #center > .chests-page1525{height:auto!important;max-height:none!important;overflow:visible!important;grid-template-columns:1fr!important;}
-  body.view-chests .chests-grid1525{grid-template-columns:1fr!important;}
   body.view-chests .chest-card1525{height:auto!important;max-height:none!important;}
-  body.view-chests .duplicate-stock1526,body.view-chests .chest-history1525{grid-column:1!important;}
 }
 
 /* === stellarion-v16-6-chests-no-overlap-css === */
@@ -13071,14 +12919,6 @@ body.view-chests #center > .chests-page1525{
   overflow-x:hidden!important;
   padding:14px 14px 110px 14px!important;
   scroll-padding-bottom:130px!important;
-}
-body.view-chests .chests-head1525{
-  grid-column:1 / -1!important;
-  grid-row:auto!important;
-  margin:0!important;
-  min-height:0!important;
-  position:relative!important;
-  z-index:1!important;
 }
 body.view-chests .chests-grid1525{
   grid-column:1 / -1!important;
@@ -13832,11 +13672,6 @@ body.stable-ui1542b.view-planet .planet-showcase-board{
     padding:12px 0 26px!important;
     align-content:start!important;
   }
-  body.view-chests .chests-head1525{
-    grid-template-columns:1fr!important;
-    gap:10px!important;
-    padding:14px!important;
-  }
   body.view-chests .chest-frag-counter1525{
     width:100%!important;
     justify-content:space-between!important;
@@ -13901,13 +13736,6 @@ body.stable-ui1542b.view-planet .planet-showcase-board{
     width:100%!important;
     min-height:44px!important;
     margin-top:4px!important;
-  }
-  body.view-chests .duplicate-stock1526,
-  body.view-chests .chest-history1525{
-    height:auto!important;
-    max-height:none!important;
-    overflow:visible!important;
-    padding:14px!important;
   }
 }
 
@@ -14068,12 +13896,6 @@ body.stable-ui1542b.view-planet .planet-showcase-board{
     padding:14px!important;
     border-radius:16px!important;
     transform:none!important;
-  }
-  body.view-chests .duplicate-stock1526{
-    order:3!important;
-  }
-  body.view-chests .chest-history1525{
-    order:4!important;
   }
   body.view-chests .duplicate-stock1526 h3,
   body.view-chests .chest-history1525 h3{
