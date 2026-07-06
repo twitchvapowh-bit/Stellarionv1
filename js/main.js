@@ -2352,8 +2352,8 @@ function relocatePlanetHtml(pid){
   <strong>🧭 Relocalisateur galactique</strong>
   <div class="geo-status">Position actuelle : <span class="coord-pill" onclick="copyCoordFromElement(this)">${coordText(p)}</span></div>
   <div class="geo-input-grid">
-   <input class="geo-input" type="number" value="${d.x}" onchange="setRelocateDraft('${pid}','x',this.value)" placeholder="Longitude X">
-   <input class="geo-input" type="number" value="${d.y}" onchange="setRelocateDraft('${pid}','y',this.value)" placeholder="Latitude Y">
+   <input id="relocInputXLive1709_${pid}" class="geo-input" type="number" value="${d.x}" oninput="setRelocateDraft('${pid}','x',this.value)" placeholder="Longitude X">
+   <input id="relocInputYLive1709_${pid}" class="geo-input" type="number" value="${d.y}" oninput="setRelocateDraft('${pid}','y',this.value)" placeholder="Latitude Y">
   </div>
   <div class="geo-status">Statut : <span class="${free?"coord-free":"coord-busy"}">${free?"Libre":"Occupée"}</span> · ${cost===0?"premier déplacement offert":"coût "+cost+" fragments"}</div>
   <button class="btn btn-gold" style="width:100%;margin-top:8px" onclick="relocatePlanet('${pid}')">${cost===0?"Déplacer gratuitement":"Déplacer pour "+cost+" fragments"}</button>
@@ -3837,7 +3837,7 @@ function renamePlanetHtml(pid){
  return `<div class="rename-box">
   <strong>✏️ Renommer ${p.isHomeworld?"la planète mère":"la colonie"}</strong>
   <div class="rename-cost">Toujours gratuit</div>
-  <input class="rename-input" maxlength="24" placeholder="Nouveau nom de planète" value="${val}" oninput="setRenameDraft('${pid}',this.value)">
+  <input id="renameInputLive1709_${pid}" class="rename-input" maxlength="24" placeholder="Nouveau nom de planète" value="${val}" oninput="setRenameDraft('${pid}',this.value)">
   <button class="btn" style="width:100%;margin-top:8px" onclick="renamePlanet('${pid}')">Renommer gratuitement</button>
  </div>`;
 }
@@ -27709,4 +27709,57 @@ window.stellarionScrollAudit1610 = function(){
       ensureChatPanelMounted();
     }else if(tries<60){ setTimeout(waitReady,500); }
   })();
+})();
+
+/* STELLARION 1.7.09 — Sauvegarde/restauration du focus de saisie autour de render()
+   render() reconstruit tout #app.innerHTML très fréquemment (timers de jeu), ce qui
+   détruit et recrée n'importe quel <input>/<textarea> qui s'y trouve, coupant le focus
+   ET la saisie en cours (ex : renommer une planète, coordonnées de relocalisation).
+   Ce correctif capture l'état du champ actif juste avant chaque appel à render(), puis
+   restaure sa valeur, son focus et sa position de curseur juste après. */
+(function(){
+  "use strict";
+  if(window.__stellarionInputFocusRescue1709) return;
+  window.__stellarionInputFocusRescue1709 = true;
+
+  function captureFocusState1709(){
+    try{
+      var el=document.activeElement;
+      if(!el||!el.id) return null;
+      var tag=el.tagName;
+      if(tag!=='INPUT'&&tag!=='TEXTAREA') return null;
+      return {
+        id: el.id,
+        value: el.value,
+        selectionStart: (typeof el.selectionStart==='number')?el.selectionStart:null,
+        selectionEnd: (typeof el.selectionEnd==='number')?el.selectionEnd:null
+      };
+    }catch(e){ return null; }
+  }
+
+  function restoreFocusState1709(info){
+    if(!info) return;
+    try{
+      var el=document.getElementById(info.id);
+      if(!el) return;
+      if(el.value!==info.value) el.value=info.value;
+      el.focus({preventScroll:true});
+      if(info.selectionStart!=null&&typeof el.setSelectionRange==='function'){
+        try{ el.setSelectionRange(info.selectionStart, info.selectionEnd); }catch(e){}
+      }
+    }catch(e){}
+  }
+
+  var oldRender1709=window.render;
+  if(typeof oldRender1709==='function'&&!oldRender1709.__inputFocusRescue1709){
+    var wrappedRender1709=function(){
+      var info=captureFocusState1709();
+      var out=oldRender1709.apply(this,arguments);
+      if(info) restoreFocusState1709(info);
+      return out;
+    };
+    wrappedRender1709.__inputFocusRescue1709=true;
+    window.render=wrappedRender1709;
+    try{ render=wrappedRender1709; }catch(e){}
+  }
 })();
