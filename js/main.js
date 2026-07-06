@@ -4257,7 +4257,7 @@ function planetShowcaseView(){
      <span class="pill">GESTION RAPIDE</span>
      <p class="muted">Switch entre tes planètes, apparats et bonus.</p>
      ${slotSummary(p)}
-     ${renamePlanetHtml(p.id)}${planetCompactShipsHtml(p.id)}
+     ${renamePlanetHtml(p.id)}${relocatePlanetHtml(p.id)}${planetCompactShipsHtml(p.id)}
      <button class="btn" style="width:100%;margin-top:12px" onclick="setView('ships')">Gérer les vaisseaux</button>
      <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="setView('galaxy')">Retour galaxie</button>
     </div>
@@ -6728,6 +6728,7 @@ function gwmSelectionPanelHtml(){
    ${t.owned?`<button class="btn btn-ghost" onclick="setView('planet')">Voir planète</button>`:`<button class="btn btn-ghost" onclick="setView('galaxy')">Préparer mission</button>`}
    <button class="btn btn-ghost" onclick="gwmFocusHomePlanet()">Retour empire</button>
   </div>
+  ${t.owned&&t.ownedPlanet?renamePlanetHtml(t.ownedPlanet.id)+relocatePlanetHtml(t.ownedPlanet.id):""}
  </div>`;
 }
 function gwmShowTooltip(name,pos,x,y){
