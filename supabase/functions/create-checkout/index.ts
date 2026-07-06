@@ -11,11 +11,12 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
 });
 
 // >>> SOURCE DE VERITE des packs : montants en CENTIMES d'euro. <
+// Prix divises par 2 (demande du 06/07/2026) : anciens prix en commentaire.
 const PACKS: Record<string, { name: string; fragments: number; amount: number }> = {
-  orbite:  { name: "Pack Orbite",  fragments: 100,  amount: 199  }, // 1,99 €
-  pulsar:  { name: "Pack Pulsar",  fragments: 550,  amount: 899  }, // 8,99 €
-  nova:    { name: "Pack Nova",    fragments: 1200, amount: 1699 }, // 16,99 €
-  stellar: { name: "Pack Stellar", fragments: 3000, amount: 3999 }, // 39,99 €
+  orbite:  { name: "Pack Orbite",  fragments: 100,  amount: 99   }, // 0,99 € (avant 1,99 €)
+  pulsar:  { name: "Pack Pulsar",  fragments: 550,  amount: 449  }, // 4,49 € (avant 8,99 €)
+  nova:    { name: "Pack Nova",    fragments: 1200, amount: 849  }, // 8,49 € (avant 16,99 €)
+  stellar: { name: "Pack Stellar", fragments: 3000, amount: 1999 }, // 19,99 € (avant 39,99 €)
 };
 
 const APP_URL = Deno.env.get("APP_URL") ?? "https://stellarionunivers.vercel.app";

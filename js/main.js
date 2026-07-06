@@ -19698,11 +19698,13 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
 (function(){
  if(window.__stellarionFragmentsShop1546)return;
  window.__stellarionFragmentsShop1546=true;
+ // Prix divisés par 2 (demande du 06/07/2026), doivent rester synchronisés avec
+ // supabase/functions/create-checkout/index.ts (source de vérité des vrais montants Stripe).
  const packs=[
-  {id:"orbite",name:"Pack Orbite",fragments:100,price:"1,99 €",tag:"Départ rapide"},
-  {id:"pulsar",name:"Pack Pulsar",fragments:550,price:"8,99 €",tag:"Populaire"},
-  {id:"nova",name:"Pack Nova",fragments:1200,price:"16,99 €",tag:"Meilleur bonus"},
-  {id:"stellar",name:"Pack Stellar",fragments:3000,price:"39,99 €",tag:"Grand empire"}
+  {id:"orbite",name:"Pack Orbite",fragments:100,price:"0,99 €",tag:"Départ rapide"},
+  {id:"pulsar",name:"Pack Pulsar",fragments:550,price:"4,49 €",tag:"Populaire"},
+  {id:"nova",name:"Pack Nova",fragments:1200,price:"8,49 €",tag:"Meilleur bonus"},
+  {id:"stellar",name:"Pack Stellar",fragments:3000,price:"19,99 €",tag:"Grand empire"}
  ];
  function esc1546(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]})}
  function fmt1546(v){try{return typeof fmt==="function"?fmt(v):Math.round(Number(v)||0).toLocaleString("fr-FR")}catch(e){return String(v||0)}}
