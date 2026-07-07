@@ -5570,6 +5570,24 @@ function restoreScrollState(pos){
  };
  apply();
  requestAnimationFrame(()=>{apply();requestAnimationFrame(apply);});
+ /* 1.6.44 — filet anti-flash scroll : un rendu peut être suivi de mutations
+    asynchrones (timers de file d'attente, sync temps réel, images) qui remettent
+    le scroll à 0 après notre rattrapage, provoquant un saut visible vers le haut
+    avant que les délais fixes (40/160/350/700ms) ne corrigent. On observe le DOM
+    pendant une courte fenêtre et on réapplique la position à chaque mutation,
+    avant le prochain paint — plus fiable que des délais fixes seuls. */
+ try{
+  if(window.__stellarionScrollWatch1644)window.__stellarionScrollWatch1644.disconnect();
+  const target=document.getElementById("center")||document.body;
+  if(target&&window.MutationObserver){
+   const obs=new MutationObserver(function(){ apply(); });
+   obs.observe(target,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class"]});
+   window.__stellarionScrollWatch1644=obs;
+   setTimeout(function(){
+    try{ obs.disconnect(); if(window.__stellarionScrollWatch1644===obs) window.__stellarionScrollWatch1644=null; }catch(e){}
+   },900);
+  }
+ }catch(e){}
 }
 function rerenderPreserveScroll(){
  const pos=captureScrollState();
