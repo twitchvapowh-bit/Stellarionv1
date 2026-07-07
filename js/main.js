@@ -25501,6 +25501,12 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   }
 
   function installProcessGuard(){
+    // 1.6.45 — verrou absolu (voir installRenderGuard1583 pour le contexte) :
+    // ce wrap est reclame en boucle (boot() toutes les 1s + apres chaque
+    // render) et se battait avec d'autres patches (1605/1606/1634) qui font
+    // de meme sur processFleets sans se reconnaitre mutuellement => les deux
+    // se re-enveloppent l'un l'autre indefiniment => stack overflow.
+    if(window.__stellarionProcessGuardV7Done) return;
     var old=window.processFleets;
     if(typeof old!=='function' || old.__serverCombatGuardV7) return;
     var wrapped=function(){
@@ -25530,6 +25536,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     wrapped.__serverCombatGuardV7=true;
     window.processFleets=wrapped;
     try{ processFleets=wrapped; }catch(e){}
+    window.__stellarionProcessGuardV7Done=true;
   }
 
   function installServerActionReportHook(){
@@ -27151,6 +27158,11 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   }
 
   function wrapProcessFleets(){
+    // 1.6.45 — verrou absolu : voir installRenderGuard1583 / installProcessGuard
+    // (V7). Ce wrap etait reclame toutes les 500ms et se battait avec les
+    // autres patches processFleets (1606, 1634, V7) => re-enveloppement mutuel
+    // sans fin => Maximum call stack size exceeded.
+    if (window.__stellarionProcessGuard1605Done) return;
     if (typeof window.processFleets !== "function" || window.processFleets.__creditGuarded1605) return;
     var original = window.processFleets;
 
@@ -27198,6 +27210,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     wrapped.__creditGuarded1605 = true;
     if (original.__serverAuthGuarded1606) wrapped.__serverAuthGuarded1606 = true;
     window.processFleets = wrapped;
+    window.__stellarionProcessGuard1605Done = true;
   }
 
   wrapProcessFleets();
@@ -27230,6 +27243,9 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   window.__stellarionServerAuthorityCreditBlock1606 = true;
 
   function wrapProcessFleets(){
+    // 1.6.45 — verrou absolu (voir installRenderGuard1583) : evite le
+    // re-enveloppement mutuel avec 1605/1634/V7 qui causait un stack overflow.
+    if (window.__stellarionProcessGuard1606Done) return;
     if (typeof window.processFleets !== "function" || window.processFleets.__serverAuthGuarded1606) return;
     var original = window.processFleets;
 
@@ -27263,6 +27279,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     wrapped.__serverAuthGuarded1606 = true;
     if (original.__creditGuarded1605) wrapped.__creditGuarded1605 = true;
     window.processFleets = wrapped;
+    window.__stellarionProcessGuard1606Done = true;
   }
 
   wrapProcessFleets();

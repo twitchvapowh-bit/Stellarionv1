@@ -87,6 +87,12 @@
      d'être livrée, si pas d'entrée au registre => f.ships vidé (aucun crédit) ;
      sinon on plafonne au contenu du registre puis on CONSOMME l'entrée. */
   function wrapProcessFleets() {
+    // 1.6.45 — verrou absolu : ce wrap etait reclame toutes les 500ms et se
+    // battait avec d'autres patches processFleets (1605, 1606, V7 dans
+    // main.js) qui font de meme sans se reconnaitre mutuellement => les
+    // wrappers se re-enveloppent les uns les autres sans fin => Maximum
+    // call stack size exceeded (confirme par trace navigateur en prod).
+    if (window.__stellarionProcessGuard1634Done) return;
     if (typeof window.processFleets !== "function" || window.processFleets.__ledgerGuarded1634) return;
     var original = window.processFleets;
 
@@ -130,6 +136,7 @@
     if (original.__creditGuarded1605) wrapped.__creditGuarded1605 = true;
     if (original.__serverAuthGuarded1606) wrapped.__serverAuthGuarded1606 = true;
     window.processFleets = wrapped;
+    window.__stellarionProcessGuard1634Done = true;
   }
   wrapProcessFleets();
   setInterval(wrapProcessFleets, 500); // si un autre patch ré-écrase processFleets
