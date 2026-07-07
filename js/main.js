@@ -5549,12 +5549,31 @@ function captureScrollState(){
   winY:window.scrollY||0,
   docTop:(document.scrollingElement&&document.scrollingElement.scrollTop)||0,
   activeId:document.activeElement&&document.activeElement.id?document.activeElement.id:null,
-  entries
+  entries,
+  capturedAt:Date.now()
  };
+}
+/* 1.6.46 — détecte un scroll VOULU par l'utilisateur (molette/tactile/clavier) survenu
+   après la capture d'une position, pour que le rattrapage anti-flash n'écrase plus
+   jamais un scroll manuel en cours (ex : page Construction avec file active, la barre
+   de progression se met à jour chaque seconde et redéclenchait le rattrapage). */
+function markUserScrollIntent1646(){ window.__stellarionLastUserScrollAt1646=Date.now(); }
+function installUserScrollWatch1646(){
+ if(window.__stellarionUserScrollHook1646)return;
+ window.__stellarionUserScrollHook1646=true;
+ window.addEventListener("wheel",markUserScrollIntent1646,{passive:true});
+ window.addEventListener("touchmove",markUserScrollIntent1646,{passive:true});
+ window.addEventListener("keydown",function(e){
+  if(["ArrowUp","ArrowDown","PageUp","PageDown","Home","End"," "].indexOf(e.key)!==-1)markUserScrollIntent1646();
+ });
 }
 function restoreScrollState(pos){
  if(!pos)return;
+ installUserScrollWatch1646();
+ const capturedAt=pos.capturedAt||0;
+ const userInterrupted=()=>(window.__stellarionLastUserScrollAt1646||0)>capturedAt;
  const apply=()=>{
+  if(userInterrupted())return;
   try{
    if(document.scrollingElement)document.scrollingElement.scrollTop=pos.docTop||0;
    window.scrollTo(pos.winX||0,pos.winY||0);
@@ -5575,12 +5594,17 @@ function restoreScrollState(pos){
     le scroll à 0 après notre rattrapage, provoquant un saut visible vers le haut
     avant que les délais fixes (40/160/350/700ms) ne corrigent. On observe le DOM
     pendant une courte fenêtre et on réapplique la position à chaque mutation,
-    avant le prochain paint — plus fiable que des délais fixes seuls. */
+    avant le prochain paint — plus fiable que des délais fixes seuls.
+    1.6.46 — mais on s'arrête net dès que l'utilisateur reprend la main sur le scroll,
+    au lieu de continuer à l'écraser pendant toute la fenêtre de 900ms. */
  try{
   if(window.__stellarionScrollWatch1644)window.__stellarionScrollWatch1644.disconnect();
   const target=document.getElementById("center")||document.body;
   if(target&&window.MutationObserver){
-   const obs=new MutationObserver(function(){ apply(); });
+   const obs=new MutationObserver(function(){
+    if(userInterrupted()){ try{obs.disconnect();}catch(e){} return; }
+    apply();
+   });
    obs.observe(target,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class"]});
    window.__stellarionScrollWatch1644=obs;
    setTimeout(function(){
