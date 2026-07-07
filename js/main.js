@@ -10771,7 +10771,7 @@ window.stellarionThreatCanvasHtml=function(threat,size=112){
   };
   window.simulateCombat=function(a,b,o){const result=typeof oldSimulateCombat==="function"?oldSimulateCombat(a,b,o):{victory:true,loot:{titanium:0,xenite:0,antimatter:0},playerRemaining:b||{}};if(a&&typeof a==="object"&&a.aiThreat)markThreatVictory(a,result);return result};
   /* Alpha 1.5.30 : ancien append texte brut des rapports IA supprimé. */
-  window.render=function(){ensureQuests();return typeof oldRender==="function"?oldRender():""};
+  if(typeof oldRender==="function"&&!oldRender.__questThreat1328){window.render=function(){ensureQuests();return typeof oldRender==="function"?oldRender():""};window.render.__questThreat1328=true;try{render=window.render;}catch(e){}}
   setTimeout(()=>{try{ensureQuests();if(typeof save==="function")save();if(typeof render==="function")render()}catch(e){}},0);
 })();
 ;
@@ -11870,8 +11870,10 @@ function questPowerStatusHtml(required,current){
   function start(){ if(!raf)raf=requestAnimationFrame(()=>drawFrame(false)); }
 
   const oldRender=window.render;
-  if(typeof oldRender==="function"){
+  if(typeof oldRender==="function"&&!oldRender.__galaxyTrajectoryDebug81b){
     window.render=function(){const r=oldRender.apply(this,arguments);setTimeout(start,0);return r;};
+    window.render.__galaxyTrajectoryDebug81b=true;
+    try{render=window.render;}catch(e){}
   }
   const oldProcess=window.processFleets;
   if(typeof oldProcess==="function"){
