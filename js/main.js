@@ -25044,6 +25044,15 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   }
 
   function installRenderGuard1583(){
+    // 1.6.45 — verrou absolu : cette fonction tourne toutes les 250ms pendant
+    // toute la session (setInterval plus bas). Les gardes ci-dessous etaient
+    // deja documentees comme point de depart d'un cycle guardedRender1583 <->
+    // lui-meme ("Maximum call stack size exceeded", voir commentaire V8
+    // 1.5.90). Plutot que de compter sur ces conditions pour rester correctes
+    // a chaque appel parmi des milliers sur une longue session, on n'autorise
+    // le wrap qu'une seule fois, pour de bon.
+    if(window.__stellarionRenderGuard1583Done) return;
+
     var current = window.render || (window.G && window.G.render) || (typeof render === 'function' ? render : null);
     if(typeof current !== 'function') return;
     if(current.__deepUiDedupeGuard1583) return;
@@ -25060,6 +25069,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     window.render = guardedRender1583;
     if(window.G) window.G.render = guardedRender1583;
     try{ render = guardedRender1583; }catch(e){}
+    window.__stellarionRenderGuard1583Done = true;
   }
 
   ['pointerdown','mousedown','click','focusin'].forEach(function(ev){
