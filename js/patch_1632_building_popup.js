@@ -135,44 +135,19 @@
     if (openId != null && window.state && window.state.view !== "buildings") close();
   }, 800);
 
-  /* ---------- 4) Garde-scroll : AMÉLIORER ne remonte plus la page ----------
-     queueBuilding() déclenche render(), qui reconstruit #app et remet le
-     scroll à zéro. Le jeu protège le clic sur les cartes
-     (__stellarionKeepConstructionScroll) mais pas les boutons AMÉLIORER.
-     Ici : au clic sur n'importe quel bouton de la page Construction (pop-up
-     inclus), on mémorise toutes les positions de scroll et on les restaure
-     après le re-rendu (plusieurs passes, car le render est asynchrone). */
-  function snapshotScroll() {
-    var snap = { win: window.scrollY || window.pageYOffset || 0, els: [] };
-    [".cmain1632", ".cmain1542f", ".layout", "#center", ".bpop1632"].forEach(function (sel) {
-      document.querySelectorAll(sel).forEach(function (el) {
-        if (el.scrollTop > 0 || el.scrollLeft > 0)
-          snap.els.push({ sel: sel, top: el.scrollTop, left: el.scrollLeft });
-      });
-    });
-    return snap;
-  }
-  function restoreScroll(snap) {
-    if (!snap) return;
-    if (snap.win > 0) window.scrollTo(0, snap.win);
-    snap.els.forEach(function (s) {
-      var el = document.querySelector(s.sel);
-      if (el) { el.scrollTop = s.top; el.scrollLeft = s.left; }
-    });
-  }
-  document.addEventListener("click", function (ev) {
-    var t = ev.target;
-    if (!t || !t.closest) return;
-    var inPopup = !!t.closest("#bpop1632-backdrop");
-    var onBuildings = window.state && window.state.view === "buildings";
-    if (!inPopup && !onBuildings) return;
-    if (!t.closest("button,.btn")) return;
-    var snap = snapshotScroll();
-    // Restauration en plusieurs passes : le render passe par des délayeurs
-    [0, 60, 160, 350, 700].forEach(function (ms) {
-      setTimeout(function () { restoreScroll(snap); }, ms);
-    });
-  }, true);
+  /* ---------- 4) Garde-scroll : RETIRÉ (8 juillet 2026) ----------
+     Ce bloc avait son propre système de capture/restauration du scroll
+     (5 passes à 0/60/160/350/700ms), indépendant de celui déjà intégré à
+     render() lui-même (voir main.js, restoreScrollState / 1.6.10-1.6.46),
+     qui capture ET restaure le scroll pour CHAQUE appel à render() - donc
+     déjà pour queueBuilding() aussi, sans qu'aucun appelant n'ait besoin
+     d'un mécanisme séparé. Les deux systèmes tournaient en même temps sur
+     la page Bâtiments avec des instants de capture et des délais
+     différents, et celui-ci ne s'arrêtait pas quand l'utilisateur reprenait
+     la main sur le scroll (contrairement à celui de render()) : les deux
+     se disputaient la position de scroll, d'où les sauts signalés le
+     8 juillet 2026. Supprimé plutôt que réparé : le mécanisme de render()
+     fait déjà ce travail correctement. */
 
   window.stellarionBuildingPopupAudit1632 = function () {
     return {

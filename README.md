@@ -58,6 +58,18 @@ sans toucher à `render()` : dès qu'un élément animé apparaît dans le DOM, 
 `animation-delay` est resynchronisé sur une horloge fixe pour qu'il reprenne l'animation
 exactement où elle devrait en être, au lieu de repartir de zéro à chaque recréation.
 
+## Alpha 1.7.06 — Scroll automatique sur la page Bâtiments (8 juillet 2026, suite)
+
+`js/patch_1632_building_popup.js` embarquait son propre système de sauvegarde/
+restauration du scroll (5 passes à délais fixes : 0/60/160/350/700ms), séparé et
+indépendant de celui déjà intégré directement dans `render()` (main.js,
+`restoreScrollState`, 1.6.10 à 1.6.46) qui fait ce travail pour **chaque** appel à
+`render()`, `queueBuilding()` inclus. Les deux tournaient en même temps sur la page
+Bâtiments, avec des instants de capture et des délais différents — et celui du patch
+1632 ne s'arrêtait pas quand l'utilisateur reprenait la main sur le scroll (contrairement
+à celui de `render()`), d'où les sauts de scroll signalés. Le doublon a été retiré ; le
+mécanisme natif de `render()` couvre déjà ce cas correctement.
+
 Chantier volontairement non lancé dans cette session : la dette CSS (~6000 `!important`
 dans `css/main.css`, accumulés par 5+ générations de patches mobiles superposés). Trop
 risqué à corriger en un seul passage sur un jeu en production avec paiements réels — à
