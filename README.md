@@ -70,6 +70,19 @@ Bâtiments, avec des instants de capture et des délais différents — et celui
 à celui de `render()`), d'où les sauts de scroll signalés. Le doublon a été retiré ; le
 mécanisme natif de `render()` couvre déjà ce cas correctement.
 
+## Alpha 1.7.07 — Vraie cause du scroll automatique en continu (8 juillet 2026, suite)
+
+Le retrait du doublon de `patch_1632` (1.7.06) n'a pas suffi : le scroll sautait encore,
+en continu, même sans clic. Cause réelle trouvée dans le mécanisme natif de `render()`
+(`restoreScrollState`, 1.6.44/1.6.46) : après un rendu, un `MutationObserver` surveille
+`#center` pendant 900ms pour réappliquer la position de scroll si quelque chose bouge
+entre-temps. Mais il réagissait à **n'importe quelle** mutation, y compris la barre de
+progression de construction (`updateQueueTimers1583`, qui met à jour `style.width` chaque
+seconde) — un simple pourcentage qui change, sans rapport avec le scroll. Comme des rendus
+ont lieu assez souvent pour que cette fenêtre de 900ms soit quasiment toujours réarmée, le
+symptôme redémarrait en boucle. Corrigé dans `main.js` : l'observateur ignore désormais les
+mutations qui ne concernent que le style d'un élément `[data-progress]`.
+
 Chantier volontairement non lancé dans cette session : la dette CSS (~6000 `!important`
 dans `css/main.css`, accumulés par 5+ générations de patches mobiles superposés). Trop
 risqué à corriger en un seul passage sur un jeu en production avec paiements réels — à

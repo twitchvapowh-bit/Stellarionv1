@@ -5602,8 +5602,22 @@ function restoreScrollState(pos){
   if(window.__stellarionScrollWatch1644)window.__stellarionScrollWatch1644.disconnect();
   const target=document.getElementById("center")||document.body;
   if(target&&window.MutationObserver){
-   const obs=new MutationObserver(function(){
+   const obs=new MutationObserver(function(records){
     if(userInterrupted()){ try{obs.disconnect();}catch(e){} return; }
+    /* 8 juillet 2026 — ignore les mutations qui viennent juste de la barre de
+       progression de la file de construction (style.width mis à jour chaque
+       seconde par updateQueueTimers1583) : ce n'est qu'un pourcentage qui
+       change visuellement, ça ne modifie ni la hauteur ni le scroll de la
+       page, donc ce n'est pas une raison de replaquer une position de scroll
+       (potentiellement déjà périmée) par-dessus un scroll que le joueur a pu
+       faire autrement qu'à la molette/au clavier (glissé de barre de scroll,
+       pavé tactile...). C'était la cause des sauts de scroll en continu sur
+       la page Bâtiments, même sans clic. */
+    const onlyProgress = records.every(r=>
+     r.type==="attributes" && r.attributeName==="style" &&
+     r.target && r.target.hasAttribute && r.target.hasAttribute("data-progress")
+    );
+    if(onlyProgress) return;
     apply();
    });
    obs.observe(target,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class"]});
