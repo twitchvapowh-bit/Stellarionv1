@@ -43,6 +43,21 @@ Volontairement laissés intacts : la boucle de jeu réelle (production/construct
 flottes/ressources), `tickV145` et `incomingAttackInterval` (1000 ms, cœur du jeu), et
 2 boucles déjà rares ou conditionnelles.
 
+## Alpha 1.7.05 — Correction du scintillement omniprésent (8 juillet 2026, suite)
+
+Cause racine identifiée : `render()` (fonction centrale du jeu, ~254 appels directs +
+tick automatique) remplace l'intégralité du `innerHTML` de `#app` à chaque appel. Chaque
+élément décoratif animé en CSS (orbites de planète, pulsations, rotations, "aura") est
+donc détruit et recréé à chaque render, ce qui remet son animation à zéro à chaque fois —
+d'où le scintillement visible sur toutes les pages. Réécrire `render()` pour qu'il ne
+remplace que ce qui change serait une chirurgie lourde sur le cœur du moteur d'affichage,
+trop risquée à faire à l'aveugle sur un jeu en production avec paiements réels (même
+niveau de risque que la dette CSS ou la chaîne de wrappers sur `render()`, déjà signalées
+et volontairement non touchées). `js/patch_1705_anim_continuity.js` corrige le symptôme
+sans toucher à `render()` : dès qu'un élément animé apparaît dans le DOM, son
+`animation-delay` est resynchronisé sur une horloge fixe pour qu'il reprenne l'animation
+exactement où elle devrait en être, au lieu de repartir de zéro à chaque recréation.
+
 Chantier volontairement non lancé dans cette session : la dette CSS (~6000 `!important`
 dans `css/main.css`, accumulés par 5+ générations de patches mobiles superposés). Trop
 risqué à corriger en un seul passage sur un jeu en production avec paiements réels — à
