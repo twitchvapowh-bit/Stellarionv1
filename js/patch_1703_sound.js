@@ -111,9 +111,11 @@
     document.body.appendChild(b);
   }
 
+  // Filets de securite BORNES (pas des boucles setInterval perpetuelles, pour ne
+  // pas reproduire le probleme de rafraichissement permanent deja identifie).
   wireToast();
-  setInterval(wireToast, 2000);
-  setInterval(ensureToggle, 2500);
+  [500, 1500, 4000, 9000].forEach(function (t) { setTimeout(wireToast, t); });
   document.addEventListener("DOMContentLoaded", ensureToggle);
   window.addEventListener("load", ensureToggle);
+  [1000, 3000, 8000, 15000].forEach(function (t) { setTimeout(ensureToggle, t); });
 })();

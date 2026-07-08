@@ -20,10 +20,12 @@ donnée de sauvegarde touchée. Nouveaux fichiers, chargés après main.js :
   (aucun onboarding n'existait). Se déclenche via un signal posé dans `main.js` → `load()`
   au tout premier lancement d'un compte (aucune sauvegarde trouvée = empire neuf) ;
   rejouable à tout moment via le bouton "?" en bas de l'écran.
-- `js/patch_1702_icon_set.js` — remplace à l'affichage les ~20 emojis les plus fréquents
-  (🚀⚔️🛡️🏆...) par des icônes SVG vectorielles cohérentes, sans jamais modifier le texte
-  d'origine (state/sauvegardes intacts). Corrige le rendu incohérent des emojis selon
-  Windows/Mac/Android.
+- ~~`js/patch_1702_icon_set.js`~~ — **retiré le 8 juillet 2026.** Remplaçait les emojis
+  par des icônes SVG, mais scannait/mutait le DOM en boucle ; entrait en conflit avec le
+  re-rendu de la barre de navigation toutes les secondes (`render()` + `tickV145`,
+  `setInterval(...,1000)`), provoquant un clignotement/chevauchement visuel permanent.
+  Supprimé plutôt que corrigé à la hâte : à refaire proprement plus tard en s'accrochant
+  au cycle de rendu du jeu plutôt qu'en l'observant de l'extérieur.
 - `js/patch_1703_sound.js` — sons d'interface courts et synthétisés (succès/erreur/
   avertissement, branchés sur les nouveaux toasts, pas sur chaque clic) + un bouton
   muet/son persistant. Pas de musique d'ambiance : ça demanderait un vrai morceau

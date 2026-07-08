@@ -193,5 +193,8 @@
 
   document.addEventListener("DOMContentLoaded", function () { setTimeout(maybeAutoOpen, 400); });
   window.addEventListener("load", function () { setTimeout(maybeAutoOpen, 400); });
-  setInterval(ensureReopenButton, 2500); // survit aux re-rendus qui vident le body
+  // Le bouton "?" vit hors de #app (ajoute directement a document.body), donc les
+  // re-rendus du jeu (qui ne touchent que #app) ne le suppriment pas : un filet de
+  // securite BORNE suffit, pas une boucle perpetuelle.
+  [1000, 3000, 8000, 15000].forEach(function (t) { setTimeout(ensureReopenButton, t); });
 })();

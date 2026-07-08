@@ -148,11 +148,14 @@
     window.addLog = wrapped;
   }
 
-  // addLog est defini plus tard dans main.js (charge avant ce patch, donc
-  // deja present) ; on relance quand meme un filet de securite au cas ou
-  // un autre patch le redefinirait apres nous.
+  // addLog est deja present au chargement de ce patch (charge apres main.js).
+  // Filet de securite BORNE (pas une boucle infinie) au cas ou un autre patch
+  // le redefinirait juste apres nous : quelques essais espaces, puis on arrete.
+  // Une boucle setInterval perpetuelle ici recree exactement le probleme de
+  // rafraichissement permanent identifie dans l'audit (78 setInterval actifs
+  // en continu) : on ne veut pas y ajouter la nôtre.
   wireAddLog();
-  setInterval(wireAddLog, 2000);
+  [500, 1500, 4000, 9000].forEach(function (t) { setTimeout(wireAddLog, t); });
 
   if (!window.__stNativeAlert1700) {
     window.__stNativeAlert1700 = window.alert ? window.alert.bind(window) : null;
