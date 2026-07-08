@@ -24106,6 +24106,41 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
       if(!s.buildings.home) s.buildings.home = [{building_id:'command_center',level:1}];
     }
 
+    // 1.7.10 — Réconciliation des colonies serveur -> state.planets.
+    // Root cause du bug "la flotte part, la colonie n'apparaît jamais" : depuis le
+    // passage server-authority (1.5.70/1.5.89), les flottes serverAuthority ne
+    // passent plus jamais par l'ancien processFleets() client (seul endroit qui
+    // créait réellement la colonie), et le serveur ne créait rien de son côté.
+    // Le serveur (game-action, resolveColonization) crée maintenant une ligne
+    // game_buildings command_center niveau 1 pour chaque planète colonisée : on
+    // détecte ici tout planet_id inconnu de state.planets et on reconstruit la
+    // fiche planète localement (nom/rareté/bonus sont 100% déterministes via
+    // planetProfile(), seed fixe dérivée de system.system — aucun aller-retour
+    // serveur supplémentaire nécessaire).
+    try{
+      var knownPlanetIds1710={};
+      (s.planets||[]).forEach(function(p){ if(p&&p.id) knownPlanetIds1710[String(p.id)]=true; });
+      Object.keys(groupedB).forEach(function(pid){
+        if(pid==='home'||knownPlanetIds1710[pid]) return;
+        var sys1710=(s.systems||[]).find(function(x){return x.id===pid});
+        if(!sys1710 || typeof planetProfile!=='function') return;
+        var report1710=planetProfile(sys1710);
+        var newPlanet1710={id:pid,name:report1710.name,type:report1710.archetype,rarity:report1710.rarity,isHomeworld:false,slots:report1710.slots,bonus:report1710.bonus};
+        try{
+          if(typeof reserveUniqueCoord==='function'){
+            var anchor1710=(typeof getPersistentCoord==='function'&&typeof activePlanet==='function')?getPersistentCoord(activePlanet()):null;
+            reserveUniqueCoord(newPlanet1710, anchor1710, 8);
+          }
+        }catch(e){}
+        newPlanet1710.x=Math.round(Number(newPlanet1710.galaxyX)||0);
+        newPlanet1710.y=Math.round(Number(newPlanet1710.galaxyY)||0);
+        s.planets=s.planets||[];
+        s.planets.push(newPlanet1710);
+        s.colonies=(s.colonies||0)+1;
+        try{ if(typeof addLog==='function') addLog('Colonie fondée : '+report1710.name+' ['+report1710.rarity+'].'); }catch(e){}
+      });
+    }catch(e){}
+
     s.buildQueue = (srv.buildQueue || []).map(function(q){
       var start=ms(q.start_at), finish=ms(q.finish_at);
       return { id:String(q.id), planetId:String(q.planet_id || 'home'), building_id:String(q.building_id), from:Number(q.from_level)||0, to:Number(q.to_level)||1, startAt:start, finishAt:finish, duration:Math.max(1, finish-start) };

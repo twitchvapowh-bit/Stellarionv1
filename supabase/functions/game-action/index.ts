@@ -667,11 +667,77 @@ async function processQueues(admin: any, maybeSupaUser: any, maybePlayerId?: str
         continue;
       }
 
+      // 1.7.10 : la colonisation ne faisait jamais rien côté serveur (aucun
+      // "case colonize" n'existait ici, contrairement à l'ancien processFleets
+      // client qui créait la colonie via state.scanReports). Depuis le passage
+      // en "server authority" (1.5.70/1.5.89), les flottes serverAuthority ne
+      // passent plus jamais par ce processFleets client, donc la colonie
+      // n'était plus jamais créée nulle part : le vaisseau colon rentrait
+      // simplement à vide. Voir resolveColonization plus bas.
+      if (mission === "colonize") {
+        try {
+          await resolveColonization(admin, playerId, f);
+        } catch (colErr) {
+          await audit(admin, playerId, "colonize_failed", false, { fleetId: f.id, error: String((colErr as Error)?.message || colErr) });
+        }
+      }
+
       await admin.from("game_fleets")
         .update({ returning:true, cargo, payload, start_at:now, ends_at:isoPlus(combatReturnSeconds(f)), updated_at:now })
         .eq("id", f.id).eq("player_id", playerId);
     }
   }
+}
+
+// 1.7.10 — Création de colonie côté serveur (source d'autorité pour les vaisseaux/ressources).
+// Le nom/rareté/archétype/bonus d'une planète colonisable sont 100% déterministes côté
+// client (planetProfile(), seed fixe dérivée de system.system) : pas besoin que le client
+// transmette quoi que ce soit de plus que ce qui est déjà stocké au lancement
+// (payload.target, qui contient l'objet système complet dont son .system numérique).
+// Idempotent : si game_buildings a déjà une ligne pour ce planet_id, on ne recrée rien
+// (évite un doublon si processQueues tourne deux fois sur la même flotte).
+function seededServer1710(seed: number) {
+  let s = seed >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967295; };
+}
+function rarityRollServer1710(r: () => number) {
+  const x = r();
+  return x < .01 ? "Mythic" : x < .05 ? "Legendary" : x < .15 ? "Epic" : x < .40 ? "Rare" : "Common";
+}
+function planetProfileServer1710(systemNumber: number, systemName: string) {
+  const r = seededServer1710(systemNumber * 991 + 7);
+  const rarity = rarityRollServer1710(r);
+  const slotBase = rarity === "Mythic" ? 7 : rarity === "Legendary" ? 6 : rarity === "Epic" ? 6 : rarity === "Rare" ? 5 : 4;
+  const archetypes = [
+    { type: "Monde minier", weights: { mining: 3, industrial: 1, military: 1, energy: 1, research: 0 } },
+    { type: "Monde énergétique", weights: { mining: 1, industrial: 1, military: 1, energy: 3, research: 0 } },
+    { type: "Monde industriel", weights: { mining: 1, industrial: 3, military: 1, energy: 1, research: 0 } },
+    { type: "Monde militaire", weights: { mining: 1, industrial: 1, military: 3, energy: 1, research: 0 } },
+    { type: "Monde relique", weights: { mining: 1, industrial: 1, military: 1, energy: 1, research: 0 } },
+  ];
+  const arch = archetypes[Math.floor(r() * archetypes.length)];
+  const keys: string[] = [];
+  Object.entries(arch.weights).forEach(([k, w]) => { for (let i = 0; i < (w as number); i++) keys.push(k); });
+  const slots: Record<string, number> = { mining: 0, industrial: 0, military: 0, energy: 0, research: 0 };
+  for (let i = 0; i < slotBase; i++) slots[keys[Math.floor(r() * keys.length)]]++;
+  slots.research = 0;
+  return { name: systemName + " Prime", rarity, archetype: arch.type };
+}
+async function resolveColonization(admin: any, playerId: string, f: any) {
+  const target = (f.payload && f.payload.target) || {};
+  const planetId = safePlanet(String(f.target_id || target.id || "").slice(0, 48));
+  if (!planetId || planetId === "home") return;
+  const exists = await admin.from("game_buildings").select("building_id").eq("player_id", playerId).eq("planet_id", planetId).limit(1).maybeSingle();
+  if (exists.error) throw exists.error;
+  if (exists.data) return; // déjà colonisée : idempotent, on ne fait rien de plus
+  const up = await admin.from("game_buildings").upsert(
+    { player_id: playerId, planet_id: planetId, building_id: "command_center", level: 1, updated_at: new Date().toISOString() },
+    { onConflict: "player_id,planet_id,building_id" }
+  );
+  if (up.error) throw up.error;
+  const systemNumber = n(target.system, 1, 100000);
+  const profile = planetProfileServer1710(systemNumber || 1, String(target.name || f.target_name || "Système"));
+  await audit(admin, playerId, "colonize_success", true, { planetId, name: profile.name, rarity: profile.rarity, archetype: profile.archetype });
 }
 
 async function currentResources(admin: any, playerId: string) {
@@ -956,6 +1022,11 @@ async function launchFleet(admin: any, playerId: string, body: any) {
     cargoCap += def.cargo * qty;
   }
   if (shipCount <= 0) throw new Error("aucun_vaisseau");
+  // 1.7.10 : le client bloque déjà le lancement sans vaisseau colon (canDoMission),
+  // mais rien ne l'imposait ici — un appel direct à l'API aurait pu coloniser
+  // sans posséder de colon_ship. Le serveur étant désormais l'autorité qui crée
+  // réellement la colonie (resolveColonization), il doit appliquer la même règle.
+  if (mission === "colonize" && !(n(launchShips["colon_ship"]) > 0)) throw new Error("vaisseau_colon_requis");
   const cargoTotal = n(cargo.titanium) + n(cargo.xenite) + n(cargo.antimatter);
   if (cargoTotal > cargoCap) throw new Error("capacite_cargo_insuffisante");
   const r = await currentResources(admin, playerId);
