@@ -23883,6 +23883,19 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
 
   G.leaveAlliance = async function(){
     var s=ensureAllianceStateFinal(), a=s.alliance, c=client(), me=uid();
+    // 8 juillet 2026 — cette version (la seule réellement active : les 5 autres
+    // window.leaveAlliance du fichier sont toutes écrasées par celle-ci, chargée
+    // en dernier) gère déjà correctement Supabase (ne supprime que sa propre
+    // ligne alliance_members, ou dissout proprement si fondateur) mais ne
+    // demandait jamais confirmation avant d'agir — risqué pour un fondateur qui
+    // dissoudrait toute l'alliance d'un clic accidentel. Ajout d'une confirmation.
+    if(a){
+      var isFounder = String(a.ownerId||'')===String(me) || a.rank==='Fondateur';
+      var msg = isFounder
+        ? 'Tu es fondateur : quitter dissoudra définitivement l’alliance [' + (a.tag||'') + '] pour tous les membres. Confirmer ?'
+        : 'Quitter l’alliance [' + (a.tag||'') + '] ?';
+      if(typeof stConfirm==='function'){ if(!(await stConfirm(msg))) return; }
+    }
     if(a && c && online()){
       try{
         if(String(a.ownerId||'') === String(me) || a.rank === 'Fondateur'){

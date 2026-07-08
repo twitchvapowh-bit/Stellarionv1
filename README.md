@@ -93,6 +93,24 @@ mais `queueBuilding()` et `tickV145()` appelaient `save()`/`render()` nus à la 
 comptant uniquement sur la protection interne de `render()` — insuffisante pour ce cas
 précis. Les deux utilisent maintenant `rerenderPreserveScroll()`.
 
+## Alpha 1.7.09 — Correction et vérification alliance (8 juillet 2026, suite)
+
+Correction d'une conclusion précédente : la session avait signalé un risque de désynchronisation
+Supabase sur "Quitter l'alliance". En vérifiant directement le schéma réel de la base (table
+`alliance_members`, via l'outil Supabase connecté), il s'avère que la version de
+`leaveAlliance` réellement active (la dernière chargée dans `main.js`, 1.5.69 "Correctif
+final") gère déjà correctement le serveur : elle supprime uniquement la ligne d'appartenance
+du joueur (`alliance_members`), ou dissout proprement l'alliance si c'est le fondateur qui
+part. Les 5 autres définitions de `leaveAlliance` dans le fichier sont bien mortes (écrasées),
+comme suspecté, mais n'affectent donc rien en pratique. En revanche cette version active ne
+demandait jamais de confirmation avant d'agir - risqué pour un fondateur qui dissoudrait toute
+son alliance d'un clic accidentel : une confirmation stylée (via `stConfirm`) a été ajoutée,
+avec un message spécifique si la personne est fondatrice.
+
+Vérifié aussi : aucun autre patch (`patch_1625_mobile.js`, `fragment-shop-stripe-patch.js`) ne
+duplique le système de préservation de scroll de `render()` — leurs usages de scroll sont
+spécifiques (zoom galaxie, carrousel boutique) et sans conflit.
+
 Chantier volontairement non lancé dans cette session : la dette CSS (~6000 `!important`
 dans `css/main.css`, accumulés par 5+ générations de patches mobiles superposés). Trop
 risqué à corriger en un seul passage sur un jeu en production avec paiements réels — à
