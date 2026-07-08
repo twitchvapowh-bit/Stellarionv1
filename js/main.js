@@ -2520,18 +2520,22 @@ function canBuildOnPlanet(def, planet=activePlanet()){
  return {ok:true,reason:""};
 }
 function queueBuilding(id){
+ // 8 juillet 2026 — passe par rerenderPreserveScroll() (capture/restaure le scroll
+ // explicitement autour du rendu) au lieu de save()/render() nus : la protection
+ // interne à render() (1610/1644/1646) n'empêchait pas un saut de scroll au moment
+ // précis où on lance une construction, signalé par l'utilisateur.
  const planet=activePlanet(), def=BUILDINGS.find(b=>b.id===id), allowed=canBuildOnPlanet(def,planet);
- if(!allowed.ok){addLog(allowed.reason+".");render();return}
+ if(!allowed.ok){addLog(allowed.reason+".");rerenderPreserveScroll();return}
  const rows=state.buildings[planet.id]||[], row=rows.find(b=>b.building_id===id);
  const queuedLevels=state.buildQueue.filter(q=>q.building_id===id&&q.planetId===planet.id).length;
  const level=(row?row.level:0)+queuedLevels,next=level+1,c=cost(def,next);
-  if(state.buildQueue.filter(q=>q.planetId===planet.id).length>=canQueue()){addLog("File de construction pleine sur "+planet.name+".");render();return}
- if(state.resources.titanium<c.titanium||state.resources.xenite<c.xenite||state.resources.antimatter<(c.antimatter||0)){addLog("Ressources insuffisantes.");render();return}
+  if(state.buildQueue.filter(q=>q.planetId===planet.id).length>=canQueue()){addLog("File de construction pleine sur "+planet.name+".");rerenderPreserveScroll();return}
+ if(state.resources.titanium<c.titanium||state.resources.xenite<c.xenite||state.resources.antimatter<(c.antimatter||0)){addLog("Ressources insuffisantes.");rerenderPreserveScroll();return}
  state.resources.titanium-=c.titanium;state.resources.xenite-=c.xenite;state.resources.antimatter-=(c.antimatter||0);
  if(!row)rows.push({building_id:id,level:0});
  const now=Date.now(); const samePlanet=state.buildQueue.filter(q=>q.planetId===planet.id); const starts=samePlanet.length?Math.max(...samePlanet.map(q=>q.finishAt)):now; const duration=buildTime(def,next)*1000;
  state.buildings[planet.id]=rows; state.buildQueue.push({id:"q"+now+Math.random(),planetId:planet.id,building_id:id,from:level,to:next,startAt:starts,finishAt:starts+duration,duration});
- addLog(def.name+" ajouté à la file de "+planet.name+".");save();render();
+ addLog(def.name+" ajouté à la file de "+planet.name+".");rerenderPreserveScroll();
 }
 function processBuildQueue(silent=false){
  const now=Date.now(); let changed=false;
@@ -19741,6 +19745,10 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   function tickV145(){
     var changed=processQueuesV145();
     if(changed){
+      // 8 juillet 2026 — rerenderPreserveScroll() au lieu de save()/render() nus :
+      // c'est le passage exact (fin de construction) qui provoquait un saut de
+      // scroll signalé par l'utilisateur, même sans clic de sa part.
+      try{ if(typeof rerenderPreserveScroll==='function'){ rerenderPreserveScroll(); return; } }catch(e){}
       try{ if(typeof save==='function')save(); }catch(e){}
       try{ if(typeof render==='function')render(); return; }catch(e){}
     }

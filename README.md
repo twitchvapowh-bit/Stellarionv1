@@ -83,6 +83,16 @@ ont lieu assez souvent pour que cette fenêtre de 900ms soit quasiment toujours 
 symptôme redémarrait en boucle. Corrigé dans `main.js` : l'observateur ignore désormais les
 mutations qui ne concernent que le style d'un élément `[data-progress]`.
 
+## Alpha 1.7.08 — Scroll au lancement/fin de construction (8 juillet 2026, suite)
+
+Après 1.7.07, le scroll sautait encore, mais seulement à deux moments précis : au clic sur
+"AMÉLIORER" (lancement) et à la fin automatique d'une construction. Le jeu contient au
+moins 6 systèmes de préservation de scroll différents accumulés au fil des versions ; un
+helper dédié existait déjà (`rerenderPreserveScroll()`, capture le scroll, rend, restaure)
+mais `queueBuilding()` et `tickV145()` appelaient `save()`/`render()` nus à la place,
+comptant uniquement sur la protection interne de `render()` — insuffisante pour ce cas
+précis. Les deux utilisent maintenant `rerenderPreserveScroll()`.
+
 Chantier volontairement non lancé dans cette session : la dette CSS (~6000 `!important`
 dans `css/main.css`, accumulés par 5+ générations de patches mobiles superposés). Trop
 risqué à corriger en un seul passage sur un jeu en production avec paiements réels — à
