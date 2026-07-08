@@ -11931,7 +11931,7 @@ function questPowerStatusHtml(required,current){
   if(typeof oldSave==="function"){
     window.save=function(){const r=oldSave.apply(this,arguments);setTimeout(start,0);return r;};
   }
-  setInterval(start,500);
+  setInterval(start,3000); // allege (8 juillet 2026) : 500ms->3000ms, filet de garde d'une animation deja auto-entretenue par requestAnimationFrame
   setTimeout(start,0);
 })();
 ;
@@ -14379,7 +14379,7 @@ function questPowerStatusHtml(required,current){
   window.stellarionStartLiveTrajectory1537=start;
   window.stellarionTrajectoryAudit1537=function(){return {build:'1.5.37 live galaxy trajectories',view:st()&&st().view,bodyGalaxy:document.body.classList.contains('view-galaxy'),mode:mode(),stage:!!document.querySelector('#center .gwm-stage'),fleets:st()&&Array.isArray(st().fleets)?st().fleets.length:0,active:activeFleets().length,overlay:!!document.querySelector('canvas.fleet-trajectory-live1537')}};
   ['click','wheel','mousemove','keydown'].forEach(ev=>window.addEventListener(ev,start,{passive:true}));
-  setInterval(start,500);
+  setInterval(start,3000); // allege (8 juillet 2026) : 500ms->3000ms, filet de garde d'une animation deja auto-entretenue par requestAnimationFrame
   setTimeout(start,0);
 })();
 ;
@@ -18261,7 +18261,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     }catch(e){}
   }
   tick();
-  setInterval(tick,250);
+  setInterval(tick,1000); // allege (8 juillet 2026) : 250ms->1000ms, horloge affichee (une seconde de precision suffit)
   document.addEventListener('visibilitychange',tick);
   window.addEventListener('focus',tick);
 })();
@@ -21038,7 +21038,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     setupRealtime();
     tickRefresh(true); // fallback agressif : max 1,5 s si Realtime ne pousse pas l'événement.
   },1500);
-  setInterval(start,250);
+  setInterval(start,2000); // allege (8 juillet 2026) : 250ms->2000ms, un compagnon a 1500ms couvre deja le fallback rapide juste au-dessus
   setTimeout(function(){setupRealtime();tickRefresh(true);start()},400);
 
   window.stellarionPublicTrajectoriesAudit1553=function(){
@@ -21609,7 +21609,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     var wrappedRender = function(){ var r = oldRender.apply(this,arguments); setTimeout(boot,0); return r; };
     wrappedRender.__trajectoryUnfreeze1555 = true; window.render = wrappedRender; try { render = wrappedRender; } catch(e){}
   }
-  setInterval(function(){ startRealtime(); publishOwnFleets(); fetchPublic(false); requestNext(); }, 800);
+  setInterval(function(){ startRealtime(); publishOwnFleets(); fetchPublic(false); requestNext(); }, 2500); // allege (8 juillet 2026) : 800ms->2500ms
   ['pointermove','mousemove','wheel','scroll','keydown','click'].forEach(function(ev){ window.addEventListener(ev,function(){ requestNext(); },{passive:true}); });
   setTimeout(boot,250);
   window.stellarionTrajectoryUnfreezeAudit1555 = function(){
@@ -22214,7 +22214,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     window.render = wrapped; try{ render = wrapped; }catch(e){}
   }
   ["click","mousemove","pointermove","wheel","keydown","resize","scroll"].forEach(function(ev){ window.addEventListener(ev,function(){ request(); },{passive:true}); });
-  setInterval(function(){ request(); }, 500);
+  setInterval(function(){ request(); }, 2000); // allege (8 juillet 2026) : 500ms->2000ms
   setTimeout(boot,150);
 
   window.stellarionGalaxyTrajectoryForcedAudit1558 = function(){
@@ -22344,8 +22344,8 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   function boot(){ensureCss();cleanBadLayers();fetchPublic(true);request();}
   var oldRender=window.render;if(typeof oldRender==='function'&&!oldRender.__trajectoryEmergency1559){var wr=function(){var out=oldRender.apply(this,arguments);setTimeout(boot,0);setTimeout(boot,80);return out;};wr.__trajectoryEmergency1559=true;window.render=wr;try{render=wr;}catch(e){}}
   ['click','mousemove','pointermove','wheel','keydown','resize','scroll'].forEach(function(ev){window.addEventListener(ev,function(){request();},{passive:true});});
-  setInterval(function(){cleanBadLayers();request();},350);
-  setInterval(function(){fetchPublic(false);request();},1200);
+  setInterval(function(){cleanBadLayers();request();},2000); // allege (8 juillet 2026) : 350ms->2000ms
+  setInterval(function(){fetchPublic(false);request();},2500); // allege (8 juillet 2026) : 1200ms->2500ms
   setTimeout(boot,120);
   window.stellarionGalaxyTrajectoryEmergencyAudit1559=function(){boot();var st=S(),stg=stage();var loc=localFlights(),ps=publicStateFlights(),pr=publicRowFlights(),all=allFlights();return {patch:'trajectory-emergency-restore-1559',view:st&&st.view,stage:!!stg,localTotal:st&&Array.isArray(st.fleets)?st.fleets.length:0,localDrawable:loc.length,publicState:ps.length,publicRows:publicRows.length,publicDrawable:pr.length,totalDrawable:all.length,overlay:!!(stg&&stg.querySelector('svg.'+TAG)),nativeLayer:!!(stg&&stg.querySelector('svg.gwm-fleet-svg-layer')),drawn:lastDraw,firstLocal:loc[0]?{id:loc[0].id,mission:loc[0].mission,from:coord(loc[0].from),to:coord(loc[0].to),remain:loc[0].remain,rawFrom:loc[0].from,rawTo:loc[0].to}:null,firstAny:all[0]?{source:all[0].source,id:all[0].id,from:all[0].__a,to:all[0].__b,remain:all[0].remain}:null,camera:camera(),error:lastError};};
 })();
@@ -22591,7 +22591,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   ['click','wheel','pointermove','keydown','resize','visibilitychange'].forEach(function(ev){
     window.addEventListener(ev,function(){ setTimeout(kick,30); },{passive:true});
   });
-  setInterval(kick,700);
+  setInterval(kick,2500); // allege (8 juillet 2026) : 700ms->2500ms, les vrais clics/molette/etc redeclenchent deja un kick immediat
   setTimeout(kick,120);
   setTimeout(kick,900);
 
@@ -22718,7 +22718,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   ['click','wheel','pointermove','mousemove','keydown','resize','visibilitychange'].forEach(function(ev){
     window.addEventListener(ev,function(){ setTimeout(kick,30); },{passive:true});
   });
-  setInterval(kick,650);
+  setInterval(kick,2500); // allege (8 juillet 2026) : 650ms->2500ms, les vrais clics/molette/etc redeclenchent deja un kick immediat
   setTimeout(kick,80);
   setTimeout(kick,600);
 
@@ -25131,7 +25131,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     installRenderGuard1583();
     patchGalaxyRoutes1583();
     updateQueueTimers1583();
-  }, 250);
+  }, 1000); // allege (8 juillet 2026) : 250ms->1000ms (ensureDeepCss/renderGuard/galaxyRoutes/queueTimers 1583)
 
   function stellarionDeepUiDedupeAudit1584(){
     patchGalaxyRoutes1583();
@@ -25337,7 +25337,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
 
   ensureCss();
   stabilizeRoutes();
-  setInterval(stabilizeRoutes, 700);
+  setInterval(stabilizeRoutes, 2500); // allege (8 juillet 2026) : 700ms->2500ms
   window.stellarionV4Audit1586=function(){
     return {
       patch:'v4-no-stack-1.5.86',
@@ -25847,7 +25847,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     try{ render=renderV8; }catch(e){}
   }
 
-  setInterval(function(){ try{ reconcileLocalAttackLoot(); applyServerCombatResourceSnapshot(); }catch(e){} }, 800);
+  setInterval(function(){ try{ reconcileLocalAttackLoot(); applyServerCombatResourceSnapshot(); }catch(e){} }, 2000); // allege (8 juillet 2026) : 800ms->2000ms
 
   window.stellarionV8Audit1590=function(){
     var s=S() || {};
@@ -26115,7 +26115,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     try{ addMessage=addWrap; }catch(e){}
   }
 
-  setInterval(function(){ try{ scanCombats(); }catch(e){ console.error('combat failsafe v9',e); } }, 700);
+  setInterval(function(){ try{ scanCombats(); }catch(e){ console.error('combat failsafe v9',e); } }, 2000); // allege (8 juillet 2026) : 700ms->2000ms
   setTimeout(scanCombats,0);
   setTimeout(scanCombats,1000);
 
@@ -26521,7 +26521,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     window.render=renderWrap;
     try{ render=renderWrap; }catch(e){}
   }
-  setInterval(applyDrafts,500);
+  setInterval(applyDrafts,2000); // allege (8 juillet 2026) : 500ms->2000ms
   window.stellarionAllianceDraftAudit1597=function(){
     applyDrafts();
     return {
@@ -26681,7 +26681,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     try{ render=renderWrap; }catch(e){}
   }
   document.addEventListener("DOMContentLoaded",function(){ scan(); installActions(); });
-  setInterval(function(){ scan(); installActions(); },600);
+  setInterval(function(){ scan(); installActions(); },2000); // allege (8 juillet 2026) : 600ms->2000ms
   scan();
   installActions();
   window.stellarionAllianceHardUnlockAudit1598=function(){
@@ -27139,7 +27139,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   setInterval(function(){
     wrapLaunchMission();
     wrapLaunchArmamentOperation();
-  }, 500);
+  }, 2000); // allege (8 juillet 2026) : 500ms->2000ms, re-verrouillage defensif, pas une boucle de jeu
 
   window.stellarionFleetGuardAudit1604 = function(){
     return {
@@ -27239,7 +27239,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   }
 
   wrapProcessFleets();
-  setInterval(wrapProcessFleets, 500);
+  setInterval(wrapProcessFleets, 2000); // allege (8 juillet 2026) : 500ms->2000ms, re-verrouillage defensif, pas une boucle de jeu
 
   window.stellarionFleetCreditAudit1605 = function(){
     return {
@@ -27308,7 +27308,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   }
 
   wrapProcessFleets();
-  setInterval(wrapProcessFleets, 500);
+  setInterval(wrapProcessFleets, 2000); // allege (8 juillet 2026) : 500ms->2000ms, re-verrouillage defensif, pas une boucle de jeu
 
   window.stellarionServerAuthorityAudit1606 = function(){
     var all = (window.state && Array.isArray(state.fleets)) ? state.fleets : [];
@@ -27750,7 +27750,7 @@ window.stellarionScrollAudit1610 = function(){
   window.addEventListener('resize',function(){ try{ syncPanelPosition(); }catch(e){} },{passive:true});
   window.addEventListener('orientationchange',function(){ setTimeout(syncPanelPosition,120); },{passive:true});
   try{ if(window.visualViewport) window.visualViewport.addEventListener('resize',function(){ try{ syncPanelPosition(); }catch(e){} },{passive:true}); }catch(e){}
-  setInterval(function(){ try{ syncPanelPosition(); }catch(e){} },500);
+  setInterval(function(){ try{ syncPanelPosition(); }catch(e){} },2000); // allege (8 juillet 2026) : 500ms->2000ms, resize/orientationchange/visualViewport couvrent deja les vrais changements
 
   var heartbeatTimer=null, onlineTimer=null, chatPollTimer=null;
   function ensureTimers(){

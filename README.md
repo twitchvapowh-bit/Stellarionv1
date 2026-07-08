@@ -31,6 +31,18 @@ donnée de sauvegarde touchée. Nouveaux fichiers, chargés après main.js :
   muet/son persistant. Pas de musique d'ambiance : ça demanderait un vrai morceau
   composé/licencié, pas quelque chose à générer.
 
+## Alpha 1.7.04 — Allègement des boucles setInterval (8 juillet 2026, suite)
+
+Après retour utilisateur ("trop d'actualisation en arrière-plan"), ralenti ~20 boucles
+`setInterval` de `main.js` qui tournaient en continu entre 250 et 900 ms — pour la
+plupart des systèmes de "trajectoires galaxie" superposés au fil des versions
+(1537/1555/1558/1559/1560/1586/1587), plus quelques re-verrouillages défensifs
+(`wrapProcessFleets`, `wrapLaunchMission`) et une horloge affichée à 250 ms. Chacun est
+passé à 1000-3000 ms selon son rôle réel : rien n'est supprimé, juste moins fréquent.
+Volontairement laissés intacts : la boucle de jeu réelle (production/construction/
+flottes/ressources), `tickV145` et `incomingAttackInterval` (1000 ms, cœur du jeu), et
+2 boucles déjà rares ou conditionnelles.
+
 Chantier volontairement non lancé dans cette session : la dette CSS (~6000 `!important`
 dans `css/main.css`, accumulés par 5+ générations de patches mobiles superposés). Trop
 risqué à corriger en un seul passage sur un jeu en production avec paiements réels — à
