@@ -1185,6 +1185,12 @@ function planetProfile(system){
  Object.entries(arch.weights).forEach(([k,w])=>{for(let i=0;i<w;i++)keys.push(k)});
  for(let i=0;i<slotBase;i++){slots[keys[Math.floor(r()*keys.length)]]++}
  slots.research=0; // IMPORTANT: colonies cannot build research buildings.
+ // 1.7.18 : avec une distribution pondérée sur seulement 4-7 tirages, une catégorie
+ // (souvent "energy") pouvait tomber à 0 — la planète ne pouvait alors JAMAIS
+ // construire ce type de bâtiment (ex: Centrale Fusion), un blocage permanent et
+ // définitif découvert par l'utilisateur après colonisation. On garantit maintenant
+ // un plancher de 1 slot par catégorie constructible (hors recherche, interdite aux colonies).
+ ["mining","industrial","military","energy"].forEach(function(k){ if(!(slots[k]>=1)) slots[k]=1; });
  return {name:system.name+" Prime",rarity,size,archetype:arch.type,slots,bonus:arch.bonus,danger:system.danger,richness:system.richness};
 }
 // TEST: 20 systemes simules maximum pour garder la carte lisible.
@@ -28082,4 +28088,56 @@ window.stellarionScrollAudit1610 = function(){
       finally{ window.__forceRenderNow1714 = false; }
     }, 30);
   }, true);
+})();
+
+/* STELLARION 1.7.18 — Retour utilisateur : "Slot Énergie indisponible" bloque
+   définitivement la construction d'une Centrale Fusion sur une colonie (ex: Aether-111
+   Prime). Cause racine : planetProfile() tire les slots (mining/industrial/military/
+   energy) au hasard sur seulement 4-7 essais pondérés par archétype — une catégorie
+   (souvent "energy", qui n'a qu'un seul bâtiment possible : la Centrale Fusion) pouvait
+   tomber à 0, rendant ce bâtiment à jamais impossible à construire sur cette planète.
+   planetProfile() garantit désormais un plancher de 1 slot par catégorie pour les
+   NOUVELLES colonisations, mais les colonies déjà fondées ont leurs slots figés dans
+   state.planets (calculés une fois à la colonisation, jamais recalculés). Ce correctif
+   répare in-place, à chaque rendu, toute colonie déjà existante dont une catégorie
+   constructible (hors recherche, toujours 0 sur colonie) est encore à 0. */
+(function(){
+  "use strict";
+  if(window.__stellarionFixZeroSlots1718) return;
+  window.__stellarionFixZeroSlots1718 = true;
+
+  var CATEGORIES = ["mining","industrial","military","energy"];
+
+  function repairPlanetSlots1718(){
+    if(!window.state || !Array.isArray(state.planets)) return false;
+    var changed = false;
+    state.planets.forEach(function(p){
+      if(!p || p.isHomeworld) return; // la planète mère a déjà toutes ses catégories >=1
+      p.slots = p.slots || {};
+      CATEGORIES.forEach(function(k){
+        if(!(Number(p.slots[k]) >= 1)){ p.slots[k] = 1; changed = true; }
+      });
+    });
+    return changed;
+  }
+
+  var oldRender1718 = window.render;
+  if(typeof oldRender1718 === "function" && !oldRender1718.__fixZeroSlots1718){
+    var wrappedRender1718 = function(){
+      try{
+        if(repairPlanetSlots1718() && typeof save === "function") save();
+      }catch(e){}
+      return oldRender1718.apply(this, arguments);
+    };
+    wrappedRender1718.__fixZeroSlots1718 = true;
+    window.render = wrappedRender1718;
+    try{ render = wrappedRender1718; }catch(e){}
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    try{ if(repairPlanetSlots1718() && typeof save === "function") save(); }catch(e){}
+  });
+  setTimeout(function(){
+    try{ if(repairPlanetSlots1718() && typeof save === "function") save(); }catch(e){}
+  }, 0);
 })();

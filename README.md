@@ -314,6 +314,24 @@ prise avec l'utilisateur : le joueur qui a déjà acheté la file auxiliaire per
 (1500 fragments) en profite désormais sur CHAQUE planète (mère et colonies), pas
 seulement 2 au total sur le compte — un joueur possède déjà cet achat.
 
+## Alpha 1.7.18 — Colonie bloquée définitivement par "Slot Énergie indisponible" (9 juillet 2026, suite)
+
+Retour utilisateur (capture d'écran) : sur la colonie Aether-111 Prime, impossible
+d'améliorer la Centrale Fusion — bouton grisé, message "Slot Énergie indisponible".
+
+Cause racine : `planetProfile()` tire aléatoirement les emplacements de construction
+(mines/industrie/militaire/énergie) sur seulement 4 à 7 essais pondérés par archétype
+de planète. La Centrale Fusion est le SEUL bâtiment de la catégorie "énergie" — si le
+tirage aléatoire n'attribuait aucun slot à cette catégorie (statistiquement environ 1
+colonie industrielle commune sur 2), la planète ne pouvait alors plus jamais produire
+sa propre énergie locale, un blocage permanent découvert seulement après coup.
+
+Corrigé : chaque catégorie constructible (hors recherche, toujours interdite aux
+colonies) garantit désormais un minimum de 1 slot. Les nouvelles colonisations en
+profitent directement ; un correctif de réparation s'exécute aussi automatiquement
+pour les colonies déjà fondées (comme Aether-111 Prime) dont les slots étaient figés
+à 0 depuis leur création.
+
 ## Alpha 1.5.45 — Messagerie destinataire
 
 Ajout : champ destinataire avec répertoire/autocomplete des joueurs depuis la table Supabase `players`.
