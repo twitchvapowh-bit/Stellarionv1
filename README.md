@@ -116,6 +116,68 @@ dans `css/main.css`, accumulés par 5+ générations de patches mobiles superpos
 risqué à corriger en un seul passage sur un jeu en production avec paiements réels — à
 traiter séparément, de façon incrémentale et testée.
 
+## Alpha 1.7.10 — La colonisation ne créait jamais de colonie (8 juillet 2026, suite)
+
+Cause racine trouvée : depuis le passage du jeu en "server authority" (patchs 1.5.70 et
+1.5.89), toutes les flottes des joueurs connectés sont lancées et résolues côté serveur
+(`supabase/functions/game-action`), et le `processFleets()` local — le seul endroit du
+code qui créait réellement une colonie (`state.planets.push(...)`) — n'est plus jamais
+exécuté pour ces flottes (elles sont explicitement retirées de la liste passée à
+`processFleets()` par le patch V7 "server combat authority", voir `main.js`). Le vaisseau
+partait donc bien, la mission "colonize" arrivait bien à destination côté serveur... mais
+`processQueues()` (côté serveur) traitait "colonize" exactement comme "explore" ou
+"transfer" : la flotte repartait simplement à vide, sans qu'aucune ligne ne soit jamais
+créée pour la nouvelle planète. Aucune erreur, aucun message : juste rien.
+
+Corrigé des deux côtés :
+
+- **Serveur** (`supabase/functions/game-action/index.ts`) : ajout de `resolveColonization()`,
+  appelée à l'arrivée d'une flotte "colonize". Elle crée une ligne `game_buildings`
+  (`command_center` niveau 1) pour la nouvelle planète, de façon idempotente (si la ligne
+  existe déjà, ne fait rien — évite les doublons en cas de double traitement). Le nom/
+  rareté/archétype de la planète sont recalculés avec exactement la même formule
+  déterministe que côté client (`planetProfile()`, seed fixe basée sur le numéro du
+  système) : aucune donnée supplémentaire à faire transiter, le résultat est garanti
+  identique. Ajout aussi d'une vérification serveur qu'un vaisseau colon est bien présent
+  dans la flotte (le client le vérifiait déjà, mais rien ne l'imposait côté serveur — un
+  appel direct à l'API aurait pu contourner cette règle).
+- **Client** (`main.js`, `applyServerState()`) : le serveur ne renvoyant que des lignes
+  `game_buildings`/`game_ships` (pas d'objet "planète"), le client détecte désormais tout
+  `planet_id` inconnu de `state.planets` et reconstruit localement sa fiche complète
+  (nom, rareté, bonus, emplacements, coordonnées) avec les fonctions déjà existantes
+  (`planetProfile()`, `reserveUniqueCoord()`), exactement comme le faisait l'ancien code
+  local de colonisation.
+
+Limite connue : les tentatives de colonisation lancées *avant* ce correctif ont consommé
+leur vaisseau colon et leurs ressources sans jamais avoir créé de colonie récupérable
+automatiquement — dis-moi si tu veux qu'on aille chercher dans les journaux serveur
+(`game_security_audit`, `game_action_claims`) quels joueurs sont concernés pour leur
+recréditer une colonie manuellement.
+
+**Correctif de suivi (même jour) : le correctif ci-dessus n'avait jamais été déployé.**
+Éditer `supabase/functions/game-action/index.ts` en local ne suffit pas : Supabase exécute
+la version publiée sur son infrastructure tant qu'un déploiement explicite n'est pas fait.
+La fonction tournait donc toujours en version 18 (sans `resolveColonization`) malgré le
+correctif écrit. Déployée manuellement en version 19 via l'outil Supabase — vérifié après
+coup que la version publiée contient bien `resolveColonization`/`colonize_success`.
+
+## Alpha 1.7.11 — Colonisation drastiquement plus coûteuse (8 juillet 2026, suite)
+
+Demande : la colonisation était trop simple à obtenir vu sa valeur (une planète de plus,
+pour toujours). Coût du vaisseau colon (`colon_ship`) très augmenté, dans `js/main.js` et
+`supabase/functions/game-action/index.ts` (les deux copies doivent rester identiques : le
+serveur revalide indépendamment le coût de chaque vaisseau).
+
+Coût final (après le multiplicateur ×5 déjà appliqué par le jeu à tous les vaisseaux) :
+
+- Avant : 41 000 Titane · 22 000 Xénite · 1 150 Antimatière, 2h10 de construction.
+- Après : 180 000 Titane · 100 000 Xénite · 30 000 Antimatière, 4h30 de construction.
+
+Positionnement choisi : juste au-dessus du Porte-vaisseaux (l'unité "Élite" la plus chère
+après le Mothership), avec un accent particulier sur l'antimatière (la ressource la plus
+rare à produire) pour que fonder une colonie reste un vrai choix stratégique de milieu/fin
+de partie plutôt qu'un achat anodin. Le Mothership reste l'unité la plus chère du jeu.
+
 ## Alpha 1.5.45 — Messagerie destinataire
 
 Ajout : champ destinataire avec répertoire/autocomplete des joueurs depuis la table Supabase `players`.

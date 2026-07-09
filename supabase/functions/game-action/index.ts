@@ -61,7 +61,7 @@ const SHIPS: Record<string, ShipDef> = Object.fromEntries([
   {id:"titan",cost:{titanium:20667,xenite:12000,antimatter:2500},time:1600,cargo:8000,attack:52000,hull:44200,can:["attack"]},
   {id:"carrier",cost:{titanium:25333,xenite:15333,antimatter:3500},time:2200,cargo:25000,attack:29000,hull:24650,can:["attack","transfer"]},
   {id:"mothership",cost:{titanium:80000,xenite:48333,antimatter:12667},time:5200,cargo:100000,attack:180000,hull:153000,can:["attack","transfer"]},
-  {id:"colon_ship",cost:{titanium:8200,xenite:4400,antimatter:230},time:7800,cargo:10000,attack:0,hull:44000,can:["colonize"]},
+  {id:"colon_ship",cost:{titanium:36000,xenite:20000,antimatter:6000},time:16200,cargo:10000,attack:0,hull:44000,can:["colonize"]},
 ].map((s: any) => {
   const c: Cost = {};
   for (const k of ["titanium","xenite","antimatter"] as const) c[k] = Math.round((s.cost[k] || 0) * ECONOMY.unitPriceMultiplier);
