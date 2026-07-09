@@ -178,6 +178,28 @@ après le Mothership), avec un accent particulier sur l'antimatière (la ressour
 rare à produire) pour que fonder une colonie reste un vrai choix stratégique de milieu/fin
 de partie plutôt qu'un achat anodin. Le Mothership reste l'unité la plus chère du jeu.
 
+## Alpha 1.7.12 — Colonie affichée au mauvais endroit sur la carte empire (8 juillet 2026, suite)
+
+Retour utilisateur : après colonisation, la nouvelle colonie apparaissait à un endroit de
+la carte "empire" sans rapport avec le système réellement ciblé (ex : colonisation d'un
+système donné, mais la colonie visible ailleurs, comme si une autre planète au hasard
+avait été obtenue). Le nom restait correct (`<nom du système> Prime`, ex : "Aethar-111
+Prime" pour une colonisation de "Aethar-111") mais la position semait la confusion.
+
+Cause : le code de placement (`reserveUniqueCoord`, hérité tel quel de l'ancien système de
+colonisation client) ancrait toujours la nouvelle colonie près de la planète *active* du
+joueur, avec un décalage aléatoire (±8 sur une grille) — jamais aux coordonnées du système
+ciblé. C'est un choix de conception déjà présent avant cette session (regrouper les
+colonies près de son empire), mais combiné à un nom reprenant celui du système ciblé, le
+résultat semblait aléatoire et incohérent.
+
+Corrigé dans `main.js` (`applyServerState()`) : la colonie est maintenant ancrée sur les
+coordonnées propres du système réellement colonisé (`sector`/`system`/`x`/`y` copiés
+depuis `state.systems`), donc affichée au bon endroit sur la carte. Un correctif
+rétroactif recalcule aussi, une seule fois, la position des colonies déjà fondées avant ce
+correctif (marquées `__coordFixed1712` une fois corrigées, pour ne pas les re-décaler à
+chaque rechargement).
+
 ## Alpha 1.5.45 — Messagerie destinataire
 
 Ajout : champ destinataire avec répertoire/autocomplete des joueurs depuis la table Supabase `players`.

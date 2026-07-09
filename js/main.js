@@ -24125,19 +24125,49 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
         var sys1710=(s.systems||[]).find(function(x){return x.id===pid});
         if(!sys1710 || typeof planetProfile!=='function') return;
         var report1710=planetProfile(sys1710);
-        var newPlanet1710={id:pid,name:report1710.name,type:report1710.archetype,rarity:report1710.rarity,isHomeworld:false,slots:report1710.slots,bonus:report1710.bonus};
+        // 1.7.12 : la colonie était ancrée près de la planète active du joueur
+        // (getPersistentCoord(activePlanet())), donc affichée à un endroit sans
+        // rapport avec le système réellement colonisé — d'où la confusion
+        // "j'ai colonisé la planète blanche, j'ai eu une planète marron ailleurs".
+        // On ancre maintenant sur les coordonnées propres du système ciblé
+        // (sector/system/x/y copiés depuis sys1710) pour que la colonie
+        // apparaisse à l'endroit du système qu'on a réellement colonisé.
+        var newPlanet1710={id:pid,name:report1710.name,type:report1710.archetype,rarity:report1710.rarity,isHomeworld:false,slots:report1710.slots,bonus:report1710.bonus,sector:sys1710.sector,system:sys1710.system,x:sys1710.x,y:sys1710.y};
         try{
           if(typeof reserveUniqueCoord==='function'){
-            var anchor1710=(typeof getPersistentCoord==='function'&&typeof activePlanet==='function')?getPersistentCoord(activePlanet()):null;
-            reserveUniqueCoord(newPlanet1710, anchor1710, 8);
+            reserveUniqueCoord(newPlanet1710, null, 8);
           }
         }catch(e){}
         newPlanet1710.x=Math.round(Number(newPlanet1710.galaxyX)||0);
         newPlanet1710.y=Math.round(Number(newPlanet1710.galaxyY)||0);
+        newPlanet1710.__coordFixed1712=true;
         s.planets=s.planets||[];
         s.planets.push(newPlanet1710);
         s.colonies=(s.colonies||0)+1;
         try{ if(typeof addLog==='function') addLog('Colonie fondée : '+report1710.name+' ['+report1710.rarity+'].'); }catch(e){}
+      });
+    }catch(e){}
+
+    // 1.7.12 — correctif rétroactif de position : les colonies fondées avant ce
+    // correctif ont été ancrées près de la planète active du joueur (ancien
+    // comportement), donc affichées à un endroit sans rapport avec le système
+    // réellement colonisé (ex : "j'ai colonisé la planète blanche, j'ai eu une
+    // planète marron ailleurs sur la carte"). On recalcule une bonne fois pour
+    // toutes leur position en l'ancrant sur les coordonnées propres du système
+    // ciblé (comme le fait désormais la création d'une nouvelle colonie), puis
+    // on marque la colonie comme corrigée pour ne plus jamais la retoucher.
+    try{
+      (s.planets||[]).forEach(function(p){
+        if(!p || !p.id || p.isHomeworld || p.__coordFixed1712) return;
+        var sys1712=(s.systems||[]).find(function(x){return x.id===p.id});
+        if(!sys1712) return;
+        p.sector=sys1712.sector; p.system=sys1712.system;
+        delete p.galaxyX; delete p.galaxyY;
+        p.x=sys1712.x; p.y=sys1712.y;
+        try{ if(typeof reserveUniqueCoord==='function') reserveUniqueCoord(p, null, 8); }catch(e){}
+        p.x=Math.round(Number(p.galaxyX)||0);
+        p.y=Math.round(Number(p.galaxyY)||0);
+        p.__coordFixed1712=true;
       });
     }catch(e){}
 
