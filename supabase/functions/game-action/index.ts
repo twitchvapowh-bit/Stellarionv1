@@ -823,6 +823,26 @@ async function transferResources(admin: any, playerId: string, body: any) {
   if (!(await ownsPlanet(fromId))) throw new Error("planete_depart_introuvable");
   if (!(await ownsPlanet(toId))) throw new Error("planete_destination_introuvable");
 
+  // 1.7.16 — CORRECTIF CRITIQUE : une colonie fondée avant le passage aux ressources
+  // par planète (1.7.13) peut n'avoir AUCUNE ligne game_resources (seule resolveColonization()
+  // en crée une pour les nouvelles colonies). Avant ce correctif, currentResources(toId) plus
+  // bas levait "resources_missing" APRÈS que le débit de la planète de départ avait déjà été
+  // écrit (setResources(fromId) puis addResources(toId) qui échoue) : les ressources
+  // disparaissaient purement et simplement (débitées, jamais créditées nulle part). On
+  // s'assure maintenant que les DEUX planètes ont une ligne AVANT de toucher au stock.
+  async function ensureResourceRow(pid: string) {
+    const ex = await admin.from("game_resources").select("player_id").eq("player_id", playerId).eq("planet_id", pid).maybeSingle();
+    if (ex.error) throw ex.error;
+    if (ex.data) return;
+    const ins = await admin.from("game_resources").upsert(
+      { player_id: playerId, planet_id: pid, titanium: 0, xenite: 0, antimatter: 0, fragments: 0, last_tick: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { onConflict: "player_id,planet_id", ignoreDuplicates: true }
+    );
+    if (ins.error) throw ins.error;
+  }
+  await ensureResourceRow(fromId);
+  await ensureResourceRow(toId);
+
   const requested = {
     titanium: n(body.titanium, 0, 100_000_000),
     xenite: n(body.xenite, 0, 100_000_000),
