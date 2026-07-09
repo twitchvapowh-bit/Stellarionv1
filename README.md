@@ -269,6 +269,31 @@ appartiennent bien au joueur. Côté client, les champs de départ/destination/q
 sont maintenant sauvegardés dans `state.transferDraft` (comme pour renommer/relocaliser)
 et le bouton appelle ce nouveau point d'entrée serveur au lieu de mutations locales.
 
+## Alpha 1.7.16 — Perte de ressources lors d'un transfert vers une colonie ancienne (9 juillet 2026, suite)
+
+Retour utilisateur : "les ressources sont bien parties de la planète mère, mais elles ne
+sont pas arrivées sur la planète où elles étaient censées arriver."
+
+Cause racine : la fonction `transferResources()` ajoutée en 1.7.15 débite d'abord la
+planète de départ (écriture persistée immédiatement) puis crédite la planète de
+destination. Une colonie fondée AVANT la migration "ressources par planète" (1.7.13)
+n'a jamais reçu de ligne `game_resources` — seule `resolveColonization()` en crée une,
+et uniquement pour les colonies fondées après ce patch. Résultat : le débit de la
+planète mère s'exécutait avec succès, puis le crédit vers la colonie plantait
+(`resources_missing`), sans annulation du débit déjà écrit. Les ressources étaient donc
+réellement détruites, pas juste "non affichées".
+
+Diagnostic en base : 3 tentatives de transfert échouées, toutes vers la même colonie
+(`sys_11`), confirmées par le journal d'audit — et confirmation qu'aucune autre action
+consommatrice de ressources n'a eu lieu entre-temps.
+
+Corrigé : `transferResources()` crée maintenant systématiquement (via `ensureResourceRow`)
+la ligne `game_resources` des deux planètes concernées, à zéro si elle n'existe pas,
+avant tout débit/crédit — déployé en v22. Un correctif immédiat a aussi été appliqué en
+base pour créer la ligne manquante de `sys_11`. La restitution des ressources perdues
+lors des 3 tentatives ratées est traitée séparément avec le joueur, faute de journal
+exact des montants exacts demandés à chaque tentative.
+
 ## Alpha 1.5.45 — Messagerie destinataire
 
 Ajout : champ destinataire avec répertoire/autocomplete des joueurs depuis la table Supabase `players`.
