@@ -149,6 +149,8 @@ Deno.serve(async (req) => {
       message = await creditQuestReward(admin, user.id, body);
     } else if (action === "abandon_colony") {
       message = await abandonColony(admin, user.id, body);
+    } else if (action === "transfer_resources") {
+      message = await transferResources(admin, user.id, body);
     } else {
       await audit(admin, user.id, action, false, { error:"unknown_action" });
       return json({ ok:false, error:"action_inconnue", state: await snapshot(admin, user.id) }, 400);
@@ -798,6 +800,49 @@ async function abandonColony(admin: any, playerId: string, body: any) {
   if (delRes.error) throw delRes.error;
   await audit(admin, playerId, "abandon_colony", true, { planetId });
   return `Colonie abandonnée : bâtiments, vaisseaux et stock perdus.`;
+}
+
+// 1.7.15 — Transfert de ressources entre deux planètes du même joueur ("Logistique
+// inter-planètes", transfert immédiat, sans vaisseau). Avant ce correctif, ce transfert
+// n'existait QUE côté client (mutation directe de state.planetResources) : il n'appelait
+// jamais le serveur, donc n'était jamais réellement persisté — la resynchronisation
+// périodique avec game_resources (source de vérité) effaçait le "transfert" en silence,
+// et l'utilisateur avait l'impression que "rien ne se passe". Ici, le mouvement est
+// appliqué directement dans game_resources, planète par planète, de façon atomique.
+async function transferResources(admin: any, playerId: string, body: any) {
+  const fromId = safePlanet(String(body.from_planet_id || body.fromPlanetId || "").slice(0, 48));
+  const toId = safePlanet(String(body.to_planet_id || body.toPlanetId || "").slice(0, 48));
+  if (!fromId || !toId || fromId === toId) throw new Error("planetes_invalides");
+
+  async function ownsPlanet(pid: string) {
+    if (pid === "home") return true;
+    const ex = await admin.from("game_buildings").select("building_id").eq("player_id", playerId).eq("planet_id", pid).limit(1).maybeSingle();
+    if (ex.error) throw ex.error;
+    return !!ex.data;
+  }
+  if (!(await ownsPlanet(fromId))) throw new Error("planete_depart_introuvable");
+  if (!(await ownsPlanet(toId))) throw new Error("planete_destination_introuvable");
+
+  const requested = {
+    titanium: n(body.titanium, 0, 100_000_000),
+    xenite: n(body.xenite, 0, 100_000_000),
+    antimatter: n(body.antimatter, 0, 50_000_000),
+  };
+  if (requested.titanium + requested.xenite + requested.antimatter <= 0) throw new Error("aucune_ressource_a_transferer");
+
+  const src = await currentResources(admin, playerId, fromId);
+  const moved = {
+    titanium: Math.min(requested.titanium, n(src.titanium)),
+    xenite: Math.min(requested.xenite, n(src.xenite)),
+    antimatter: Math.min(requested.antimatter, n(src.antimatter)),
+  };
+  if (moved.titanium + moved.xenite + moved.antimatter <= 0) throw new Error("stock_insuffisant");
+
+  spend(src, moved);
+  await setResources(admin, playerId, fromId, src);
+  await addResources(admin, playerId, toId, moved);
+  await audit(admin, playerId, "transfer_resources", true, { fromId, toId, moved });
+  return `Transfert effectué : ${moved.titanium} Ti / ${moved.xenite} Xe / ${moved.antimatter} AM vers ${toId === "home" ? "la planète mère" : toId}.`;
 }
 
 // 1.7.13 — Ressources par planète (au lieu d'un pool unique par joueur).

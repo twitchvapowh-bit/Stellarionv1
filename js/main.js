@@ -15913,21 +15913,30 @@ window.__stellarionKeepConstructionScroll = function(cb){
       </div>`;
     }
     const opts = (sel) => ps.map(p => `<option value="${esc(p.id)}" ${String(p.id)===String(sel)?"selected":""}>${esc(p.name||"Planète")} — ${esc(coordsLabel(p))}</option>`).join("");
-    const otherId = (ps.find(p => String(p.id) !== String(aid)) || ps[0]).id;
-    const sr = planetRes(aid);
+    // 1.7.15 — Les sélections et quantités saisies sont désormais conservées dans
+    // s.transferDraft : avant, elles n'étaient stockées nulle part (aucun oninput),
+    // donc perdues au moindre re-rendu (fréquent : files d'attente, timers, etc.),
+    // ce qui donnait l'impression que le champ "repassait à 0" tout seul.
+    const s = S();
+    s.transferDraft = s.transferDraft || {};
+    const draftFrom = (s.transferDraft.from && ps.some(p => String(p.id) === String(s.transferDraft.from))) ? String(s.transferDraft.from) : aid;
+    const otherId = (ps.find(p => String(p.id) !== String(draftFrom)) || ps[0]).id;
+    const draftTo = (s.transferDraft.to && String(s.transferDraft.to) !== String(draftFrom) && ps.some(p => String(p.id) === String(s.transferDraft.to))) ? String(s.transferDraft.to) : otherId;
+    const sr = planetRes(draftFrom);
+    const dTi = num(s.transferDraft.titanium), dXe = num(s.transferDraft.xenite), dAm = num(s.transferDraft.antimatter);
     return `<div class="card panel cc-block cc-logistics">
       <h2 class="cc-h">📦 Logistique inter-planètes <span class="muted small">(transfert immédiat)</span></h2>
       <div class="cc-form-grid">
-        <div><label class="cc-label">Départ</label><select id="cc-tr-from" class="cc-field">${opts(aid)}</select></div>
-        <div><label class="cc-label">Destination</label><select id="cc-tr-to" class="cc-field">${opts(otherId)}</select></div>
+        <div><label class="cc-label">Départ</label><select id="cc-tr-from" class="cc-field" onchange="StellarionCommandCenter.setTransferPlanet('from', this.value)">${opts(draftFrom)}</select></div>
+        <div><label class="cc-label">Destination</label><select id="cc-tr-to" class="cc-field" onchange="StellarionCommandCenter.setTransferPlanet('to', this.value)">${opts(draftTo)}</select></div>
       </div>
       <div class="cc-cargo-grid">
-        <div><label>Titane <span class="muted tiny">(dispo ${f(sr.titanium)})</span></label><input id="cc-tr-titanium" type="number" min="0" value="0"></div>
-        <div><label>Xénite <span class="muted tiny">(dispo ${f(sr.xenite)})</span></label><input id="cc-tr-xenite" type="number" min="0" value="0"></div>
-        <div><label>Antimatière <span class="muted tiny">(dispo ${f(sr.antimatter)})</span></label><input id="cc-tr-antimatter" type="number" min="0" value="0"></div>
+        <div><label>Titane <span class="muted tiny">(dispo ${f(sr.titanium)})</span></label><input id="cc-tr-titanium" type="number" min="0" value="${dTi}" oninput="StellarionCommandCenter.setTransferAmount('titanium', this.value)"></div>
+        <div><label>Xénite <span class="muted tiny">(dispo ${f(sr.xenite)})</span></label><input id="cc-tr-xenite" type="number" min="0" value="${dXe}" oninput="StellarionCommandCenter.setTransferAmount('xenite', this.value)"></div>
+        <div><label>Antimatière <span class="muted tiny">(dispo ${f(sr.antimatter)})</span></label><input id="cc-tr-antimatter" type="number" min="0" value="${dAm}" oninput="StellarionCommandCenter.setTransferAmount('antimatter', this.value)"></div>
       </div>
       <button class="btn" style="width:100%;margin-top:10px" onclick="StellarionCommandCenter.transfer()">Envoyer les ressources</button>
-      <p class="muted tiny" style="margin-top:6px">Les ressources de départ affichées correspondent à la planète active. Choisis une autre planète de départ pour transférer son stock.</p>
+      <p class="muted tiny" style="margin-top:6px">Les ressources de départ affichées correspondent à la planète de départ sélectionnée ci-dessus.</p>
     </div>`;
   }
 
@@ -16051,37 +16060,46 @@ window.__stellarionKeepConstructionScroll = function(cb){
     else if (typeof render === "function") render();
   }
 
-  function doTransfer(){
+  // 1.7.15 — Réécrit pour passer par le serveur (source de vérité de game_resources).
+  // Avant, cette fonction ne mutait que state.planetResources en mémoire : rien n'était
+  // jamais envoyé au serveur, donc la synchro périodique effaçait le "transfert" sans
+  // que rien ne le signale à l'utilisateur ("rien ne se passe"). Voir G.transferPlanetResources
+  // (guarded('transfer_resources', ...)) et transferResources() côté game-action.
+  async function doTransfer(){
     const s = S();
+    s.transferDraft = s.transferDraft || {};
     const fromEl = document.getElementById("cc-tr-from");
     const toEl = document.getElementById("cc-tr-to");
-    const fromId = fromEl && fromEl.value;
-    const toId = toEl && toEl.value;
+    const fromId = s.transferDraft.from || (fromEl && fromEl.value);
+    const toId = s.transferDraft.to || (toEl && toEl.value);
     if (!fromId || !toId || String(fromId) === String(toId)){
       if (typeof addLog === "function") addLog("Choisis deux planètes différentes pour le transfert.");
       if (typeof render === "function") render();
       return;
     }
-    if (typeof commitActiveResources === "function") commitActiveResources();
-    if (typeof ensurePlanetResources === "function") ensurePlanetResources();
-    const pr = s.planetResources || {};
-    const src = pr[fromId], dst = pr[toId];
-    if (!src || !dst){ if (typeof addLog === "function") addLog("Planète invalide."); return; }
-    const moved = { titanium:0, xenite:0, antimatter:0 };
-    ["titanium","xenite","antimatter"].forEach(k => {
-      let amt = Math.max(0, Math.floor(Number((document.getElementById("cc-tr-" + k) || {}).value) || 0));
-      amt = Math.min(amt, Math.floor(num(src[k])));
-      src[k] = num(src[k]) - amt;
-      dst[k] = num(dst[k]) + amt;
-      moved[k] = amt;
-    });
-    if (typeof syncActiveResources === "function") syncActiveResources();
-    if (typeof save === "function") save();
-    const total = moved.titanium + moved.xenite + moved.antimatter;
-    if (typeof addLog === "function") addLog(total > 0
-      ? `Transfert logistique → ${planetName(toId)} : ${f(moved.titanium)} Ti, ${f(moved.xenite)} Xe, ${f(moved.antimatter)} AM.`
-      : "Aucune ressource transférée (vérifie les quantités).");
-    if (typeof render === "function") render();
+    const amounts = {
+      titanium: Math.max(0, parseInt(s.transferDraft.titanium ?? (document.getElementById("cc-tr-titanium")||{}).value ?? 0, 10) || 0),
+      xenite: Math.max(0, parseInt(s.transferDraft.xenite ?? (document.getElementById("cc-tr-xenite")||{}).value ?? 0, 10) || 0),
+      antimatter: Math.max(0, parseInt(s.transferDraft.antimatter ?? (document.getElementById("cc-tr-antimatter")||{}).value ?? 0, 10) || 0),
+    };
+    if (amounts.titanium + amounts.xenite + amounts.antimatter <= 0){
+      if (typeof addLog === "function") addLog("Indique une quantité à transférer.");
+      if (typeof render === "function") render();
+      return;
+    }
+    if (typeof G.transferPlanetResources !== "function"){
+      if (typeof addLog === "function") addLog("Transfert indisponible : sécurité serveur non prête.");
+      if (typeof render === "function") render();
+      return;
+    }
+    const result = await G.transferPlanetResources(fromId, toId, amounts);
+    // G.transferPlanetResources()/guarded() déclenche déjà applyServerState()+render()
+    // en cas de succès ET d'échec (via serverAction) : pas besoin de rappeler render() ici.
+    if (result){
+      s.transferDraft.titanium = 0;
+      s.transferDraft.xenite = 0;
+      s.transferDraft.antimatter = 0;
+    }
   }
 
   const API = {
@@ -16121,6 +16139,21 @@ window.__stellarionKeepConstructionScroll = function(cb){
     },
     order(missionType){ orderMission(missionType); },
     lockTarget(){ lockTarget(); },
+    setTransferPlanet(which, val){
+      const s = S();
+      s.transferDraft = s.transferDraft || {};
+      s.transferDraft[which] = String(val);
+      // Changer le select (from/to) doit rafraîchir les "dispo X" affichés tout de
+      // suite : contrairement à la saisie d'un montant, ce n'est pas une frappe
+      // continue, donc pas de risque de perte de focus à re-rendre ici.
+      if (typeof render === "function") render();
+    },
+    setTransferAmount(k, val){
+      const s = S();
+      s.transferDraft = s.transferDraft || {};
+      s.transferDraft[k] = Math.max(0, parseInt(val || 0, 10) || 0);
+      // Pas de render() ici : on ne fait que mémoriser le brouillon pendant la frappe.
+    },
     transfer(){ doTransfer(); }
   };
   G.StellarionCommandCenter = API;
@@ -24331,6 +24364,22 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   };
   try{ abandonColony = G.abandonColony; }catch(e){}
 
+  // 1.7.15 — Transfert de ressources entre planètes ("Logistique inter-planètes").
+  // Avant ce correctif, ce transfert ne touchait que state.planetResources en local
+  // (jamais le serveur) : il était donc effacé en silence par la prochaine synchro,
+  // puisque game_resources fait autorité. Voir transferResources() côté game-action.
+  G.transferPlanetResources = async function(fromId, toId, amounts){
+    amounts = amounts || {};
+    return guarded('transfer_resources', {
+      from_planet_id: fromId,
+      to_planet_id: toId,
+      titanium: Math.max(0, Math.floor(Number(amounts.titanium)||0)),
+      xenite: Math.max(0, Math.floor(Number(amounts.xenite)||0)),
+      antimatter: Math.max(0, Math.floor(Number(amounts.antimatter)||0)),
+    });
+  };
+  try{ transferPlanetResources = G.transferPlanetResources; }catch(e){}
+
   G.launchMission = async function(mission){
     var s = st();
     var target = s.selected || {};
@@ -27983,4 +28032,50 @@ window.stellarionScrollAudit1610 = function(){
     window.render=wrappedRender1709;
     try{ render=wrappedRender1709; }catch(e){}
   }
+})();
+
+/* STELLARION 1.7.14 — Retour utilisateur : "impossible d'écrire, le focus ne se fait pas"
+   dans Renommer la colonie / Relocalisateur galactique (vue Galaxie). Le correctif 1709
+   ci-dessus restaure le focus APRÈS un render(), mais si render() est redéclenché plusieurs
+   fois par seconde (files d'attente, trajectoires de flotte en vol, etc.), la restauration
+   peut être elle-même écrasée par l'appel suivant : dans les faits, le champ ne garde jamais
+   le focus assez longtemps pour taper. Fix plus robuste : tant que l'un de ces champs a le
+   focus, on n'exécute PAS le rendu complet (qui reconstruit tout #app.innerHTML et donc
+   détruit l'input) — les compteurs (files, ressources) continuent d'être mis à jour ailleurs,
+   hors innerHTML. Dès que le champ perd le focus, un rendu de rattrapage est déclenché. */
+(function(){
+  "use strict";
+  if(window.__stellarionProtectTypingFields1714) return;
+  window.__stellarionProtectTypingFields1714 = true;
+
+  var PROTECTED_PREFIXES = ["renameInputLive1709_","relocInputXLive1709_","relocInputYLive1709_","cc-tr-titanium","cc-tr-xenite","cc-tr-antimatter"];
+  function isProtectedInput(el){
+    if(!el || !el.id) return false;
+    for(var i=0;i<PROTECTED_PREFIXES.length;i++){ if(el.id.indexOf(PROTECTED_PREFIXES[i])===0) return true; }
+    return false;
+  }
+
+  var oldRender1714 = window.render;
+  if(typeof oldRender1714 === "function" && !oldRender1714.__protectTyping1714){
+    var wrappedRender1714 = function(){
+      if(!window.__forceRenderNow1714 && isProtectedInput(document.activeElement)){
+        return; // saute le rendu tant que l'utilisateur tape dans ce champ
+      }
+      return oldRender1714.apply(this, arguments);
+    };
+    wrappedRender1714.__protectTyping1714 = true;
+    window.render = wrappedRender1714;
+    try{ render = wrappedRender1714; }catch(e){}
+  }
+
+  document.addEventListener("focusout", function(e){
+    if(!isProtectedInput(e.target)) return;
+    setTimeout(function(){
+      try{
+        window.__forceRenderNow1714 = true;
+        if(typeof window.render === "function") window.render();
+      }catch(err){}
+      finally{ window.__forceRenderNow1714 = false; }
+    }, 30);
+  }, true);
 })();

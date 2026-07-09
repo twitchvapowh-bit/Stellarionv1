@@ -228,6 +228,47 @@ files de construction/formation et stock de la colonie sont définitivement perd
 remboursement ni rapatriement vers la planète mère. Une flotte déjà en vol vers une
 colonie abandonnée est automatiquement rapatriée vers la planète mère au lieu d'échouer.
 
+## Alpha 1.7.14 — Impossible d'écrire dans Renommer/Relocaliser (9 juillet 2026, suite)
+
+Retour utilisateur : dans le panneau de la colonie sur la carte Galaxie, impossible de
+taper un nouveau nom de planète ou une position de relocalisation — le focus clavier ne
+se posait jamais dans les champs.
+
+Cause : `render()` reconstruit tout `#app.innerHTML` très fréquemment (files d'attente,
+trajectoires de flotte), ce qui détruit et recrée l'input en cours d'édition. Un correctif
+précédent (1.7.09) restaurait le focus après coup, mais quand `render()` est redéclenché
+plusieurs fois par seconde, cette restauration peut elle-même être écrasée par l'appel
+suivant : dans les faits, le champ ne gardait jamais le focus assez longtemps pour taper.
+
+Corrigé plus radicalement : tant qu'un champ "Renommer la colonie" ou "Relocalisateur
+galactique" a le focus, `render()` est sauté entièrement (aucune reconstruction du DOM ne
+peut donc l'interrompre) ; les compteurs de ressources/files continuent d'être mis à jour
+par ailleurs, sans passer par `render()`. Dès que le champ perd le focus, un rendu de
+rattrapage s'exécute pour resynchroniser l'affichage.
+
+## Alpha 1.7.15 — Le transfert de ressources inter-planètes ne fonctionnait pas du tout (9 juillet 2026, suite)
+
+Retour utilisateur (à juste titre très mécontent) : dans le panneau "Logistique
+inter-planètes" (Commandements), impossible de saisir une quantité de Titane/Xénite/
+Antimatière — le champ repassait à 0 dès qu'on cliquait ailleurs — et le bouton "Envoyer
+les ressources" ne faisait rien de durable.
+
+Deux bugs cumulés :
+1. Les champs de quantité n'avaient aucun `oninput` : rien ne mémorisait la valeur tapée
+   nulle part, donc le moindre rafraîchissement de page (fréquent, comme pour le bug
+   1.7.14 ci-dessus) la remettait à 0 telle qu'écrite en dur dans le template.
+2. Plus grave : le bouton "Envoyer les ressources" ne faisait qu'une mutation locale de
+   `state.planetResources`, sans jamais appeler le serveur. Comme `game_resources` (côté
+   Supabase) fait autorité et resynchronise le client périodiquement, ce "transfert"
+   fantôme était systématiquement effacé en silence à la synchro suivante.
+
+Corrigé des deux côtés : nouvelle action serveur `transfer_resources` dans `game-action`
+(déployée v21) qui déplace réellement titane/xénite/antimatière d'une planète à l'autre
+dans `game_resources`, de façon atomique et après vérification que les deux planètes
+appartiennent bien au joueur. Côté client, les champs de départ/destination/quantités
+sont maintenant sauvegardés dans `state.transferDraft` (comme pour renommer/relocaliser)
+et le bouton appelle ce nouveau point d'entrée serveur au lieu de mutations locales.
+
 ## Alpha 1.5.45 — Messagerie destinataire
 
 Ajout : champ destinataire avec répertoire/autocomplete des joueurs depuis la table Supabase `players`.
