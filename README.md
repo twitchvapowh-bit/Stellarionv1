@@ -294,6 +294,26 @@ base pour créer la ligne manquante de `sys_11`. La restitution des ressources p
 lors des 3 tentatives ratées est traitée séparément avec le joueur, faute de journal
 exact des montants exacts demandés à chaque tentative.
 
+## Alpha 1.7.17 — Files de construction bâtiments partagées entre toutes les planètes (9 juillet 2026, suite)
+
+Retour utilisateur : "il faut que les files d'attente des constructions de bâtiments et
+de vaisseaux de chaque planète soit indépendante."
+
+Cause racine (bâtiments uniquement — les vaisseaux étaient déjà indépendants par
+planète, aucune limite de file n'existait pour eux) : `buyBuilding()` côté serveur
+comptait le nombre de constructions en cours sur TOUTES les planètes du compte
+(`game_build_queue` sans filtre `planet_id`) pour appliquer la limite de 1 (ou 2 avec
+la "file auxiliaire permanente"). Une construction en cours sur la planète mère
+bloquait donc toute construction sur une colonie, et inversement. Côté client, le
+patch de gestion de cette limite (`activeBuildQueueCount1550`) faisait la même erreur
+en comptant globalement plutôt que par planète, ce qui grisait aussi le bouton à tort.
+
+Corrigé des deux côtés pour compter et limiter par planète : chaque planète a
+maintenant sa propre file de 1 construction (2 avec l'upgrade). Décision produit
+prise avec l'utilisateur : le joueur qui a déjà acheté la file auxiliaire permanente
+(1500 fragments) en profite désormais sur CHAQUE planète (mère et colonies), pas
+seulement 2 au total sur le compte — un joueur possède déjà cet achat.
+
 ## Alpha 1.5.45 — Messagerie destinataire
 
 Ajout : champ destinataire avec répertoire/autocomplete des joueurs depuis la table Supabase `players`.

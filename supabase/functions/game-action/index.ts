@@ -954,7 +954,9 @@ async function buyBuilding(admin: any, playerId: string, body: any) {
   const planetId = safePlanet(body.planet_id || body.planetId || "home");
   const def = BUILDINGS[buildingId];
   if (!def) throw new Error("batiment_inconnu");
-  const qCount = await admin.from("game_build_queue").select("id", { count:"exact", head:true }).eq("player_id", playerId);
+  // 1.7.17 — la file de construction doit etre independante par planete : on ne compte
+  // plus les constructions en cours sur TOUT le compte, seulement celles de cette planete.
+  const qCount = await admin.from("game_build_queue").select("id", { count:"exact", head:true }).eq("player_id", playerId).eq("planet_id", planetId);
   if (qCount.error) throw qCount.error;
   const maxQueue = await maxBuildQueue(admin, playerId);
   if ((qCount.count || 0) >= maxQueue) throw new Error("file_construction_pleine");

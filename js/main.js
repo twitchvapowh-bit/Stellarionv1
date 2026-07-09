@@ -20191,19 +20191,23 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   }
 
   function hasBuildQueue2Permanent1550(){ return ensureUpgradeState1550().unlocked; }
+  // 1.7.17 : la limite de file s'applique maintenant PAR PLANÈTE (1 de base, 2 avec
+  // l'upgrade permanente — sur CHAQUE planète, pas seulement 2 au total sur le compte).
   function maxBuildQueues1550(){ return hasBuildQueue2Permanent1550() ? 2 : 1; }
-  function activeBuildQueueCount1550(){
+  function activeBuildQueueCount1550(planetId){
     if(!window.state || !Array.isArray(state.buildQueue)) return 0;
     var now = Date.now();
-    // On compte les constructions en cours OU déjà planifiées, pas les anciennes entrées terminées.
-    return state.buildQueue.filter(function(q){ return q && Number(q.finishAt || 0) > now; }).length;
+    var pid = planetId || state.activePlanetId;
+    // On compte les constructions en cours OU déjà planifiées sur CETTE planète
+    // uniquement (pas les anciennes entrées terminées, pas les autres planètes).
+    return state.buildQueue.filter(function(q){ return q && q.planetId === pid && Number(q.finishAt || 0) > now; }).length;
   }
 
   function queueFullReason1550(){
     var max = maxBuildQueues1550();
     return hasBuildQueue2Permanent1550()
-      ? "Files de construction pleines : " + max + "/" + max + "."
-      : "File de construction pleine. Débloque la file auxiliaire permanente pour passer à 2 constructions simultanées.";
+      ? "File de construction pleine sur cette planète : " + max + "/" + max + "."
+      : "File de construction pleine sur cette planète. Débloque la file auxiliaire permanente pour passer à 2 constructions simultanées par planète.";
   }
 
   // Remplace l'ancienne logique de file par planète/centre de commandement.
@@ -20213,7 +20217,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   function premiumQueueCard1550(){
     if(window.__stellarionBootHold || (typeof currentUser !== 'undefined' && currentUser && !window.__stellarionServerStateLoaded1570)) return '';
     var st = ensureUpgradeState1550();
-    var active = activeBuildQueueCount1550();
+    var active = activeBuildQueueCount1550(state.activePlanetId);
     var max = maxBuildQueues1550();
     // Une fois l'achat permanent effectué, on ne garde plus de bandeau premium.
     // La 2e file reste active via maxBuildQueues1550(), mais l'UI d'achat disparaît.
@@ -20223,8 +20227,8 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     var canBuy = st.fragments >= PRICE;
     return '<div class="card panel build-queue-premium1550 locked">'
       + '<div><span class="pill">🏗️ PREMIUM</span><h3>File auxiliaire permanente</h3>'
-      + '<p class="small muted">Débloque définitivement une 2e construction de bâtiment simultanée. Achat unique, valable sur tout le compte.</p>'
-      + '<div class="tiny muted">Limite finale : 2 files bâtiment maximum. Pas une file par planète.</div></div>'
+      + '<p class="small muted">Débloque définitivement une 2e construction de bâtiment simultanée, sur chaque planète. Achat unique, valable sur tout le compte.</p>'
+      + '<div class="tiny muted">Limite : 2 files bâtiment maximum PAR PLANÈTE (mère et colonies).</div></div>'
       + '<div class="bq2-buybox1550"><strong>'+f(PRICE)+' 💠</strong><span>Fragments disponibles : '+f(st.fragments)+'</span>'
       + '<button class="btn btn-gold" '+(canBuy?'':'disabled')+' onclick="unlockBuildQueue2Permanent1550();event.stopPropagation();return false;">Débloquer définitivement</button></div>'
       + '</div>';
@@ -20287,7 +20291,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
       unlocked: st.unlocked,
       price: PRICE,
       fragments: st.fragments,
-      activeBuildQueue: activeBuildQueueCount1550(),
+      activeBuildQueue: activeBuildQueueCount1550(state.activePlanetId),
       maxBuildQueue: maxBuildQueues1550(),
       queue: Array.isArray(state.buildQueue) ? state.buildQueue.map(function(q){return {id:q.id, planetId:q.planetId, building_id:q.building_id, to:q.to || q.toLevel, finishAt:q.finishAt};}) : []
     };
@@ -20310,7 +20314,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
       var c = cost(def, next);
       var allowed = canBuildOnPlanet(def, activePlanet());
       var max = false;
-      var queueOpen = activeBuildQueueCount1550() < maxBuildQueues1550();
+      var queueOpen = activeBuildQueueCount1550(state.activePlanetId) < maxBuildQueues1550();
       var ok = !!(allowed.ok
         && queueOpen
         && Number(state.resources.titanium || 0) >= Number(c.titanium || 0)
@@ -20326,7 +20330,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   var oldBuildingBlockReason1550 = window.buildingBlockReason;
   window.buildingBlockReason = function(def, info){
     try{
-      if(info && !info.queueOpen && activeBuildQueueCount1550() >= maxBuildQueues1550()) return queueFullReason1550();
+      if(info && !info.queueOpen && activeBuildQueueCount1550(state.activePlanetId) >= maxBuildQueues1550()) return queueFullReason1550();
     }catch(e){}
     return oldBuildingBlockReason1550 ? oldBuildingBlockReason1550.apply(this, arguments) : 'Prêt';
   };
@@ -20343,7 +20347,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
   window.planetQueueFloatingHtml = function(){
     try{
       var activePlanetQueue = (Array.isArray(state.buildQueue) ? state.buildQueue : []).filter(function(x){ return x.planetId === state.activePlanetId && Number(x.finishAt || 0) > Date.now(); });
-      return '<div class="queue-floating"><span class="pill">CONSTRUCTION GLOBALE '+activeBuildQueueCount1550()+'/'+maxBuildQueues1550()+'</span>'
+      return '<div class="queue-floating"><span class="pill">CONSTRUCTION '+activeBuildQueueCount1550(state.activePlanetId)+'/'+maxBuildQueues1550()+'</span>'
         + (activePlanetQueue.length ? activePlanetQueue.map(planetQueueCompactHtml).join('') : '<p class="muted small">Aucune construction sur cette planète.</p>')
         + '</div>';
     }catch(e){ return oldPlanetQueueFloatingHtml1550 ? oldPlanetQueueFloatingHtml1550.apply(this, arguments) : ''; }
@@ -20369,7 +20373,7 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     var allowed = canBuildOnPlanet(def, planet);
     if(!allowed.ok){ addLog(allowed.reason + '.'); render(); return; }
 
-    var currentQueueCount = activeBuildQueueCount1550();
+    var currentQueueCount = activeBuildQueueCount1550(planet.id);
     var maxQueue = maxBuildQueues1550();
     if(currentQueueCount >= maxQueue){
       addLog(queueFullReason1550());
@@ -20552,8 +20556,8 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     var canBuy = st.fragments >= PRICE;
     return '<div id="'+CARD_ID+'" class="card panel locked">'
       + '<div><span class="pill">🏗️ PREMIUM</span><h3>File auxiliaire permanente</h3>'
-      + '<p class="small muted">Débloque définitivement une 2e construction de bâtiment simultanée. Achat unique, valable sur tout le compte.</p>'
-      + '<div class="tiny muted">Limite finale : 2 files bâtiment maximum. Pas une file par planète.</div></div>'
+      + '<p class="small muted">Débloque définitivement une 2e construction de bâtiment simultanée, sur chaque planète. Achat unique, valable sur tout le compte.</p>'
+      + '<div class="tiny muted">Limite : 2 files bâtiment maximum PAR PLANÈTE (mère et colonies).</div></div>'
       + '<div class="bq2-actions1551"><div class="bq2-price1551">'+fmt1551(PRICE)+' 💠</div>'
       + '<span class="small muted">Fragments disponibles : '+fmt1551(st.fragments)+'</span>'
       + '<button class="btn btn-gold" '+(canBuy?'':'disabled')+' onclick="unlockBuildQueue2Permanent1550();event.stopPropagation();return false;">Débloquer définitivement</button></div>'
