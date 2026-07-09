@@ -3846,6 +3846,15 @@ function renamePlanetHtml(pid){
   <button class="btn" style="width:100%;margin-top:8px" onclick="renamePlanet('${pid}')">Renommer gratuitement</button>
  </div>`;
 }
+// 1.7.13 — Abandon de colonie (jamais la planète mère). Bouton affiché uniquement
+// sur une colonie ; tout est perdu (bâtiments, vaisseaux, stock), sans remboursement
+// ni rapatriement (confirmé côté design). La confirmation stylée + l'appel serveur
+// sont dans G.abandonColony (voir le bloc "server authority" plus bas dans le fichier).
+function abandonColonyButtonHtml(pid){
+ const p=(state.planets||[]).find(x=>x.id===pid);
+ if(!p || p.isHomeworld) return "";
+ return `<button class="btn btn-danger" style="width:100%;margin-top:8px" onclick="abandonColony('${pid}')">🗑️ Abandonner cette colonie</button>`;
+}
 
 
 function planetCompactShipsHtml(pid){
@@ -4265,6 +4274,7 @@ function planetShowcaseView(){
      ${renamePlanetHtml(p.id)}${relocatePlanetHtml(p.id)}${planetCompactShipsHtml(p.id)}
      <button class="btn" style="width:100%;margin-top:12px" onclick="setView('ships')">Gérer les vaisseaux</button>
      <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="setView('galaxy')">Retour galaxie</button>
+     ${abandonColonyButtonHtml(p.id)}
     </div>
    </div>
   </div>`;
@@ -24069,30 +24079,40 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     if(!srv) return false;
     var s = st();
     s.__serverAuthority1570 = { patch:PATCH, ok:true, at:Date.now(), serverTime:srv.serverTime || null };
+    // 1.7.13 — Ressources par planète. Avant, le serveur ne renvoyait qu'un pool
+    // unique (srv.resources) qu'on recopiait tel quel sur la planète active — donc
+    // une colonie affichait instantanément tout le stock de la planète mère. Le
+    // serveur renvoie maintenant une ligne par planète (srv.resourcesByPlanet) ;
+    // on peuple planetResources pour CHAQUE planète, et state.resources reflète la
+    // planète actuellement active (titane/xénite/antimatière propres). Les FRAGMENTS
+    // restent une monnaie de compte (achetée via Stripe) : toujours ceux de "home"
+    // (srv.resources), quelle que soit la planète affichée à l'écran.
     s.resources = s.resources || {};
-    if(srv.resources){
-      s.resources.titanium = Number(srv.resources.titanium)||0;
-      s.resources.xenite = Number(srv.resources.xenite)||0;
-      s.resources.antimatter = Number(srv.resources.antimatter)||0;
-      s.resources.fragments = Number(srv.resources.fragments)||0;
-      s.resources.darkMatter = 0;
-      s.resources.energy = Number(s.resources.energy)||0;
-    }
+    s.resources.fragments = Number(srv.resources && srv.resources.fragments) || 0;
+    s.resources.darkMatter = 0;
+    s.resources.energy = Number(s.resources.energy)||0;
+
+    s.planetResources = s.planetResources || {};
+    (srv.resourcesByPlanet || []).forEach(function(r){
+      var rpid = String(r.planet_id || 'home');
+      s.planetResources[rpid] = s.planetResources[rpid] || {titanium:0,xenite:0,antimatter:0,energy:0};
+      s.planetResources[rpid].titanium = Number(r.titanium)||0;
+      s.planetResources[rpid].xenite = Number(r.xenite)||0;
+      s.planetResources[rpid].antimatter = Number(r.antimatter)||0;
+    });
+    try{
+      var pid = activePid();
+      var activeRes = s.planetResources[pid] || {titanium:0,xenite:0,antimatter:0,energy:0};
+      s.resources.titanium = activeRes.titanium;
+      s.resources.xenite = activeRes.xenite;
+      s.resources.antimatter = activeRes.antimatter;
+    }catch(e){}
+
     if(srv.upgrades){
       s.premiumUpgrades = s.premiumUpgrades || {};
       s.premiumUpgrades.buildQueue2Permanent = !!srv.upgrades.buildQueue2Permanent;
       if(srv.upgrades.buildQueue2PurchasedAt) s.premiumUpgrades.buildQueue2PermanentPurchasedAt = srv.upgrades.buildQueue2PurchasedAt;
     }
-
-    // Ressources miroir planète active.
-    try{
-      var pid = activePid();
-      s.planetResources = s.planetResources || {};
-      s.planetResources[pid] = s.planetResources[pid] || {titanium:0,xenite:0,antimatter:0,energy:0};
-      s.planetResources[pid].titanium = s.resources.titanium;
-      s.planetResources[pid].xenite = s.resources.xenite;
-      s.planetResources[pid].antimatter = s.resources.antimatter;
-    }catch(e){}
 
     var groupedB = {};
     (srv.buildings || []).forEach(function(r){
@@ -24281,6 +24301,35 @@ console.log('✅ Systèmes TIER S chargés (Marché, Leaderboards, Chat, Notifs,
     }
   };
   try{ processShipQueue = G.processShipQueue; }catch(e){}
+
+  // 1.7.13 — Abandon de colonie. Jamais la planète mère. Tout est perdu (bâtiments,
+  // vaisseaux, stock sur place) sans remboursement ni rapatriement : confirmé côté design.
+  G.abandonColony = async function(pid){
+    var p = (st().planets||[]).find(function(x){ return x && x.id === pid; });
+    if(!p){ log('Planète introuvable.'); return null; }
+    if(p.isHomeworld){ log('Impossible d’abandonner la planète mère.'); return null; }
+    var msg = 'Abandonner la colonie "'+(p.name||pid)+'" ? Bâtiments, vaisseaux et stock présents sur place seront définitivement perdus, sans remboursement. Cette action est irréversible.';
+    if(typeof stConfirm==='function'){ if(!(await stConfirm(msg))) return null; }
+    var result = await guarded('abandon_colony', { planet_id: pid }, 'Colonie abandonnée.');
+    if(!result) return null;
+    try{
+      var s = st();
+      s.planets = (s.planets||[]).filter(function(x){ return x && x.id !== pid; });
+      if(s.buildings) delete s.buildings[pid];
+      if(s.planetShips) delete s.planetShips[pid];
+      if(s.planetResources) delete s.planetResources[pid];
+      if(s.activePlanetId === pid){
+        var home = (s.planets||[]).find(function(x){ return x && x.isHomeworld; }) || (s.planets||[])[0];
+        s.activePlanetId = home ? home.id : 'home';
+      }
+      s.colonies = Math.max(0, (Number(s.colonies)||1)-1);
+    }catch(e){}
+    try{ if(typeof G.save==='function') G.save(); }catch(e){}
+    try{ setView('galaxy'); }catch(e){}
+    renderSafe();
+    return result;
+  };
+  try{ abandonColony = G.abandonColony; }catch(e){}
 
   G.launchMission = async function(mission){
     var s = st();

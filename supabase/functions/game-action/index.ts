@@ -147,6 +147,8 @@ Deno.serve(async (req) => {
       extra.repair = repair;
     } else if (action === "credit_quest_reward") {
       message = await creditQuestReward(admin, user.id, body);
+    } else if (action === "abandon_colony") {
+      message = await abandonColony(admin, user.id, body);
     } else {
       await audit(admin, user.id, action, false, { error:"unknown_action" });
       return json({ ok:false, error:"action_inconnue", state: await snapshot(admin, user.id) }, 400);
@@ -212,7 +214,10 @@ async function ensurePlayer(admin: any, playerId: string, snapshotPayload: any) 
       p_name: "Planète mère"
     });
   } catch (_) {}
-  const existing = await admin.from("game_resources").select("player_id").eq("player_id", playerId).maybeSingle();
+  // 1.7.13 : game_resources est maintenant clé (player_id, planet_id) — un joueur
+  // avec des colonies a plusieurs lignes. On vérifie spécifiquement la ligne
+  // "home" (sinon .maybeSingle() plante dès la 2e planète avec "multiple rows").
+  const existing = await admin.from("game_resources").select("player_id").eq("player_id", playerId).eq("planet_id", "home").maybeSingle();
   if (!existing.error && existing.data) {
     await admin.from("game_buildings").upsert({ player_id:playerId, planet_id:"home", building_id:"command_center", level:1, updated_at:new Date().toISOString() }, { onConflict:"player_id,planet_id,building_id", ignoreDuplicates:true });
     await admin.from("game_security_profile").upsert({ player_id:playerId, updated_at:new Date().toISOString() }, { onConflict:"player_id" });
@@ -222,13 +227,14 @@ async function ensurePlayer(admin: any, playerId: string, snapshotPayload: any) 
   const seed = sanitizeInitialSnapshot(snapshotPayload || {});
   const res = await admin.from("game_resources").upsert({
     player_id: playerId,
+    planet_id: "home",
     titanium: seed.resources.titanium,
     xenite: seed.resources.xenite,
     antimatter: seed.resources.antimatter,
     fragments: seed.resources.fragments,
     last_tick: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-  }, { onConflict:"player_id" });
+  }, { onConflict:"player_id,planet_id" });
   if (res.error) throw res.error;
 
   const rows = seed.buildings.length ? seed.buildings : [{ planet_id:"home", building_id:"command_center", level:1 }];
@@ -269,48 +275,61 @@ function sanitizeInitialSnapshot(s: any) {
   return { resources, buildings, ships };
 }
 
+// 1.7.13 : accrual par planète. Avant, la production de TOUS les bâtiments (toutes
+// planètes confondues) était sommée dans l'unique ligne du joueur — une colonie
+// profitait donc instantanément de tout le stock de la planète mère. Chaque planète
+// (ligne game_resources) a maintenant son propre last_tick et n'accumule que la
+// production de ses propres bâtiments (mêmes formules qu'avant, appliquées par planète).
 async function accrueResources(admin: any, playerId: string) {
-  const rr = await admin.from("game_resources").select("*").eq("player_id", playerId).maybeSingle();
+  const rr = await admin.from("game_resources").select("*").eq("player_id", playerId);
   if (rr.error) throw rr.error;
-  const res = rr.data;
-  if (!res) return;
-  const last = new Date(res.last_tick || Date.now()).getTime();
-  const now = Date.now();
-  const dt = Math.min(12 * 3600, Math.max(0, (now - last) / 1000));
-  if (dt < 5) return;
+  const rows = rr.data || [];
+  if (!rows.length) return;
 
   const br = await admin.from("game_buildings").select("planet_id,building_id,level").eq("player_id", playerId);
   if (br.error) throw br.error;
-  const buildings = br.data || [];
-  let energyProd = 0;
-  let energyCons = 0;
-  let titaniumPerHour = 0;
-  let xenitePerHour = 0;
-  let antimatterPerHour = 0;
-
-  for (const row of buildings) {
-    const def = BUILDINGS[row.building_id];
-    if (!def) continue;
-    const lvl = n(row.level, 0, 1000);
-    if (def.id === "fusion_plant") energyProd += energyProduction(lvl);
-    energyCons += energyConsumption(def.baseEnergyConsumption, lvl);
-    if (!def.produces || def.produces === "energy") continue;
-    const v = resourceProduction(def.baseRate, lvl);
-    if (def.produces === "titanium") titaniumPerHour += v;
-    if (def.produces === "xenite") xenitePerHour += v;
-    if (def.produces === "antimatter") antimatterPerHour += v;
+  const buildingsByPlanet: Record<string, any[]> = {};
+  for (const row of br.data || []) {
+    const pid = String(row.planet_id || "home");
+    (buildingsByPlanet[pid] = buildingsByPlanet[pid] || []).push(row);
   }
-  const balance = energyProd - energyCons;
-  const ratio = balance >= 0 ? 1 : balance > -energyProd*.1 ? .85 : balance > -energyProd*.25 ? .60 : balance > -energyProd*.5 ? .30 : .10;
-  const upd = {
-    titanium: n(res.titanium) + Math.floor(titaniumPerHour * ratio * dt / 3600),
-    xenite: n(res.xenite) + Math.floor(xenitePerHour * ratio * dt / 3600),
-    antimatter: n(res.antimatter) + Math.floor(antimatterPerHour * ratio * dt / 3600),
-    last_tick: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-  const up = await admin.from("game_resources").update(upd).eq("player_id", playerId);
-  if (up.error) throw up.error;
+
+  const now = Date.now();
+  for (const res of rows) {
+    const planetId = String(res.planet_id || "home");
+    const last = new Date(res.last_tick || now).getTime();
+    const dt = Math.min(12 * 3600, Math.max(0, (now - last) / 1000));
+    if (dt < 5) continue;
+
+    let energyProd = 0;
+    let energyCons = 0;
+    let titaniumPerHour = 0;
+    let xenitePerHour = 0;
+    let antimatterPerHour = 0;
+    for (const row of buildingsByPlanet[planetId] || []) {
+      const def = BUILDINGS[row.building_id];
+      if (!def) continue;
+      const lvl = n(row.level, 0, 1000);
+      if (def.id === "fusion_plant") energyProd += energyProduction(lvl);
+      energyCons += energyConsumption(def.baseEnergyConsumption, lvl);
+      if (!def.produces || def.produces === "energy") continue;
+      const v = resourceProduction(def.baseRate, lvl);
+      if (def.produces === "titanium") titaniumPerHour += v;
+      if (def.produces === "xenite") xenitePerHour += v;
+      if (def.produces === "antimatter") antimatterPerHour += v;
+    }
+    const balance = energyProd - energyCons;
+    const ratio = balance >= 0 ? 1 : balance > -energyProd*.1 ? .85 : balance > -energyProd*.25 ? .60 : balance > -energyProd*.5 ? .30 : .10;
+    const upd = {
+      titanium: n(res.titanium) + Math.floor(titaniumPerHour * ratio * dt / 3600),
+      xenite: n(res.xenite) + Math.floor(xenitePerHour * ratio * dt / 3600),
+      antimatter: n(res.antimatter) + Math.floor(antimatterPerHour * ratio * dt / 3600),
+      last_tick: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const up = await admin.from("game_resources").update(upd).eq("player_id", playerId).eq("planet_id", planetId);
+    if (up.error) throw up.error;
+  }
 }
 
 function shipCargoCapacity(ships: any) {
@@ -473,8 +492,13 @@ async function markFleetReturningAfterCombat(admin: any, supaUser: any, playerId
   const returningShips = result.playerRemaining || f.ships || {};
   const loot = result.loot || { titanium:0, xenite:0, antimatter:0, fragments:0 };
   const lootTotal = n(loot.titanium) + n(loot.xenite) + n(loot.antimatter) + n(loot.fragments);
-  if (lootTotal > 0) await addResources(admin, playerId, loot);
-  const resourcesAfter = await currentResources(admin, playerId);
+  // 1.7.13 : le butin est credite a la planete d'origine de la flotte (ressources
+  // propres a chaque planete), les fragments restent une monnaie compte-large (home).
+  const creditPlanetId = await resolveCreditPlanetId(admin, playerId, f.origin_planet_id);
+  if (n(loot.titanium) + n(loot.xenite) + n(loot.antimatter) > 0) await addResources(admin, playerId, creditPlanetId, loot);
+  if (n(loot.fragments) > 0) await addFragments(admin, playerId, loot.fragments);
+  const resourcesAfter = await currentResources(admin, playerId, creditPlanetId);
+  const fragmentsAfter = await currentFragments(admin, playerId);
   const creditedResult = {
     ...result,
     serverResolved:true,
@@ -484,7 +508,7 @@ async function markFleetReturningAfterCombat(admin: any, supaUser: any, playerId
       titanium:n(resourcesAfter.titanium),
       xenite:n(resourcesAfter.xenite),
       antimatter:n(resourcesAfter.antimatter),
-      fragments:n(resourcesAfter.fragments),
+      fragments:fragmentsAfter,
     },
   };
   // V11 1.5.92 : le rapport ne dépend plus de la durée de vie de la ligne game_fleets.
@@ -647,10 +671,13 @@ async function processQueues(admin: any, maybeSupaUser: any, maybePlayerId?: str
         await admin.from("game_fleets").delete().eq("id", f.id).eq("player_id", playerId);
         continue;
       }
+      // 1.7.13 : rapatrie vers la planete d'origine si elle existe encore, sinon
+      // vers "home" (cas d'une colonie abandonnee pendant que la flotte etait en vol).
+      const creditPlanetIdReturn = await resolveCreditPlanetId(admin, playerId, f.origin_planet_id);
       const ships = f.ships || {};
-      for (const [shipId, qty] of Object.entries(ships)) if (SHIPS[shipId]) await addShips(admin, playerId, f.origin_planet_id, shipId, n(qty,0,1000000));
+      for (const [shipId, qty] of Object.entries(ships)) if (SHIPS[shipId]) await addShips(admin, playerId, creditPlanetIdReturn, shipId, n(qty,0,1000000));
       const cargo = f.cargo || {};
-      if (n(cargo.titanium)+n(cargo.xenite)+n(cargo.antimatter)+n(cargo.fragments) > 0) await addResources(admin, playerId, cargo);
+      if (n(cargo.titanium)+n(cargo.xenite)+n(cargo.antimatter) > 0) await addResources(admin, playerId, creditPlanetIdReturn, cargo);
       await admin.from("game_fleets").delete().eq("id", f.id).eq("player_id", playerId);
     } else {
       const mission = String(f.mission || "");
@@ -735,28 +762,97 @@ async function resolveColonization(admin: any, playerId: string, f: any) {
     { onConflict: "player_id,planet_id,building_id" }
   );
   if (up.error) throw up.error;
+  // 1.7.13 : chaque planète a son propre stock de ressources (titane/xénite/antimatière) —
+  // la nouvelle colonie démarre à 0 (elle n'a encore aucune mine) ; les fragments à 0 ne
+  // sont jamais utilisés hors de la ligne "home", posés ici uniquement par cohérence de schéma.
+  const resIns = await admin.from("game_resources").upsert(
+    { player_id: playerId, planet_id: planetId, titanium: 0, xenite: 0, antimatter: 0, fragments: 0, last_tick: new Date().toISOString(), updated_at: new Date().toISOString() },
+    { onConflict: "player_id,planet_id", ignoreDuplicates: true }
+  );
+  if (resIns.error) throw resIns.error;
   const systemNumber = n(target.system, 1, 100000);
   const profile = planetProfileServer1710(systemNumber || 1, String(target.name || f.target_name || "Système"));
   await audit(admin, playerId, "colonize_success", true, { planetId, name: profile.name, rarity: profile.rarity, archetype: profile.archetype });
 }
 
-async function currentResources(admin: any, playerId: string) {
-  const rr = await admin.from("game_resources").select("*").eq("player_id", playerId).maybeSingle();
+// 1.7.13 — Abandon de colonie. Décision confirmée : tout est perdu (bâtiments,
+// vaisseaux, file de construction/formation, stock propre à la colonie), sans
+// remboursement ni rapatriement. Jamais "home". Idempotent côté flottes en vol :
+// resolveCreditPlanetId() détecte l'absence de la planète et rapatrie vers "home"
+// tout vaisseau/ressource d'une flotte qui reviendrait vers une colonie abandonnée.
+async function abandonColony(admin: any, playerId: string, body: any) {
+  const planetId = safePlanet(String(body.planet_id || body.planetId || "").slice(0, 48));
+  if (!planetId || planetId === "home") throw new Error("planete_invalide");
+  const exists = await admin.from("game_buildings").select("building_id").eq("player_id", playerId).eq("planet_id", planetId).limit(1).maybeSingle();
+  if (exists.error) throw exists.error;
+  if (!exists.data) throw new Error("colonie_introuvable");
+  const delBuildings = await admin.from("game_buildings").delete().eq("player_id", playerId).eq("planet_id", planetId);
+  if (delBuildings.error) throw delBuildings.error;
+  const delShips = await admin.from("game_ships").delete().eq("player_id", playerId).eq("planet_id", planetId);
+  if (delShips.error) throw delShips.error;
+  const delBQ = await admin.from("game_build_queue").delete().eq("player_id", playerId).eq("planet_id", planetId);
+  if (delBQ.error) throw delBQ.error;
+  const delSQ = await admin.from("game_ship_queue").delete().eq("player_id", playerId).eq("planet_id", planetId);
+  if (delSQ.error) throw delSQ.error;
+  const delRes = await admin.from("game_resources").delete().eq("player_id", playerId).eq("planet_id", planetId);
+  if (delRes.error) throw delRes.error;
+  await audit(admin, playerId, "abandon_colony", true, { planetId });
+  return `Colonie abandonnée : bâtiments, vaisseaux et stock perdus.`;
+}
+
+// 1.7.13 — Ressources par planète (au lieu d'un pool unique par joueur).
+// game_resources est désormais clé (player_id, planet_id). Titane/Xénite/Antimatière
+// sont propres à chaque planète (mère + colonies) ; les FRAGMENTS (monnaie premium,
+// achetés via Stripe) restent volontairement une notion compte-large, toujours lus/
+// écrits sur la ligne planet_id="home", jamais dupliqués ni fractionnés par colonie —
+// voir currentFragments/spendFragments/addFragments plus bas.
+async function currentResources(admin: any, playerId: string, planetId: string) {
+  const rr = await admin.from("game_resources").select("titanium,xenite,antimatter").eq("player_id", playerId).eq("planet_id", planetId).maybeSingle();
   if (rr.error) throw rr.error;
   if (!rr.data) throw new Error("resources_missing");
   return rr.data;
 }
-async function setResources(admin: any, playerId: string, r: any) {
-  const up = await admin.from("game_resources").update({ titanium:n(r.titanium), xenite:n(r.xenite), antimatter:n(r.antimatter), fragments:n(r.fragments), updated_at:new Date().toISOString() }).eq("player_id", playerId);
+async function setResources(admin: any, playerId: string, planetId: string, r: any) {
+  const up = await admin.from("game_resources").update({ titanium:n(r.titanium), xenite:n(r.xenite), antimatter:n(r.antimatter), updated_at:new Date().toISOString() }).eq("player_id", playerId).eq("planet_id", planetId);
   if (up.error) throw up.error;
 }
-async function addResources(admin: any, playerId: string, delta: any) {
-  const r = await currentResources(admin, playerId);
+async function addResources(admin: any, playerId: string, planetId: string, delta: any) {
+  const r = await currentResources(admin, playerId, planetId);
   r.titanium = n(r.titanium) + n(delta.titanium,0,100_000_000);
   r.xenite = n(r.xenite) + n(delta.xenite,0,100_000_000);
   r.antimatter = n(r.antimatter) + n(delta.antimatter,0,50_000_000);
-  r.fragments = n(r.fragments) + n(delta.fragments,0,100_000);
-  await setResources(admin, playerId, r);
+  await setResources(admin, playerId, planetId, r);
+}
+async function currentFragments(admin: any, playerId: string) {
+  const rr = await admin.from("game_resources").select("fragments").eq("player_id", playerId).eq("planet_id", "home").maybeSingle();
+  if (rr.error) throw rr.error;
+  if (!rr.data) throw new Error("resources_missing");
+  return n(rr.data.fragments);
+}
+async function spendFragments(admin: any, playerId: string, amount: number) {
+  amount = n(amount, 0, 100_000_000);
+  if (amount <= 0) return;
+  const cur = await currentFragments(admin, playerId);
+  if (cur < amount) throw new Error("fragments_insuffisants");
+  const up = await admin.from("game_resources").update({ fragments: cur - amount, updated_at: new Date().toISOString() }).eq("player_id", playerId).eq("planet_id", "home");
+  if (up.error) throw up.error;
+}
+async function addFragments(admin: any, playerId: string, amount: number) {
+  amount = n(amount, 0, 100_000);
+  if (amount <= 0) return;
+  const cur = await currentFragments(admin, playerId);
+  const up = await admin.from("game_resources").update({ fragments: cur + amount, updated_at: new Date().toISOString() }).eq("player_id", playerId).eq("planet_id", "home");
+  if (up.error) throw up.error;
+}
+// Un vaisseau qui rentre credite sa planete d'origine — sauf si cette planete a
+// ete abandonnee entre-temps (colonie supprimee pendant que la flotte etait en
+// vol) : dans ce cas, on rapatrie vers "home" plutot que d'echouer/perdre le gain.
+async function resolveCreditPlanetId(admin: any, playerId: string, planetId: string) {
+  const pid = safePlanet(planetId);
+  if (!pid || pid === "home") return "home";
+  const exists = await admin.from("game_buildings").select("building_id").eq("player_id", playerId).eq("planet_id", pid).limit(1).maybeSingle();
+  if (exists.error || !exists.data) return "home";
+  return pid;
 }
 
 // STELLARION — correctif "recompense qui disparait" (quetes journalieres / boss hebdomadaire).
@@ -779,7 +875,10 @@ async function creditQuestReward(admin: any, playerId: string, body: any) {
     antimatter: n(body.antimatter, 0, 500_000),
     fragments: n(body.fragments, 0, 5_000),
   };
-  await addResources(admin, playerId, reward);
+  // 1.7.13 : recompense creditee sur "home" (les quetes/menaces galactiques ne sont
+  // pas rattachees a une planete precise cote client) ; fragments toujours a part.
+  if (reward.titanium || reward.xenite || reward.antimatter) await addResources(admin, playerId, "home", reward);
+  if (reward.fragments) await addFragments(admin, playerId, reward.fragments);
   return `Recompense objectif galactique creditee : ${reward.titanium} Ti / ${reward.xenite} Xe / ${reward.antimatter} AM / ${reward.fragments} fragments.`;
 }
 function hasEnough(r: any, c: Cost) { return n(r.titanium) >= n(c.titanium) && n(r.xenite) >= n(c.xenite) && n(r.antimatter) >= n(c.antimatter); }
@@ -801,10 +900,10 @@ async function buyBuilding(admin: any, playerId: string, body: any) {
   const from = rowLevel + (queued.count || 0);
   const to = from + 1;
   const c = cost(def, to);
-  const r = await currentResources(admin, playerId);
+  const r = await currentResources(admin, playerId, planetId);
   if (!hasEnough(r, c)) throw new Error("ressources_insuffisantes");
   spend(r, c);
-  await setResources(admin, playerId, r);
+  await setResources(admin, playerId, planetId, r);
   const startsAt = new Date().toISOString();
   const ins = await admin.from("game_build_queue").insert({ player_id:playerId, planet_id:planetId, building_id:buildingId, from_level:from, to_level:to, start_at:startsAt, finish_at:isoPlus(buildTime(def, to)) });
   if (ins.error) throw ins.error;
@@ -819,10 +918,7 @@ async function buyBuildQueue2(admin: any, playerId: string) {
   const pr = await admin.from("game_security_profile").select("build_queue_2_permanent").eq("player_id", playerId).maybeSingle();
   if (pr.error) throw pr.error;
   if (pr.data?.build_queue_2_permanent) return "File auxiliaire deja active.";
-  const r = await currentResources(admin, playerId);
-  if (n(r.fragments) < ECONOMY.buildQueue2Price) throw new Error("fragments_insuffisants");
-  r.fragments = n(r.fragments) - ECONOMY.buildQueue2Price;
-  await setResources(admin, playerId, r);
+  await spendFragments(admin, playerId, ECONOMY.buildQueue2Price);
   const up = await admin.from("game_security_profile").upsert({
     player_id: playerId,
     build_queue_2_permanent: true,
@@ -844,10 +940,7 @@ async function finishBuilding(admin: any, playerId: string, body: any) {
   if (!qr.data) throw new Error("construction_introuvable");
   const remain = Math.max(0, (new Date(qr.data.finish_at).getTime() - Date.now()) / 1000);
   const price = fragmentFinishCost(remain);
-  const r = await currentResources(admin, playerId);
-  if (n(r.fragments) < price) throw new Error("fragments_insuffisants");
-  r.fragments = n(r.fragments) - price;
-  await setResources(admin, playerId, r);
+  await spendFragments(admin, playerId, price);
   const up = await admin.from("game_build_queue").update({ finish_at:new Date().toISOString() }).eq("id", id).eq("player_id", playerId);
   if (up.error) throw up.error;
   await processQueuesSafeNoCombat(admin, playerId);
@@ -863,10 +956,10 @@ async function buyShip(admin: any, playerId: string, body: any) {
   const shipyard = await buildingLevel(admin, playerId, planetId, "shipyard");
   if (shipyard <= 0 && shipId !== "scout_probe") throw new Error("chantier_spatial_requis");
   const total: Cost = { titanium:n(def.cost.titanium)*qty, xenite:n(def.cost.xenite)*qty, antimatter:n(def.cost.antimatter)*qty };
-  const r = await currentResources(admin, playerId);
+  const r = await currentResources(admin, playerId, planetId);
   if (!hasEnough(r, total)) throw new Error("ressources_insuffisantes");
   spend(r, total);
-  await setResources(admin, playerId, r);
+  await setResources(admin, playerId, planetId, r);
   const speedBonus = Math.max(1, 1 + shipyard * 0.04);
   const duration = Math.max(12, Math.round(def.time / speedBonus)) * qty;
   const ins = await admin.from("game_ship_queue").insert({ player_id:playerId, planet_id:planetId, ship_id:shipId, qty, start_at:new Date().toISOString(), finish_at:isoPlus(duration) });
@@ -880,10 +973,7 @@ async function finishShip(admin: any, playerId: string, body: any) {
   if (!qr.data) throw new Error("formation_introuvable");
   const remain = Math.max(0, (new Date(qr.data.finish_at).getTime() - Date.now()) / 1000);
   const price = fragmentFinishCost(remain);
-  const r = await currentResources(admin, playerId);
-  if (n(r.fragments) < price) throw new Error("fragments_insuffisants");
-  r.fragments = n(r.fragments) - price;
-  await setResources(admin, playerId, r);
+  await spendFragments(admin, playerId, price);
   const up = await admin.from("game_ship_queue").update({ finish_at:new Date().toISOString() }).eq("id", id).eq("player_id", playerId);
   if (up.error) throw up.error;
   await processQueuesSafeNoCombat(admin, playerId);
@@ -1029,7 +1119,7 @@ async function launchFleet(admin: any, playerId: string, body: any) {
   if (mission === "colonize" && !(n(launchShips["colon_ship"]) > 0)) throw new Error("vaisseau_colon_requis");
   const cargoTotal = n(cargo.titanium) + n(cargo.xenite) + n(cargo.antimatter);
   if (cargoTotal > cargoCap) throw new Error("capacite_cargo_insuffisante");
-  const r = await currentResources(admin, playerId);
+  const r = await currentResources(admin, playerId, planetId);
   if (!hasEnough(r, cargo)) throw new Error("ressources_cargo_insuffisantes");
   const launchKey = fleetLaunchClaimKey(playerId, planetId, mission, target.id || body.target_id || "", launchShips, cargo, body.launch_id || body.launchId);
   if (!(await claimGameActionOnce(admin, playerId, "fleet_launch", launchKey))) {
@@ -1044,7 +1134,7 @@ async function launchFleet(admin: any, playerId: string, body: any) {
     await admin.from("game_ships").upsert({ player_id:playerId, planet_id:planetId, ship_id:shipId, qty:next, updated_at:new Date().toISOString() }, { onConflict:"player_id,planet_id,ship_id" });
   }
   spend(r, cargo);
-  await setResources(admin, playerId, r);
+  await setResources(admin, playerId, planetId, r);
   const ends = isoPlus(duration);
   const ins = await admin.from("game_fleets").insert({
     player_id:playerId,
@@ -1153,7 +1243,9 @@ async function openChest(admin: any, playerId: string, body: any) {
   const chest = CHESTS[chestId];
   if (!chest) throw new Error("coffre_inconnu");
 
-  const rr = await admin.from("game_resources").select("*").eq("player_id", playerId).maybeSingle();
+  // 1.7.13 : les coffres ne sont pas rattachés à une planète précise dans l'UI —
+  // coût et gains (ressources + fragments) sont toujours appliqués sur "home".
+  const rr = await admin.from("game_resources").select("*").eq("player_id", playerId).eq("planet_id", "home").maybeSingle();
   if (rr.error) throw rr.error;
   if (!rr.data) throw new Error("stock_introuvable");
   const before = rr.data;
@@ -1196,6 +1288,7 @@ async function openChest(admin: any, playerId: string, body: any) {
   const up = await admin.from("game_resources")
     .update(stockAfter)
     .eq("player_id", playerId)
+    .eq("planet_id", "home")
     .eq("fragments", before.fragments)
     .select("titanium,xenite,antimatter,fragments")
     .maybeSingle();
@@ -1215,7 +1308,7 @@ async function openChest(admin: any, playerId: string, body: any) {
 
 async function snapshot(admin: any, playerId: string) {
   const [res, b, bq, ships, sq, fleets, profile] = await Promise.all([
-    admin.from("game_resources").select("*").eq("player_id", playerId).maybeSingle(),
+    admin.from("game_resources").select("*").eq("player_id", playerId),
     admin.from("game_buildings").select("planet_id,building_id,level").eq("player_id", playerId),
     admin.from("game_build_queue").select("*").eq("player_id", playerId).order("finish_at", { ascending:true }),
     admin.from("game_ships").select("planet_id,ship_id,qty").eq("player_id", playerId),
@@ -1224,5 +1317,11 @@ async function snapshot(admin: any, playerId: string) {
     admin.from("game_security_profile").select("build_queue_2_permanent,build_queue_2_purchased_at").eq("player_id", playerId).maybeSingle(),
   ]);
   for (const r of [res,b,bq,ships,sq,fleets,profile]) if (r.error) throw r.error;
-  return { serverTime: new Date().toISOString(), resources: res.data, buildings:b.data || [], buildQueue:bq.data || [], ships:ships.data || [], shipQueue:sq.data || [], fleets:fleets.data || [], upgrades:{ buildQueue2Permanent: !!profile.data?.build_queue_2_permanent, buildQueue2PurchasedAt: profile.data?.build_queue_2_purchased_at || null } };
+  // 1.7.13 : game_resources renvoie maintenant une ligne par planète. "resources"
+  // reste la ligne "home" (compat : c'est ce que le client historique attend comme
+  // "les" ressources du joueur, et les fragments n'existent que là). "resourcesByPlanet"
+  // est le nouveau champ que le client utilise pour peupler state.planetResources par planète.
+  const resRows = res.data || [];
+  const homeRes = resRows.find((r: any) => String(r.planet_id) === "home") || null;
+  return { serverTime: new Date().toISOString(), resources: homeRes, resourcesByPlanet: resRows, buildings:b.data || [], buildQueue:bq.data || [], ships:ships.data || [], shipQueue:sq.data || [], fleets:fleets.data || [], upgrades:{ buildQueue2Permanent: !!profile.data?.build_queue_2_permanent, buildQueue2PurchasedAt: profile.data?.build_queue_2_purchased_at || null } };
 }

@@ -44,15 +44,26 @@ Deno.serve(async (req) => {
     // Server-authority 1.5.70 : les fragments payés doivent aussi être crédités
     // dans la table canonique game_resources. Le client n'est plus autorisé à
     // rendre une monnaie premium persistante par simple modification JS.
+    //
+    // 1.7.13 : game_resources est passée à une ligne PAR PLANÈTE (player_id, planet_id),
+    // pour que chaque colonie ait son propre stock de titane/xénite/antimatière. Les
+    // fragments (monnaie payée via Stripe) restent volontairement une notion compte-large,
+    // donc toujours lus/écrits sur planet_id="home" — jamais sur une colonie. Avant ce
+    // correctif, ce code lisait/écrivait sans filtrer par planète : dès qu'un joueur
+    // possède une colonie (donc plusieurs lignes game_resources), .maybeSingle() aurait
+    // renvoyé une erreur "multiple (or no) rows returned" et cassé tout paiement Stripe.
     if (credited > 0) {
       const current = await admin.from("game_resources")
         .select("player_id,fragments")
         .eq("player_id", user.id)
+        .eq("planet_id", "home")
         .maybeSingle();
+      if (current.error) throw current.error;
 
       if (!current.data) {
         const ins = await admin.from("game_resources").insert({
           player_id: user.id,
+          planet_id: "home",
           titanium: 2500,
           xenite: 1200,
           antimatter: 0,
@@ -67,7 +78,8 @@ Deno.serve(async (req) => {
             fragments: (Number(current.data.fragments) || 0) + credited,
             updated_at: new Date().toISOString(),
           })
-          .eq("player_id", user.id);
+          .eq("player_id", user.id)
+          .eq("planet_id", "home");
         if (up.error) throw up.error;
       }
     }

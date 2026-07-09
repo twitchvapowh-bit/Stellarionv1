@@ -200,6 +200,34 @@ rétroactif recalcule aussi, une seule fois, la position des colonies déjà fon
 correctif (marquées `__coordFixed1712` une fois corrigées, pour ne pas les re-décaler à
 chaque rechargement).
 
+## Alpha 1.7.13 — Ressources par planète + abandon de colonie (9 juillet 2026)
+
+Retour utilisateur : après colonisation, la nouvelle colonie héritait instantanément de
+tout le stock de titane/xénite/antimatière de la planète mère — un seul pool de
+ressources était partagé par toutes les planètes du joueur. Demande explicite : stock
+séparé par planète, et possibilité d'abandonner une colonie si on n'en veut plus.
+
+Migration Supabase (`game_resources_per_planet_1712`) : la table `game_resources` passe
+d'une clé `(player_id)` à `(player_id, planet_id)`. Chaque planète (mère + chaque colonie)
+a maintenant son propre stock de titane/xénite/antimatière, alimenté uniquement par ses
+propres bâtiments. Les FRAGMENTS (monnaie payée via Stripe) restent volontairement une
+notion compte-large : toujours lus/écrits sur `planet_id="home"`, jamais fractionnés par
+colonie — ce point a été traité avec une rigueur particulière puisqu'il touche aux
+paiements réels.
+
+Réécrit côté serveur (`game-action`, déployé v20) : accrual, achats, coffres, quêtes,
+combats/pillage et retours de flotte utilisent tous désormais la bonne planète. Une
+nouvelle colonie démarre à 0 ressource (elle n'a encore aucune mine). `claim-fragments`
+(déployé v9) corrigé en préventif : il ciblait déjà `game_resources` sans filtrer par
+planète, ce qui aurait cassé tout paiement Stripe dès qu'un joueur possède une colonie.
+
+Nouvelle fonctionnalité : abandon de colonie. Un bouton "Abandonner cette colonie"
+apparaît dans le panneau "Gestion rapide" de toute colonie (jamais sur la planète mère),
+avec confirmation explicite avant l'action. Conséquence assumée : bâtiments, vaisseaux,
+files de construction/formation et stock de la colonie sont définitivement perdus, sans
+remboursement ni rapatriement vers la planète mère. Une flotte déjà en vol vers une
+colonie abandonnée est automatiquement rapatriée vers la planète mère au lieu d'échouer.
+
 ## Alpha 1.5.45 — Messagerie destinataire
 
 Ajout : champ destinataire avec répertoire/autocomplete des joueurs depuis la table Supabase `players`.
